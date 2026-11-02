@@ -1,5 +1,5 @@
-.exd-fig { position: relative; aspect-ratio: 448/504; max-height: 52vh; margin: 6px auto 10px; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line2); }
-.exd-fig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.exd-fig { position: relative; width: 100%; max-width: 380px; height: 0; padding-top: min(112.5%, 427px); margin: 6px auto 12px; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line2); }
+.exd-fig img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; display: block; -webkit-transform: translateZ(0); }
 .exd-b { animation: exdFade 3.2s ease-in-out infinite; }
 .exd-lbl { position: absolute; left: 10px; bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .exd-lbl span { padding: 3px 8px; border-radius: 99px; background: rgba(0,0,0,.6); color: #d4af37; }

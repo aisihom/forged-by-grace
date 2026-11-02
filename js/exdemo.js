@@ -55,7 +55,7 @@
     if (!x) return App.sheet(App.sheetHead(ex.name, ex.muscle) + '<ol class="plain-list">' + ex.cues.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>');
     var src = 'assets/ex/' + ex.id;
     var h = App.sheetHead(ex.name, ex.muscle) +
-      '<div class="exd-fig" data-exd><img class="exd-a" src="' + src + '-a.webp" alt="' + esc(ex.name) + ' — startpositie" loading="lazy" decoding="async"><img class="exd-b" src="' + src + '-b.webp" alt="' + esc(ex.name) + ' — eindpositie" loading="lazy" decoding="async">' +
+      '<div class="exd-fig" data-exd>' + ['a', 'b'].map(function (k) { return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=3.1.1"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=3.1.1" width="448" height="504" alt="' + esc(ex.name) + (k === 'a' ? ' — startpositie' : ' — eindpositie') + '"></picture>'; }).join('') +
       '<div class="exd-lbl"><span class="exd-la">Start</span><span class="exd-lb">Eind</span></div><button class="exd-pp" type="button" aria-label="Pauze/afspelen">❚❚</button></div>' +
       '<div class="exd-map">' + App.muscleMap(x.p, x.s) + '<div class="exd-leg"><span><i class="lg-p"></i>Agonist (primair)</span><span><i class="lg-s"></i>Ondersteunend</span></div></div>' +
       '<h3 class="h3 exd-h">Agonisten — deze spieren train je</h3><ul class="plain-list exd-m">' + names(x.p) + '</ul>' +
@@ -63,6 +63,7 @@
       '<h3 class="h3 exd-h">Stappenplan — hier let je op</h3><ol class="exd-steps">' + x.steps.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' +
       '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>';
     var s = App.sheet(h, { label: ex.name });
+    s.el.querySelectorAll('.exd-fig img').forEach(function (im) { im.onerror = function () { if (!im.dataset.retry) { im.dataset.retry = 1; im.src = im.src.split('?')[0] + '?r=' + Date.now(); } }; });
     var fig = s.el.querySelector('[data-exd]'), pp = s.el.querySelector('.exd-pp');
     pp.onclick = function (e) { e.stopPropagation(); var p = fig.classList.toggle('paused'); pp.textContent = p ? '▶' : '❚❚'; };
     return s;
