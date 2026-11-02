@@ -331,11 +331,11 @@
     // apple export
     out += '<div class="card hcard"><div class="row"><div class="ex-icon">' + I.heart + '</div><div class="grow"><b>' + esc(t('Apple Health export')) + '</b><div class="tiny muted">' + esc(t('All history at once: steps, weight, body fat, resting heart rate, active calories, workouts.')) + '</div></div></div>' +
       '<ol class="plain-list small"><li>' + esc(t('Open the Health app → tap your photo (top right).')) + '</li><li>' + esc(t('Tap “Export All Health Data” → Export. Save to Files.')) + '</li><li>' + esc(t('Choose export.zip below (big files can take a minute).')) + '</li></ol>' +
-      '<label class="btn block" style="margin-top:8px">' + I.file + esc(t('Choose export.zip / export.xml')) + '<input type="file" id="h-apple" accept=".zip,.xml,application/zip,text/xml" hidden></label></div>';
+      '<label class="btn block" style="margin-top:8px">' + I.file + esc(t('Choose export.zip / export.xml')) + '<input type="file" id="h-apple" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"></label></div>';
     // garmin
     out += '<div class="card hcard"><div class="row"><div class="ex-icon">' + I.train + '</div><div class="grow"><b>Garmin Connect</b><div class="tiny muted">' + esc(t('Workouts (type, duration, distance, calories, avg heart rate), daily steps and weight.')) + '</div></div></div>' +
       '<ul class="plain-list small"><li>' + esc(t('Activities list: connect.garmin.com → Activities → All activities → Export CSV.')) + '</li><li>' + esc(t('One activity: open it → ⚙ → Export original (.fit) or Export to TCX/GPX.')) + '</li><li>' + esc(t('Everything: Garmin account → Data management → Export your data (zip, sent by e-mail).')) + '</li></ul>' +
-      '<label class="btn block" style="margin-top:8px">' + I.file + esc(t('Choose CSV / FIT / TCX / GPX / zip')) + '<input type="file" id="h-garmin" accept=".csv,.fit,.tcx,.gpx,.zip,.json" multiple hidden></label></div>';
+      '<label class="btn block" style="margin-top:8px">' + I.file + esc(t('Choose CSV / FIT / TCX / GPX / zip')) + '<input type="file" id="h-garmin" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"></label></div>';
     out += '<div id="h-prog" aria-live="polite"></div>';
     if (days.length) {
       var bars = []; for (var i = 6; i >= 0; i--) { var d = App.isoAdd(App.today(), -i), x = h.days[d] || {}; bars.push({ l: F.parseISO(d).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: x.steps || 0, hi: i === 0 }); }

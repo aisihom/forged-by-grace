@@ -504,6 +504,8 @@
     var h = location.hash || '';
     if (h.indexOf('#imp=') === 0) { App.views.importLink(h.slice(5)); return; }
     if (h.indexOf('#health') === 0 && App.applyHealthLink) { App.applyHealthLink(h); return; }
+    var qs = location.search || '';
+    if (/[?&](steps|weight|rhr|kcal|fat)=/.test(qs) && App.applyHealthLink) { history.replaceState(null, '', location.pathname + '#/health'); App.applyHealthLink(qs); return; }
     var parts = h.replace(/^#\/?/, '').split('/'), name = parts[0], arg = parts.slice(1).join('/');
     var view = document.getElementById('view');
     if (!S.role) { App.renderTabs(''); view.innerHTML = App.views.welcome(); App.bind(view); return; }
