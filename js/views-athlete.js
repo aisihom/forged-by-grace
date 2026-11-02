@@ -401,7 +401,7 @@
   A['change-plan'] = function (el) { App.sheet(App.sheetHead(t('Choose a plan')) + App.templatePicker(el.dataset.o)); };
   A['day-sheet'] = function (el) {
     var i = +el.dataset.i, d = App.dayOf(me().plan, i);
-    App.sheet(App.sheetHead(t(d.title), t(d.focus || '')) + (d.items.length ? '<div class="list">' + d.items.map(function (it) { var ex = D.BY_ID[it.ex]; return '<div class="list-item"><div class="grow"><b>' + esc(ex ? ex.name : it.ex) + '</b><div class="tiny muted">' + it.sets + ' × ' + esc(it.reps) + (ex && ex.track === 'time' ? ' s' : ex && ex.track === 'min' ? ' min' : '') + ' · ' + esc(t('rest')) + ' ' + it.rest + 's · RPE ' + it.rpe + '</div></div></div>'; }).join('') + '</div><button class="btn primary lg block" style="margin-top:14px" data-act="start-workout" data-day="' + i + '">' + I.play + esc(t('Start workout')) + '</button>' : '<p class="muted">' + esc(t('Rest, walk, sleep, eat your protein.')) + '</p>'));
+    App.sheet(App.sheetHead(t(d.title), t(d.focus || '')) + (d.items.length ? '<div class="list">' + d.items.map(function (it) { var ex = D.BY_ID[it.ex]; return '<div class="list-item"><div class="grow"><b>' + esc(ex ? ex.name : it.ex) + '</b><div class="tiny muted">' + it.sets + ' × ' + esc(it.reps) + (ex && ex.track === 'time' ? ' s' : ex && ex.track === 'min' ? ' min' : '') + ' · ' + esc(t('rest')) + ' ' + it.rest + 's · RPE ' + it.rpe + '</div></div><button class="icon-btn" data-act="ex-demo" data-ex="' + it.ex + '" aria-label="Uitleg">?</button></div>'; }).join('') + '</div><button class="btn primary lg block" style="margin-top:14px" data-act="start-workout" data-day="' + i + '">' + I.play + esc(t('Start workout')) + '</button>' : '<p class="muted">' + esc(t('Rest, walk, sleep, eat your protein.')) + '</p>'));
   };
   A['ex-library'] = function () { App.exercisePicker(null); };
   App.exercisePicker = function (onPick) {
@@ -415,7 +415,7 @@
     s.el.querySelector('#exres').onclick = function (e) {
       var b = e.target.closest('[data-id]'); if (!b) return; var ex = D.BY_ID[b.dataset.id];
       if (onPick) { s.close(); onPick(ex); return; }
-      App.sheet(App.sheetHead(ex.name, ex.muscle) + '<ol class="plain-list">' + ex.cues.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol><p class="suggest">' + esc(t('Common mistake')) + ': ' + esc(ex.mistake) + '</p>');
+      App.exDemo(ex);
     };
   };
 

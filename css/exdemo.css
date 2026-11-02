@@ -1,0 +1,32 @@
+.exd-fig { position: relative; aspect-ratio: 448/504; max-height: 52vh; margin: 6px auto 10px; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--line2); }
+.exd-fig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.exd-b { animation: exdFade 3.2s ease-in-out infinite; }
+.exd-lbl { position: absolute; left: 10px; bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.exd-lbl span { padding: 3px 8px; border-radius: 99px; background: rgba(0,0,0,.6); color: #d4af37; }
+.exd-la { animation: exdA 3.2s ease-in-out infinite; position: absolute; left: 0; bottom: 0; white-space: nowrap; }
+.exd-lb { animation: exdFade 3.2s ease-in-out infinite; position: absolute; left: 0; bottom: 0; white-space: nowrap; }
+.exd-pp { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(212,175,55,.6); background: rgba(0,0,0,.6); color: #d4af37; font-size: 12px; }
+.exd-fig.paused .exd-b, .exd-fig.paused .exd-la, .exd-fig.paused .exd-lb { animation-play-state: paused; }
+@keyframes exdFade { 0%, 35% { opacity: 0; } 50%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes exdA { 0%, 35% { opacity: 1; } 50%, 85% { opacity: 0; } 100% { opacity: 1; } }
+.exd-map { display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 16px; background: var(--card, rgba(255,255,255,.03)); border: 1px solid var(--line2); }
+.mm { width: 100%; max-width: 320px; height: auto; }
+.mm-base { fill: #2b2f36; }
+.mm-n { fill: #3d434c; }
+.mm-p { fill: #e8462c; filter: drop-shadow(0 0 3px rgba(232,70,44,.7)); }
+.mm-s { fill: #f0a35a; opacity: .75; }
+.mm-t { fill: #8a8f98; font-size: 7px; text-anchor: middle; }
+.exd-leg { display: flex; gap: 14px; font-size: 12px; margin-top: 4px; color: var(--muted, #aaa); }
+.exd-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.lg-p { background: #e8462c; } .lg-s { background: #f0a35a; opacity: .75; }
+.exd-h { margin: 16px 0 6px; font-size: 15px; color: var(--accent); }
+.exd-m li { margin: 4px 0; }
+.exd-steps { padding-left: 20px; margin: 0 0 10px; } .exd-steps li { margin: 7px 0; line-height: 1.45; }
+.exd-steps li:last-child { color: #f0a35a; }
+html[data-theme="light"] .mm-base { fill: #e4e1da; } html[data-theme="light"] .mm-n { fill: #cfcac0; } html[data-theme="light"] .mm-t { fill: #777; }
+/* rest timer done */
+.rest-bar.rest-done { background: linear-gradient(90deg, #b8860b, #d4af37) !important; color: #111; animation: restPulse .6s ease-in-out 4; }
+.rest-bar.rest-done .tiny { color: #222; }
+body.rest-flash::after { content: ''; position: fixed; inset: 0; z-index: 44; pointer-events: none; background: rgba(212,175,55,.35); animation: restFlash 1.6s ease-out forwards; }
+@keyframes restPulse { 50% { transform: translateY(-4px); filter: brightness(1.15); } }
+@keyframes restFlash { 0%, 30%, 60% { opacity: 1; } 15%, 45% { opacity: .2; } 100% { opacity: 0; } }
