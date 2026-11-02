@@ -78,7 +78,7 @@
   function px(x) { return IMG.x + x * K; } function py(y) { return IMG.y + y * K; }
   // head: crown centre x, hat line y, head width; eye: mid x, y, distance; chest: x, y, width (source px)
   P.ANCH = {
-    sheep:  { h: [395, 150, 190], e: [392, 209, 143], c: [400, 360, 190] },
+    sheep:  { h: [401, 134, 190], e: [399, 192, 146], c: [404, 410, 250] },
     lamb:   { h: [442, 165, 215], e: [442, 242, 155], c: [450, 400, 200] },
     dove:   { h: [466, 130, 150], e: [466, 168, 95],  c: [455, 300, 210] },
     lion:   { h: [420, 200, 200], e: [421, 269, 108], c: [430, 480, 230] },
@@ -90,9 +90,10 @@
   // Canonical item frames: head brim (100,64) w80, eyes (100,90) d30, chest (100,120) w72. Hand items stay at the side.
   P.slotTf = function (type, slot) {
     var a = P.ANCH[type]; if (!a) return '';
-    if (slot === 'head' || slot === 'hair') return tf(100, 64, 80, a.h);
+    if (slot === 'head' || slot === 'hair') return tf(100, 64, 80, a.h) + ' translate(100 64) scale(1 .93) translate(-100 -64)';
     if (slot === 'face') return tf(100, 90, 30, a.e);
-    if (slot === 'neck' || slot === 'body') return tf(100, 120, 72, a.c);
+    if (slot === 'neck') return tf(100, 120, 72, a.c);
+    if (slot === 'body') return tf(100, 128, 72, [a.c[0], a.c[1] + 10, a.c[2] * 1.55]);
     return '';
   };
   function photo(k, st) {
@@ -100,6 +101,29 @@
     return '<image href="assets/pets/' + k + '.webp" x="' + IMG.x + '" y="' + IMG.y + '" width="' + IMG.w + '" height="' + IMG.w + '" preserveAspectRatio="xMidYMid meet"' + (f ? ' style="filter:' + f + '"' : '') + (sad ? ' transform="rotate(4 100 190) translate(0 3)"' : '') + '/>' +
       (sad ? '<g fill="#7fb7e6" opacity=".85"><path d="M' + (px(P.ANCH[k].e[0] - P.ANCH[k].e[2] / 2) + 1).toFixed(1) + ' ' + (py(P.ANCH[k].e[1]) + 4).toFixed(1) + 'q-2 4 0 6q2 -2 0 -6z"/></g>' : '');
   }
+  /* v2.7.1: realistic wardrobe — clothes are masked to the animal's own silhouette, curved with soft lighting, given fabric texture, wrinkles, soft shadows and feathered edges. */
+  var UID = 0;
+  P.wear = function (type, slot, inner) {
+    var u = 'w' + (++UID), d = '';
+    if (slot === 'body' || slot === 'neck') {
+      d = '<defs><filter id="' + u + 'a" x="0" y="0" width="200" height="200" filterUnits="userSpaceOnUse"><feColorMatrix in="SourceAlpha" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.6 0"/><feMorphology operator="dilate" radius="' + (slot === 'neck' ? 3 : 1.2) + '"/><feGaussianBlur stdDeviation=".6"/></filter>' +
+        '<mask id="' + u + 'm" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><image href="assets/pets/' + type + '.webp?v=2.7.1" x="' + IMG.x + '" y="' + IMG.y + '" width="' + IMG.w + '" height="' + IMG.w + '" filter="url(#' + u + 'a)"/></mask>' +
+        '<filter id="' + u + 'c" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">' +
+        '<feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G" result="w"/>' +
+        '<feGaussianBlur in="w" stdDeviation="5" result="b"/><feDiffuseLighting in="b" surfaceScale="7" diffuseConstant="1.18" lighting-color="#fff" result="l"><feDistantLight azimuth="250" elevation="52"/></feDiffuseLighting>' +
+        '<feComposite in="w" in2="l" operator="arithmetic" k1="1" result="s"/>' +
+        '<feTurbulence type="fractalNoise" baseFrequency="1.2 .9" numOctaves="1" seed="3"/><feColorMatrix values=".3 0 0 0 .72 .3 0 0 0 .72 .3 0 0 0 .72 0 0 0 0 1" result="t"/><feBlend in="s" in2="t" mode="multiply" result="tx"/>' +
+        '<feGaussianBlur in="w" stdDeviation=".9" result="soft"/><feComposite in="tx" in2="soft" operator="in" result="fe"/>' +
+        '<feGaussianBlur in="SourceAlpha" stdDeviation="2.4"/><feOffset dx="1" dy="2.6"/><feComponentTransfer><feFuncA type="linear" slope=".42"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="fe"/></feMerge></filter></defs>';
+      return d + '<g mask="url(#' + u + 'm)"><g filter="url(#' + u + 'c)" opacity=".95">' + inner + '</g></g>';
+    }
+    // hats, hair, glasses, hand items: gentle top-light shading + soft contact shadow
+    d = '<defs><filter id="' + u + 'c" x="-20%" y="-20%" width="140%" height="160%" color-interpolation-filters="sRGB">' +
+      '<feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b"/><feDiffuseLighting in="b" surfaceScale="4" diffuseConstant="1.15" lighting-color="#fff" result="l"><feDistantLight azimuth="250" elevation="58"/></feDiffuseLighting>' +
+      '<feComposite in="SourceGraphic" in2="l" operator="arithmetic" k1="1" result="s"/><feComposite in="s" in2="SourceAlpha" operator="in" result="fe"/>' +
+      '<feGaussianBlur in="SourceAlpha" stdDeviation="' + (slot === 'face' ? 1.2 : 2) + '"/><feOffset dx=".8" dy="' + (slot === 'face' ? 1.6 : 2.4) + '"/><feComponentTransfer><feFuncA type="linear" slope=".38"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="fe"/></feMerge></filter></defs>';
+    return d + '<g filter="url(#' + u + 'c)">' + inner + '</g>';
+  };
   P.ART = {};
   ['sheep', 'lamb', 'dove', 'lion', 'donkey', 'ox', 'eagle'].forEach(function (k) { P.ART[k] = function (st) { return photo(k, st); }; });
 })();
