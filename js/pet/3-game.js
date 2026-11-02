@@ -57,7 +57,7 @@
   App.petVitals = vit;
   function settle(p) { var v = vit(p); p.f = v.f; p.w = v.w; p.j = v.j; p.ts = Date.now(); if (v.dead) p.dead = true; return v; }
   function nm(p) { return p.name || L(P.PETS[p.type]); }
-  function dressed(p, st) { var eq = p.eq || {}; return P.ART[p.type](st) + P.LAYER.map(function (k) { return eq[k] && P.BY[eq[k]] ? P.BY[eq[k]].g() : ''; }).join(''); }
+  function dressed(p, st) { var eq = p.eq || {}; return P.ART[p.type](st) + P.LAYER.map(function (k) { if (!(eq[k] && P.BY[eq[k]])) return ''; var tr = P.slotTf ? P.slotTf(p.type, k) : ''; return tr ? '<g transform="' + tr + '">' + P.BY[eq[k]].g() + '</g>' : P.BY[eq[k]].g(); }).join(''); }
   function scene(p, opts) {
     opts = opts || {}; var se = P.season(), home = P.HBY[opts.home || (p && p.home) || 'pastures'] || P.HOMES[0];
     var sky = home.sky, id = 'k' + Math.random().toString(36).slice(2, 7);
