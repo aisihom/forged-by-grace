@@ -55,3 +55,6 @@
 .scores { margin: 12px 0 4px; }
 .footer-note { line-height: 1.6; }
 .btn.sm { white-space: nowrap; }
+.cam video { display: block; background: #000; }
+.cam-torch { position: absolute; right: 10px; bottom: 10px; z-index: 2; } .cam-torch.on { background: var(--accent); color: var(--accent-ink); }
+.cam-status { margin: 8px 0 0; min-height: 20px; }

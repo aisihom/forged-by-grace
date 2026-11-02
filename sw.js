@@ -1,7 +1,7 @@
 /* Forged by Grace service worker — offline support. Bump VERSION after changing files. */
-var VERSION = 'fbg-v2.0.0';
+var VERSION = 'fbg-v2.1.0';
 var ASSETS = ['./', './index.html', './intake.html', './config.js', './css/styles.css', './css/app.css', './js/data.js', './js/foods.js', './js/intake-i18n.js', './js/common.js', './js/i18n.js',
-  './js/core.js', './js/views-athlete.js', './js/views-coach.js', './js/scan.js', './js/intake.js', './vendor/html5-qrcode.min.js', './manifest.webmanifest',
+  './js/core.js', './js/views-athlete.js', './js/views-coach.js', './js/scan.js', './js/intake.js', './vendor/zxing-reader.js', './vendor/zxing_reader.wasm', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));

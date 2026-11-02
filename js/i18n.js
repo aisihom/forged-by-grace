@@ -1,6 +1,6 @@
 /* Forged by Grace — UI translations. English text is the key; missing keys fall back to English. */
 window.FBG_I18N = {
-  nl: {
+  nl: {"Tap “Start camera”, hold the barcode 10–20 cm away, flat and well lit.":"Tik op “Camera starten”, houd de barcode 10–20 cm van de camera, recht en goed belicht.","Starting camera…":"Camera starten…","Scanning… hold steady, fill the frame with the barcode":"Scannen… houd stil, vul het kader met de barcode",
 "1 portion": "1 portie",
 "1 serving": "1 portie (etiket)",
 "100 g": "100 g",

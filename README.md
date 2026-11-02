@@ -14,7 +14,7 @@ Aarón can be his own first client on the same phone with the ⇄ switch at the 
 - **Meal plans**: calories + macros auto-calculated (Mifflin-St Jeor BMR × activity, goal deficit, protein g/kg); 3/4/5 meals; auto-fit portions to the targets; swap foods with equal protein/carbs/fat; 7-day grocery list (copy / WhatsApp).
 - **Food database**: 100+ common Dutch/European foods per 100 g + your own custom foods + scanned products.
 - **Food log**: search, "eaten as planned" in one tap, **barcode scanner**, **AI food photo**, day ring + macro bars, week chart.
-- **Barcode**: live camera (native BarcodeDetector, fallback html5-qrcode bundled in `vendor/`), photo of a barcode, or type the number. Products from **Open Food Facts** (free, no key). Scanned products are cached on the device.
+- **Barcode**: live camera (native BarcodeDetector, fallback zxing-wasm (zxing-cpp, works on iPhone Safari) bundled in `vendor/`, torch button where supported), photo of a barcode, or type the number. Products from **Open Food Facts** (free, no key). Scanned products are cached on the device.
 - **AI food photo**: free on-device AI (Food-101 Swin model via transformers.js). Gives the top-3 dishes + typical macros; you pick the grams. Always marked as an *estimate*. Photo is stored with the log entry, never uploaded.
 - **Progress**: weight + waist charts, optional progress photos, streaks, daily habits (water, steps, sleep, protein, veg, optional quiet time / prayer).
 - **Mental coaching intake** (`intake.html`, EN/ES/NL) → coaching brief: themes, watch-outs, focus areas, first-session questions, reply draft.
@@ -45,4 +45,4 @@ Opened as a file (double-click `index.html`) everything works on that device, bu
 ## Files
 `index.html` app · `intake.html` client questionnaire · `config.js` coach name/email/WhatsApp ·
 `js/core.js` state, calculators, generators, sharing · `js/views-athlete.js` · `js/views-coach.js` · `js/scan.js` barcode + AI photo ·
-`js/foods.js` food DB + Food-101 macros + verses · `js/data.js` exercises · `js/i18n.js` translations · `vendor/html5-qrcode.min.js` (Apache-2.0).
+`js/foods.js` food DB + Food-101 macros + verses · `js/data.js` exercises · `js/i18n.js` translations · `vendor/zxing-reader.js` + `zxing_reader.wasm` (zxing-wasm, MIT / Apache-2.0).
