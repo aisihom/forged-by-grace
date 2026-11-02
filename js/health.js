@@ -338,7 +338,7 @@
       '<label class="btn block" style="margin-top:8px">' + I.file + esc(t('Choose CSV / FIT / TCX / GPX / zip')) + '<input type="file" id="h-garmin" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"></label></div>';
     out += '<div id="h-prog" aria-live="polite"></div>';
     if (days.length) {
-      var bars = []; for (var i = 6; i >= 0; i--) { var d = App.isoAdd(App.today(), -i), x = h.days[d] || {}; bars.push({ l: F.parseISO(d).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: x.steps || 0, hi: i === 0 }); }
+      var bars = []; for (var i = 6; i >= 0; i--) { var d = App.isoAdd(App.today(), -i), x = App.healthDay(d) || {}; bars.push({ l: F.parseISO(d).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: x.steps || 0, hi: i === 0 }); }
       out += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Steps')) + '</h2><span class="tiny muted">' + esc(t('goal')) + ' 8.000</span></div><div class="card">' + App.barChart(bars, 8000) + '</div></div>';
     }
     if (days.length) out += '<button class="btn danger sm block" data-act="h-clear" style="margin-top:14px">' + esc(t('Remove imported health data')) + '</button>';

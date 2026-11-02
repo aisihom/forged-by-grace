@@ -163,7 +163,7 @@
       body: ath.body.slice(-12).map(function (b) { return [b.date, b.weight || null, b.waist || null]; }),
       workouts: ath.sessions.filter(function (s) { return s.date >= from; }).map(function (s) { return [s.date, s.title, App.doneSetsCount(s), Math.round(s.dur / 60), (s.prs || []).length]; }),
       food: days, habits: Object.keys(ath.habits).filter(function (d) { return d >= from; }).map(function (d) { var h = ath.habits[d]; return [d, Object.keys(h).filter(function (k) { return h[k]; }).length]; }),
-      health: Object.keys((ath.health && ath.health.days) || {}).filter(function (d) { return d >= from; }).sort().map(function (d) { var x = ath.health.days[d]; return [d, x.steps == null ? null : Math.round(x.steps), x.rhr || null, x.kcal == null ? null : Math.round(x.kcal)]; }),
+      health: Object.keys((ath.health && ath.health.days) || {}).filter(function (d) { return d >= from; }).sort().map(function (d) { var x = App.healthDay(d) || {}; return [d, x.steps == null ? null : Math.round(x.steps), x.rhr || null, x.kcal == null ? null : Math.round(x.kcal)]; }),
       adh: { train: ad.train, food: ad.food, overall: ad.overall, done: ad.done, planned: ad.planned, logged: ad.logged }, streak: App.streak(ath) };
   };
   App.doneSetsCount = function (s) { return s.items.reduce(function (a, it) { return a + App.doneSets(it).length; }, 0); };
@@ -507,7 +507,7 @@
     var ad = App.adherence(ath, 7);
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Last 7 days')) + '</h2></div><div class="grid3"><div class="stat"><div class="v">' + ad.done + '/' + ad.planned + '</div><div class="l">' + esc(t('workouts')) + '</div></div><div class="stat"><div class="v">' + ad.logged + '/7</div><div class="l">' + esc(t('days food logged')) + '</div></div><div class="stat"><div class="v">' + App.pct(ad.overall) + '</div><div class="l">' + esc(t('adherence')) + '</div></div></div></div>';
     var hh = (ath.health && ath.health.days) || {}, sb = [], ssum = 0, sn = 0, rh = [];
-    for (var si = 6; si >= 0; si--) { var sd = App.isoAdd(App.today(), -si), sx = hh[sd] || {}; sb.push({ l: F.parseISO(sd).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: sx.steps || 0, hi: si === 0 }); if (sx.steps) { ssum += sx.steps; sn++; } }
+    for (var si = 6; si >= 0; si--) { var sd = App.isoAdd(App.today(), -si), sx = App.healthDay(sd) || {}; sb.push({ l: F.parseISO(sd).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: sx.steps || 0, hi: si === 0 }); if (sx.steps) { ssum += sx.steps; sn++; } }
     Object.keys(hh).sort().slice(-30).forEach(function (d) { if (hh[d].rhr) rh.push({ x: d, y: hh[d].rhr }); });
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Steps')) + '</h2><a class="btn sm" href="#/health">' + I.heart + esc(t('Garmin / Apple Health')) + '</a></div>' + (sn ? '<div class="card">' + App.barChart(sb, 8000) + '<p class="tiny muted" style="margin:6px 0 0">' + esc(t('avg steps')) + ': ' + Math.round(ssum / sn).toLocaleString(S.lang) + '</p></div>' : '<p class="small muted">' + esc(t('Steps, weight, resting heart rate and active calories from Apple Health — one tap or automatic every day.')) + '</p>') + '</div>';
     if (rh.length > 1) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('resting HR')) + '</h2></div><div class="card">' + App.lineChart(rh) + '</div></div>';

@@ -45,8 +45,8 @@
   function G() { var g = App.game(); if (!Array.isArray(g.redeem)) g.redeem = []; return g; }
   function lg(g, k, pts, l) { g.log.unshift({ d: App.today(), ts: Date.now(), k: k, pts: pts, l: l }); if (g.log.length > 300) g.log.length = 300; }
   function activity(ath, from) {
-    var a = { st: {}, wk: {}, sp: {}, fl: {} };
-    for (var d = from; d <= App.today(); d = App.isoAdd(d, 1)) { var hd = App.healthDay && App.healthDay(d); if (hd && hd.steps) a.st[d] = hd.steps; var fe = (ath.food && ath.food[d]) || []; if (fe.length) a.fl[d] = fe.length; }
+    var a = { st: {}, sx: {}, wk: {}, sp: {}, fl: {} };
+    for (var d = from; d <= App.today(); d = App.isoAdd(d, 1)) { var hd = App.healthDay && App.healthDay(d); if (hd && hd.steps) { a.st[d] = hd.steps; if (hd.extraSteps) a.sx[d] = hd.extraSteps; } var fe = (ath.food && ath.food[d]) || []; if (fe.length) a.fl[d] = fe.length; }
     (ath.sessions || []).forEach(function (s) { if (!s.date || s.date < from) return; var k = (s.type === 'sport' || s.type === 'external') ? 'sp' : 'wk'; a[k][s.date] = (a[k][s.date] || 0) + 1; });
     return a;
   }
@@ -82,7 +82,8 @@
     if (r.amt <= 0) w.push('Invalid amount');
     (S.redemptions || []).forEach(function (x) { if (x.status === 'approved' && x.name === r.name) { var h = (r.hist || []).filter(function (y) { return y[0] === x.id; })[0]; if (h && h[1] === 'cancelled') w.push('Earlier approved request ' + x.code + ' was cancelled on the phone (points taken back)'); } });
     var dup = (S.redemptions || []).filter(function (x) { return x.id === r.id; })[0];
-    return { ok: ok, warn: w, earned: earned, days: days, dup: dup };
+    var notes = Object.keys((r.act && r.act.sx) || {}).sort().map(function (d) { return d + ': ' + r.act.st[d] + ' steps, of which ' + r.act.sx[d] + ' manual/estimated (no watch)'; });
+    return { ok: ok, warn: w, earned: earned, days: days, dup: dup, notes: notes };
   };
   // ---- client UI: Rewards section inside Sweatpoints card ----
   function stLabel(s) { return { pending: 'Pending', done: 'Done', cancelled: 'Cancelled' }[s] || s; }
@@ -148,7 +149,7 @@
     if (!v.dup) { S.redemptions = S.redemptions || []; S.redemptions.unshift(rec); App.save(); }
     var h = App.sheetHead(t('Reward request') + ' ' + r.code, r.name + ' · ' + r.rn + ' · ' + r.amt + ' SP');
     h += '<div class="pet-alert ' + (v.ok ? 'good' : 'bad') + '">' + (v.ok ? '✅ ' : '⛔ ') + esc(t(v.ok ? 'Checksum OK — the request was not changed.' : 'Checksum does NOT match — the request or the points history was changed.')) + '</div>';
-    h += '<div class="pet-alert ' + (good ? 'good' : 'warn') + '" style="margin-top:8px"><b>' + (good ? '👍 ' + esc(t('Looks plausible')) : '⚠️ ' + esc(t('Check carefully'))) + '</b><div class="tiny" style="margin-top:4px">' + v.days + ' days · ' + r.total + ' SP earned · ' + r.ledger.length + ' history entries · balance ' + r.bal + ' SP</div>' + (v.warn.length ? '<ul class="small" style="margin:6px 0 0;padding-left:18px">' + v.warn.slice(0, 8).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
+    h += '<div class="pet-alert ' + (good ? 'good' : 'warn') + '" style="margin-top:8px"><b>' + (good ? '👍 ' + esc(t('Looks plausible')) : '⚠️ ' + esc(t('Check carefully'))) + '</b><div class="tiny" style="margin-top:4px">' + v.days + ' days · ' + r.total + ' SP earned · ' + r.ledger.length + ' history entries · balance ' + r.bal + ' SP</div>' + (v.warn.length ? '<ul class="small" style="margin:6px 0 0;padding-left:18px">' + v.warn.slice(0, 8).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' + (v.notes && v.notes.length ? '<div class="pet-alert" style="margin-top:8px"><b>👣 ' + esc(t('Steps added by hand / estimated')) + '</b><ul class="small" style="margin:6px 0 0;padding-left:18px">' + v.notes.slice(0, 8).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '');
     if (rec.status === 'approved') h += '<div class="card center" style="margin-top:10px"><div class="tiny muted">' + esc(t('Approval code')) + '</div><div class="rw-code">' + esc(rec.approval) + '</div></div>';
     else if (rec.status !== 'rejected') h += '<div class="grid2" style="margin-top:12px"><button class="btn danger" id="rw-rej">' + esc(t('Reject')) + '</button><button class="btn primary" id="rw-ok">' + I.check + esc(t('Approve')) + '</button></div>';
     else h += '<p class="small muted">' + esc(t('Rejected')) + '</p>';

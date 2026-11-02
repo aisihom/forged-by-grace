@@ -1,6 +1,6 @@
 /* Forged by Grace service worker — offline support. Bump VERSION after changing files. */
-var VERSION = 'fbg-v2.8.0';
-var ASSETS = ['./', './index.html', './intake.html', './config.js', './css/styles.css', './css/app.css', './css/light.css', './js/sports.js', './js/pet/1-data.js', './js/pet/2-shop.js', './js/pet/3-game.js', './js/pet/4-rewards.js', './css/pet.css', './assets/lands/sinai.webp', './assets/lands/eden.webp', './assets/lands/pastures.webp', './js/data.js', './js/foods.js', './js/foods-db.js', './js/intake-i18n.js', './js/common.js', './js/i18n.js',
+var VERSION = 'fbg-v2.9.0';
+var ASSETS = ['./', './index.html', './intake.html', './config.js', './css/styles.css', './css/app.css', './css/light.css', './js/sports.js', './js/steps.js', './js/pet/1-data.js', './js/pet/2-shop.js', './js/pet/3-game.js', './js/pet/4-rewards.js', './css/pet.css', './assets/lands/sinai.webp', './assets/lands/eden.webp', './assets/lands/pastures.webp', './js/data.js', './js/foods.js', './js/foods-db.js', './js/intake-i18n.js', './js/common.js', './js/i18n.js',
   './js/core.js', './js/views-athlete.js', './js/views-coach.js', './js/scan.js', './js/intake.js', './js/health.js', './vendor/fflate.min.js', './vendor/zxing-reader.js', './vendor/zxing_reader.wasm', './manifest.webmanifest',
   './icons/icon.svg', './assets/pets/sheep.webp?v=2.7.1', './assets/pets/lamb.webp?v=2.7.1', './assets/pets/dove.webp?v=2.7.1', './assets/pets/lion.webp?v=2.7.1', './assets/pets/donkey.webp?v=2.7.1', './assets/pets/ox.webp?v=2.7.1', './assets/pets/eagle.webp?v=2.7.1', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', function (e) {
