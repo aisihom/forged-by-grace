@@ -58,12 +58,13 @@
   function settle(p) { var v = vit(p); p.f = v.f; p.w = v.w; p.j = v.j; p.ts = Date.now(); if (v.dead) p.dead = true; return v; }
   function nm(p) { return p.name || L(P.PETS[p.type]); }
   function dressed(p, st) { var eq = p.eq || {}; return P.ART[p.type](st) + P.LAYER.map(function (k) { if (!(eq[k] && P.BY[eq[k]])) return ''; var tr = P.slotTf ? P.slotTf(p.type, k) : ''; var g = tr ? '<g transform="' + tr + '">' + P.BY[eq[k]].g() + '</g>' : P.BY[eq[k]].g(); return P.wear ? P.wear(p.type, k, g) : g; }).join(''); }
+  var TINT = { winter: ['#dfeaf5', .38], autumn: ['#c8641e', .18], spring: ['#ffd6ec', .12] };
   function scene(p, opts) {
     opts = opts || {}; var se = P.season(), home = P.HBY[opts.home || (p && p.home) || 'pastures'] || P.HOMES[0];
     var sky = home.sky, id = 'k' + Math.random().toString(36).slice(2, 7);
     if (se === 'winter' && !home.night) sky = ['#c9dbe8', '#f4f8fb'];
-    var s = '<svg class="pet-scene" viewBox="0 0 360 230" role="img" aria-label="' + esc(p ? nm(p) : L(home)) + '"><defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sky[0] + '"/><stop offset="1" stop-color="' + sky[1] + '"/></linearGradient><filter id="f' + id + '"><feColorMatrix type="saturate" values="0.1"/></filter></defs>' +
-      '<rect width="360" height="230" fill="url(#' + id + ')"/>' + (se === 'summer' && !home.night ? P.particles('summer') : '') + home.d(P.SEAS[se].g) + P.decor(se);
+    var s = '<svg class="pet-scene" viewBox="0 0 360 230" role="img" aria-label="' + esc(p ? nm(p) : L(home)) + '"><defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sky[0] + '"/><stop offset="1" stop-color="' + sky[1] + '"/></linearGradient><radialGradient id="v' + id + '" cx="50%" cy="62%" r="75%"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></radialGradient><filter id="f' + id + '"><feColorMatrix type="saturate" values="0.1"/></filter></defs>' +
+      '<rect width="360" height="230" fill="url(#' + id + ')"/><image href="assets/lands/' + home.id + '.webp" x="0" y="0" width="360" height="230" preserveAspectRatio="xMidYMid slice"/>' + (TINT[se] ? '<rect width="360" height="230" fill="' + TINT[se][0] + '" opacity="' + TINT[se][1] + '"/>' : '') + '<rect width="360" height="230" fill="url(#v' + id + ')"/>' + (se === 'summer' && !home.night ? P.particles('summer') : '') + P.decor(se);
     if (p) {
       var v = vit(p);
       s += '<g transform="translate(80 26)"' + (v.dead ? ' filter="url(#f' + id + ')" opacity=".7"' : '') + '><g' + (v.dead ? '' : ' class="pet-bob"') + '><ellipse cx="100" cy="188" rx="46" ry="7" fill="#000" opacity=".18"/>' + dressed(p, v.st) + '</g></g>';
