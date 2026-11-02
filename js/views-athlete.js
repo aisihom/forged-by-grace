@@ -264,24 +264,78 @@
   };
   App.foodSearchSheet = function (onPick, title) {
     var s = App.sheet(App.sheetHead(title || t('Add food')) +
-      '<input class="input" id="fq" type="search" placeholder="' + esc(t('Search 100+ foods, e.g. kwark, kip, rice')) + '" autocomplete="off">' +
+      '<input class="input" id="fq" type="search" enterkeyhint="search" placeholder="' + esc(t('Search millions of foods & brands, e.g. kwark, AH pindakaas')) + '" autocomplete="off">' +
       '<div class="chips" id="fcats" style="margin:10px 0">' + Object.keys(FD.CATS).map(function (k) { return '<button class="chip sm" data-c="' + k + '">' + esc(t(FD.CATS[k])) + '</button>'; }).join('') + '</div>' +
-      '<div class="list" id="fres"></div>');
-    var cat = '';
+      '<div id="fonl"></div><div class="list" id="fres"></div>');
+    var cat = '', timer = null, searcher = null, onlineItems = [], onlineState = '', lastQ = '';
     function norm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-    function render() {
-      var q = norm(s.el.querySelector('#fq').value), all = App.allFoods(), res;
-      if (!q && !cat) { res = S.recentFoods.map(App.findFood).filter(Boolean); if (res.length < 8) res = res.concat(all.slice(0, 12).filter(function (f) { return res.indexOf(f) === -1; })); }
-      else res = all.filter(function (f) { return (!cat || f.cat === cat) && (!q || norm(f.en + ' ' + f.nl + ' ' + (f.brand || '')).indexOf(q) !== -1); });
-      s.el.querySelector('#fres').innerHTML = res.slice(0, 40).map(function (f) {
-        return '<button class="list-item" data-fid="' + esc(f.id) + '"><div class="grow"><div class="ell"><b>' + esc(App.foodName(f)) + '</b></div><div class="tiny muted">' + (f.brand ? esc(f.brand) + ' · ' : '') + f.kcal + ' kcal · P ' + f.p + ' · C ' + f.c + ' · F ' + f.f + ' /100 g</div></div><span class="chev">›</span></button>'; }).join('') || '<p class="small muted" style="padding:14px">' + esc(t('No match. Try another word or add a custom food.')) + '</p>';
+    function hay(f) { return f._h || (f._h = norm(f.en + ' ' + f.nl + ' ' + (f.al || '') + ' ' + (f.brand || ''))); }
+    function row(f, online) {
+      return '<button class="list-item" data-fid="' + esc(f.id) + '"' + (online ? ' data-on="1"' : '') + '>' + (online && f.img ? '<img src="' + esc(f.img) + '" alt="" loading="lazy" class="offimg">' : '') + '<div class="grow"><div class="ell"><b>' + esc(App.foodName(f)) + '</b></div><div class="tiny muted ell">' + (f.brand ? esc(f.brand) + ' · ' : '') + (f.qty ? esc(f.qty) + ' · ' : '') + f.kcal + ' kcal · P ' + f.p + ' · C ' + f.c + ' · F ' + f.f + ' /100 g</div></div><span class="chev">›</span></button>';
     }
-    s.el.querySelector('#fq').oninput = render;
+    function local(q) {
+      var all = App.allFoods();
+      if (!q && !cat) { var r = S.recentFoods.map(App.findFood).filter(Boolean); return r.length < 8 ? r.concat(all.slice(0, 12).filter(function (f) { return r.indexOf(f) === -1; })) : r; }
+      var toks = q.split(/\s+/).filter(Boolean), out = [];
+      all.forEach(function (f) {
+        if (cat && f.cat !== cat) return; if (!toks.length) { out.push([0, f]); return; }
+        var h = hay(f); for (var i = 0; i < toks.length; i++) if (h.indexOf(toks[i]) === -1) return;
+        var nm = norm(App.foodName(f)), sc = (nm.indexOf(q) === 0 ? 0 : (' ' + nm).indexOf(' ' + toks[0]) !== -1 ? 10 : 20) + (f.x ? 5 : 0) + nm.length / 40;
+        out.push([sc, f]);
+      });
+      return out.sort(function (a, b) { return a[0] - b[0]; }).map(function (x) { return x[1]; });
+    }
+    function renderOnline() {
+      var el = s.el.querySelector('#fonl'), q = s.el.querySelector('#fq').value.trim();
+      if (q.length < 2) { el.innerHTML = ''; return; }
+      var h = '<div class="offbox"><div class="row"><b class="grow">' + I.search + ' ' + esc(t('Open Food Facts — millions of products')) + '</b>' + (onlineState === 'loading' ? '<span class="spin"></span>' : '') + '</div>';
+      if (onlineState === 'idle') h += '<button class="btn sm primary block" id="fgo">' + esc(t('Search online for “{q}”', { q: q })) + '</button>';
+      if (onlineItems.length) h += '<div class="list">' + onlineItems.map(function (f) { return row(f, true); }).join('') + '</div>';
+      if (onlineState === 'more') h += '<button class="btn sm block" id="fmore">' + esc(t('Load more')) + (searcher && searcher.nextStage ? ' · ' + esc(t(searcher.nextStage)) : '') + '</button>';
+      if (onlineState === 'none') h += '<p class="tiny muted">' + esc(t('Nothing online either. Try a shorter word or the brand name.')) + '</p>';
+      if (onlineState === 'end') h += '<p class="tiny muted">' + esc(t('That is everything Open Food Facts has.')) + '</p>';
+      if (onlineState && onlineState.indexOf('err:') === 0) h += '<p class="tiny" style="color:var(--warn)">' + esc(onlineState.slice(4)) + '</p><button class="btn sm block" id="fmore">' + esc(t('Try again')) + '</button>';
+      h += '<p class="tiny muted">' + esc(t('Netherlands first, then Belgium, Germany, France and the rest of the world.')) + '</p></div>';
+      el.innerHTML = h;
+      var go = el.querySelector('#fgo'); if (go) go.onclick = function () { startOnline(true); };
+      var m = el.querySelector('#fmore'); if (m) m.onclick = more;
+    }
+    function more() {
+      if (!searcher) return; var q0 = searcher.query; onlineState = 'loading'; renderOnline();
+      searcher.next().then(function (r) {
+        if (!searcher || searcher.query !== q0) return;
+        onlineItems = onlineItems.concat(r.items); searcher.nextStage = r.nextStage;
+        onlineState = r.done ? (onlineItems.length ? 'end' : 'none') : 'more'; renderOnline();
+      }).catch(function (e) { if (searcher && searcher.query === q0) { onlineState = 'err:' + ((e && e.message) || t('Open Food Facts is not reachable right now.')); renderOnline(); } });
+    }
+    function startOnline(force) {
+      var q = s.el.querySelector('#fq').value.trim();
+      if (q.length < 2 || (!force && q === lastQ)) return; lastQ = q;
+      searcher = App.offSearcher(q); onlineItems = []; more();
+    }
+    function render() {
+      var q = norm(s.el.querySelector('#fq').value.trim()), res = local(q);
+      s.el.querySelector('#fres').innerHTML = (q ? '<h3 class="h3 tiny muted" style="margin:10px 0 4px">' + esc(t('In the app')) + ' · ' + res.length + '</h3>' : '') + (res.slice(0, q ? 25 : 40).map(function (f) { return row(f); }).join('') || '<p class="small muted" style="padding:14px">' + esc(t('No match in the app — see the online results above, or add a custom food.')) + '</p>');
+      clearTimeout(timer);
+      if (q.length >= 3) { onlineState = onlineState === 'loading' ? 'loading' : (s.el.querySelector('#fq').value.trim() === lastQ ? onlineState : 'idle'); timer = setTimeout(function () { startOnline(false); }, 900); }
+      else { searcher = null; onlineItems = []; onlineState = q.length >= 2 ? 'idle' : ''; lastQ = ''; }
+      renderOnline();
+    }
+    var fq = s.el.querySelector('#fq');
+    fq.oninput = render;
+    fq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); startOnline(true); fq.blur(); } };
     s.el.querySelectorAll('#fcats .chip').forEach(function (b) { b.onclick = function () { cat = cat === b.dataset.c ? '' : b.dataset.c; s.el.querySelectorAll('#fcats .chip').forEach(function (x) { x.classList.toggle('on', x.dataset.c === cat); }); render(); }; });
-    s.el.querySelector('#fres').onclick = function (e) { var b = e.target.closest('[data-fid]'); if (!b) return; var fd = App.findFood(b.dataset.fid); if (onPick) { s.close(); onPick(fd); } else App.portionSheet(fd); };
-    render(); setTimeout(function () { var q = s.el.querySelector('#fq'); if (q) q.focus(); }, 60);
+    s.el.onclick = function (e) {
+      var b = e.target.closest('[data-fid]'); if (!b) return;
+      var fd = b.dataset.on ? App.rememberOff(onlineItems.filter(function (f) { return f.id === b.dataset.fid; })[0]) : App.findFood(b.dataset.fid);
+      if (!fd) return;
+      if (onPick) { s.close(); onPick(fd); } else if (b.dataset.on) App.showProduct(fd); else App.portionSheet(fd);
+    };
+    if (App._prefillSearch) { fq.value = App._prefillSearch; App._prefillSearch = ''; render(); startOnline(true); } else render();
+    setTimeout(function () { var q = s.el.querySelector('#fq'); if (q) q.focus(); }, 60);
     return s;
   };
+  App.searchFoodsFor = function (q) { App._prefillSearch = q || ''; return App.foodSearchSheet(); };
   A['food-add'] = function () { App.foodSearchSheet(); };
   A['custom-food'] = function () { App.customFoodSheet(); };
   App.customFoodSheet = function (pre, done) {

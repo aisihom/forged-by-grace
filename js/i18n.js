@@ -526,3 +526,24 @@ window.FBG_I18N = {
 "Verse of the day": "Versículo del día"
 }
 };
+/* v2.3 food search */
+(function (L) {
+  Object.assign(L.nl = L.nl || {}, {
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Zoek in miljoenen producten & merken, bv. kwark, AH pindakaas',
+    'Open Food Facts — millions of products': 'Open Food Facts — miljoenen producten',
+    'Search online for “{q}”': 'Online zoeken naar “{q}”', 'Load more': 'Meer laden', 'Try again': 'Opnieuw proberen',
+    'Nothing online either. Try a shorter word or the brand name.': 'Online ook niets gevonden. Probeer een korter woord of de merknaam.',
+    'That is everything Open Food Facts has.': 'Dat is alles wat Open Food Facts heeft.',
+    'Netherlands first, then Belgium, Germany, France and the rest of the world.': 'Eerst Nederland, dan België, Duitsland, Frankrijk en de rest van de wereld.',
+    'In the app': 'In de app', 'No match in the app — see the online results above, or add a custom food.': 'Niets in de app — bekijk de online resultaten hierboven, of voeg zelf een product toe.',
+    'Open Food Facts is busy — wait a few seconds and tap again.': 'Open Food Facts is druk — wacht een paar seconden en tik opnieuw.',
+    'Search by name': 'Zoek op naam', 'Netherlands': 'Nederland', 'Belgium': 'België', 'Germany': 'Duitsland', 'France': 'Frankrijk', 'World': 'Wereld',
+    'Meat & poultry': 'Vlees & gevogelte', 'Fish, eggs & plant protein': 'Vis, eieren & plantaardig eiwit', 'built-in foods': 'ingebouwde producten'
+  });
+  Object.assign(L.es = L.es || {}, {
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Busca entre millones de alimentos y marcas',
+    'Open Food Facts — millions of products': 'Open Food Facts — millones de productos',
+    'Search online for “{q}”': 'Buscar en línea “{q}”', 'Load more': 'Cargar más', 'Try again': 'Reintentar', 'In the app': 'En la app', 'Search by name': 'Buscar por nombre',
+    'Netherlands first, then Belgium, Germany, France and the rest of the world.': 'Primero Países Bajos, luego Bélgica, Alemania, Francia y el resto del mundo.'
+  });
+})(window.FBG_I18N);

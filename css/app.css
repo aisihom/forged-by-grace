@@ -63,3 +63,9 @@
 ol.steps { padding-left: 20px; margin: 0 0 12px; } ol.steps li { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
 .codebox { display: block; margin-top: 6px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; color: #f1d08b; }
 .suggest svg { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; }
+/* v2.3 online food search */
+.offbox{border:1px solid var(--accent,#c9a24a);border-radius:14px;padding:10px 12px;margin:4px 0 10px;background:rgba(201,162,74,.06)}
+.offbox .row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.offbox .list{margin:6px 0}
+.offbox .btn.block{width:100%;margin:6px 0}
+.offimg{width:40px;height:40px;object-fit:cover;border-radius:8px;margin-right:10px;flex:none;background:#fff}

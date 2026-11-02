@@ -1,6 +1,6 @@
 /* Forged by Grace service worker — offline support. Bump VERSION after changing files. */
-var VERSION = 'fbg-v2.2.0';
-var ASSETS = ['./', './index.html', './intake.html', './config.js', './css/styles.css', './css/app.css', './js/data.js', './js/foods.js', './js/intake-i18n.js', './js/common.js', './js/i18n.js',
+var VERSION = 'fbg-v2.3.0';
+var ASSETS = ['./', './index.html', './intake.html', './config.js', './css/styles.css', './css/app.css', './js/data.js', './js/foods.js', './js/foods-db.js', './js/intake-i18n.js', './js/common.js', './js/i18n.js',
   './js/core.js', './js/views-athlete.js', './js/views-coach.js', './js/scan.js', './js/intake.js', './js/health.js', './vendor/fflate.min.js', './vendor/zxing-reader.js', './vendor/zxing_reader.wasm', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', function (e) {
