@@ -41,3 +41,10 @@ html[data-theme="light"] .sp-card { background: linear-gradient(140deg, #fbf1de,
 html[data-theme="light"] .pet-today { background: linear-gradient(140deg, #fbf1de, #fff 65%); }
 html[data-theme="light"] .sp-bal { color: #8a6420; }
 .pet-today{margin-bottom:12px}
+/* v2.6 rewards */
+.rw { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.rw-item, .rw-req { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.rw-req { flex-wrap: wrap; }
+.rw-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rw-acts { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.rw-code { font: 900 34px/1.2 ui-monospace, Menlo, monospace; letter-spacing: 4px; color: var(--accent); text-align: center; margin: 10px 0; }

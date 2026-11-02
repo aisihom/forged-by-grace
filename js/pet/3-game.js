@@ -82,13 +82,13 @@
   function spCard(g, full) {
     var td = g.daySp[App.today()] || 0;
     return '<div class="card sp-card"><div class="row between"><div><div class="kicker">' + esc(t('Sweatpoints')) + '</div><div class="sp-bal">' + g.sp.toLocaleString(S.lang) + ' <span>SP</span></div><div class="tiny muted">' + esc(t('Earned today')) + ': +' + td + ' / ' + DAY_CAP + (g.streak > 1 ? ' · 🔥 ' + g.streak : '') + '</div></div><div class="sp-coin">SP</div></div>' +
-      (full ? '<div class="sp-soon">🎁 <b>' + esc(t('Rewards coming soon')) + '</b><div class="tiny muted">' + esc(t('Save your Sweatpoints — later you may be able to swap them for real products.')) + '</div></div>' : '') + '</div>';
+      (full && App.rewardsBlock ? App.rewardsBlock() : '') + '</div>';
   }
   function earn(g) {
     var R = App.SP_RULES, rows = [['Daily check-in (open the app)', '+' + R.checkin], ['Steps (6k / 8k / 10k)', '+10 / +20 / +35'], ['Strength workout completed', '+' + R.workout], ['Extra sport session logged (max 2 a day)', '+' + R.sport], ['Food logged (3+ items)', '+' + R.foodLog], ['Day within calories & protein target', '+' + R.onTarget], ['7-day check-in streak', '+' + R.streak7], ['Max per day', DAY_CAP + ' SP']];
     var h = '<div class="card"><b>' + esc(t('How you earn Sweatpoints')) + '</b><div style="margin-top:6px">' + rows.map(function (r) { return '<div class="row between small sp-row"><span>' + esc(t(r[0])) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('') + '</div><p class="tiny muted" style="margin:8px 0 0">' + esc(t('Each thing counts once.')) + '</p></div>';
     return h + '<div class="section"><h2 class="h2" style="font-size:16px">' + esc(t('History')) + '</h2>' + (g.log.length ? '<div class="list">' + g.log.slice(0, 50).map(function (x) {
-      var lab = x.k === 'buy' ? x.l : t(x.l); return '<div class="list-item"><div class="grow"><b>' + esc(lab) + '</b><div class="tiny muted">' + esc(F.fmtDay(x.d)) + '</div></div><b class="' + (x.pts < 0 ? 'muted' : 'sp-plus') + '">' + (x.pts > 0 ? '+' : '') + x.pts + '</b></div>'; }).join('') + '</div>' : '<p class="small muted">' + esc(t('No points yet — open the app daily, walk, train and log your food.')) + '</p>') + '</div>';
+      var lab = (x.k === 'buy' || x.k === 'res' || x.k === 'ret' || x.k === 'redeemed') ? x.l : t(x.l); return '<div class="list-item"><div class="grow"><b>' + esc(lab) + '</b><div class="tiny muted">' + esc(F.fmtDay(x.d)) + '</div></div><b class="' + (x.pts < 0 ? 'muted' : 'sp-plus') + '">' + (x.pts > 0 ? '+' : '') + x.pts + '</b></div>'; }).join('') + '</div>' : '<p class="small muted">' + esc(t('No points yet — open the app daily, walk, train and log your food.')) + '</p>') + '</div>';
   }
   function chooser() {
     var h = '<h2 class="h2">' + esc(t('Choose your animal')) + '</h2><p class="small muted">' + esc(t('Every animal has its own Bible verse. Take good care of it!')) + '</p><div class="pet-choose">';
