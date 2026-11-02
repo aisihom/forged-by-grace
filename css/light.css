@@ -1,0 +1,35 @@
+/* Light theme (white background, gold accent stays). Applied via html[data-theme="light"]. */
+html[data-theme="light"] {
+  --bg: #ffffff; --bg2: #f4f5f7; --card: #ffffff; --card2: #f3f4f6;
+  --line: #e5e7eb; --line2: #d1d5db; --text: #111318; --muted: #4b5563; --dim: #6b7280;
+  --accent: #b8862f; --accent2: #8a6420; --accent-ink: #ffffff;
+  --good: #059669; --warn: #b45309; --bad: #dc2626; --info: #2563eb;
+  --shadow: 0 6px 20px rgba(0,0,0,.08);
+  color-scheme: light;
+}
+html[data-theme="light"] body { background-image: radial-gradient(1200px 500px at 50% -200px, rgba(212,162,76,.10), transparent 60%); }
+html[data-theme="light"] .card, html[data-theme="light"] .stat, html[data-theme="light"] .list-item { box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+html[data-theme="light"] .hero { background: linear-gradient(150deg, #fbf1de 0%, #ffffff 60%); border-color: #ecd9b0; }
+html[data-theme="light"] .hero.rest { background: linear-gradient(150deg, #e8f1fb 0%, #ffffff 60%); border-color: #c9dcf3; }
+html[data-theme="light"] .pill.accent { color: #7a5518; }
+html[data-theme="light"] .pill.good { color: #047857; } html[data-theme="light"] .pill.warn { color: #92400e; }
+html[data-theme="light"] .pill.bad { color: #b91c1c; } html[data-theme="light"] .pill.info { color: #1d4ed8; }
+html[data-theme="light"] .suggest { color: #6b4a12; }
+html[data-theme="light"] .verse p, html[data-theme="light"] .quote { color: #5b4520; }
+html[data-theme="light"] .plain-list, html[data-theme="light"] .focus-area ul { color: #374151; }
+html[data-theme="light"] .crisis { color: #374151; } html[data-theme="light"] pre.summary { color: #1f2937; }
+html[data-theme="light"] .codebox { color: #7a5518; }
+html[data-theme="light"] .rest-bar { background: rgba(255,255,255,.97); }
+html[data-theme="light"] .tabbar { background: rgba(255,255,255,.94) !important; border-color: var(--line) !important; }
+html[data-theme="light"] .log-head, html[data-theme="light"] .screen { background: var(--bg); }
+html[data-theme="light"] .overlay .sheet { background: var(--card); }
+/* Extra sports */
+.wd .sp { font-size: 10px; margin-top: 2px; line-height: 1; min-height: 11px; }
+.sport-chip { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; font-size:11.5px; font-weight:800; background: rgba(96,165,250,.12); border:1px solid rgba(96,165,250,.35); color: var(--info); }
+.day-pick { display:grid; grid-template-columns: repeat(7,1fr); gap:4px; }
+.day-pick button { padding: 9px 0; border-radius:10px; border:1px solid var(--line2); background: var(--bg2); color: var(--muted); font-weight:800; font-size:12px; cursor:pointer; }
+.day-pick button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.sport-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:6px; }
+.sport-grid button { padding:10px 4px; border-radius:12px; border:1px solid var(--line2); background: var(--bg2); color: var(--text); font-weight:700; font-size:12.5px; cursor:pointer; }
+.sport-grid button .e { display:block; font-size:20px; margin-bottom:2px; }
+.sport-grid button.on { border-color: var(--accent); background: rgba(212,162,76,.14); }

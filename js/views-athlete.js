@@ -125,7 +125,7 @@
     // workout hero
     if (!plan) h += '<div class="hero"><p class="kicker">' + esc(t('Training')) + '</p><h2 class="h2">' + esc(t('No training plan yet')) + '</h2><p class="small muted">' + esc(t('Pick a template — you can tweak every exercise.')) + '</p><a class="btn primary" href="#/train">' + esc(t('Choose a plan')) + '</a></div>';
     else {
-      var doneToday = ath.sessions.some(function (s) { return s.date === App.today(); });
+      var doneToday = ath.sessions.some(function (s) { return s.date === App.today() && s.type !== 'sport'; });
       var rest = day.type === 'rest' || day.type === 'active';
       h += '<div class="hero' + (rest ? ' rest' : '') + '"><div class="row between"><p class="kicker" style="margin:0">' + esc(t('Week {w}', { w: wk })) + (App.isDeload(plan) ? ' · ' + esc(t('Deload')) : '') + '</p>' + (doneToday ? '<span class="pill good">' + I.check + esc(t('Done')) + '</span>' : '') + '</div>' +
         '<h2 class="h2" style="margin-top:6px">' + esc(t(day.title)) + '</h2><p class="small muted">' + esc(t(day.focus || '')) + (day.items.length ? ' · ' + day.items.length + ' ' + esc(t('exercises')) : '') + '</p>' +
