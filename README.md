@@ -19,6 +19,7 @@ Aarón can be his own first client on the same phone with the ⇄ switch at the 
 - **Progress**: weight + waist charts, optional progress photos, streaks, daily habits (water, steps, sleep, protein, veg, optional quiet time / prayer).
 - **Mental coaching intake** (`intake.html`, EN/ES/NL) → coaching brief: themes, watch-outs, focus areas, first-session questions, reply draft.
 - Verse of the day (optional), English / Nederlands / Español (Spanish partial in the app, full in the intake).
+- **Health import** (Progress → Garmin / Apple Health): Apple Health export.zip/xml (streamed), Garmin CSV / FIT / TCX / GPX / export zip, and an iPhone Shortcut link (`#health?d=…&steps=…&weight=…&rhr=…&kcal=…`) with Dutch step-by-step help.
 - Backup / restore (JSON file), works offline once loaded (PWA).
 
 ## How sharing works without a server

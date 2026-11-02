@@ -56,7 +56,7 @@
       }
       target.profile = Object.assign({}, target.profile || {}, np);
       if (oid !== 'me') { target.name = np.name; target.email = String(fd.get('email') || '').trim(); target.phone = String(fd.get('phone') || '').replace(/[^\d]/g, ''); }
-      if (oid === 'me' && !target.profile.weightLogged) { target.body.push({ date: App.today(), weight: np.weight }); target.profile.weightLogged = true; }
+      if (oid === 'me' && !target.profile.weightLogged) { target.body.push({ date: App.today(), weight: np.weight, src: 'profile' }); target.profile.weightLogged = true; }
       if (target.meal) { var T = App.calcTargets(target.profile); target.meal.targets = { kcal: T.kcal, p: T.p, c: T.c, f: T.f }; App.fitMeal(target.meal); }
       App.save(); s.close(); if (done) done(target); else App.rerender();
     };
@@ -135,9 +135,12 @@
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Nutrition')) + '</h2><a class="link-btn" href="#/food">' + esc(t('Open')) + '</a></div>' +
       '<div class="card"><div class="row" style="gap:16px">' + '<div style="width:118px;flex:none">' + App.ring(tot.kcal, T.kcal, String(Math.max(0, T.kcal - tot.kcal)), t('kcal left')) + '</div><div class="grow">' + App.macroBars(tot, T) + '</div></div>' +
       '<div class="grid3" style="margin-top:12px"><button class="btn sm" data-act="food-add">' + I.search + esc(t('Search')) + '</button><button class="btn sm" data-act="scan">' + I.barcode + esc(t('Scan')) + '</button><button class="btn sm" data-act="photo">' + I.camera + esc(t('Photo')) + '</button></div></div></div>';
+    // health
+    var hd0 = App.healthDay && App.healthDay();
+    h += '<div class="section"><a class="card tap row health-today" href="#/health"><div class="ex-icon">' + I.heart + '</div><div class="grow"><b>' + (hd0 && hd0.steps != null ? Math.round(hd0.steps).toLocaleString(S.lang) + ' ' + esc(t('steps')) : esc(t('Garmin / Apple Health'))) + '</b><div class="tiny muted">' + (hd0 ? [hd0.rhr ? hd0.rhr + ' bpm ' + esc(t('resting HR')) : '', hd0.kcal != null ? hd0.kcal + ' kcal ' + esc(t('active')) : ''].filter(Boolean).join(' · ') || esc(t('Synced')) : esc(t('Connect')) + ' →') + '</div>' + (hd0 && hd0.steps != null ? '<div class="bar-track" style="margin-top:6px"><div class="bar-fill" style="width:' + Math.min(100, hd0.steps / 80) + '%"></div></div>' : '') + '</div><span class="chev">›</span></a></div>';
     // habits
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Daily habits')) + '</h2><span class="pill accent">' + I.fire + streak + ' ' + esc(t('day streak')) + '</span></div><div class="habits">' + App.habitList(ath).map(function (x) {
-      var on = (ath.habits[App.today()] || {})[x[0]];
+      var hd = App.healthDay && App.healthDay(), on = (ath.habits[App.today()] || {})[x[0]] || (x[0] === 'steps' && hd && hd.steps >= 8000);
       return '<button class="habit' + (on ? ' on' : '') + '" data-act="habit" data-k="' + x[0] + '" aria-pressed="' + !!on + '"><span class="hc">' + (on ? I.check : '') + '</span>' + esc(t(x[1])) + '</button>'; }).join('') + '</div></div>';
     // check-in
     h += '<div class="section"><div class="card row"><div class="grow"><b>' + esc(t('Weekly check-in')) + '</b><div class="small muted">' + esc(ath.checkins.length ? t('Last sent') + ': ' + App.ago(ath.checkins[ath.checkins.length - 1]) : t('Send your progress to your coach')) + '</div></div><button class="btn primary sm" data-act="checkin">' + I.share + esc(t('Send')) + '</button></div></div>';
@@ -160,6 +163,7 @@
       body: ath.body.slice(-12).map(function (b) { return [b.date, b.weight || null, b.waist || null]; }),
       workouts: ath.sessions.filter(function (s) { return s.date >= from; }).map(function (s) { return [s.date, s.title, App.doneSetsCount(s), Math.round(s.dur / 60), (s.prs || []).length]; }),
       food: days, habits: Object.keys(ath.habits).filter(function (d) { return d >= from; }).map(function (d) { var h = ath.habits[d]; return [d, Object.keys(h).filter(function (k) { return h[k]; }).length]; }),
+      health: Object.keys((ath.health && ath.health.days) || {}).filter(function (d) { return d >= from; }).sort().map(function (d) { var x = ath.health.days[d]; return [d, x.steps == null ? null : Math.round(x.steps), x.rhr || null, x.kcal == null ? null : Math.round(x.kcal)]; }),
       adh: { train: ad.train, food: ad.food, overall: ad.overall, done: ad.done, planned: ad.planned, logged: ad.logged }, streak: App.streak(ath) };
   };
   App.doneSetsCount = function (s) { return s.items.reduce(function (a, it) { return a + App.doneSets(it).length; }, 0); };
@@ -299,7 +303,7 @@
   V.train = function () {
     var ath = me(), plan = ath.plan;
     var h = App.header(t('Train'));
-    if (!plan) return h + App.templatePicker('me');
+    if (!plan) return h + App.templatePicker('me') + App.historyHtml(ath);
     var wk = App.planWeek(plan), ti = App.dayIndex();
     h += '<div class="card"><div class="row between"><div><p class="kicker" style="margin:0">' + esc(t('Week {w} of {n}', { w: Math.min(wk, plan.weeks), n: plan.weeks })) + '</p><h2 class="h2" style="margin:4px 0 0">' + esc(plan.name) + '</h2></div><a class="btn sm" href="#/plan/me">' + I.edit + esc(t('Edit')) + '</a></div>' +
       '<p class="tiny muted" style="margin:8px 0 0">' + esc(t(App.PROGRESSIONS[plan.progression] || '')) + '</p></div>';
@@ -315,8 +319,12 @@
     var prs = App.prList(ath);
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Personal records')) + '</h2></div>' + (prs.length ? '<div class="list">' + prs.slice(0, 8).map(function (p) { return '<div class="list-item"><div class="ex-icon">' + I.trophy + '</div><div class="grow"><b>' + esc(p.name) + '</b><div class="tiny muted">' + esc(F.fmtDay(p.date)) + '</div></div><b>' + p.w + ' kg × ' + p.r + '</b></div>'; }).join('') + '</div>' : '<p class="small muted">' + esc(t('Finish a workout and your best lifts show up here.')) + '</p>') + '</div>';
     h += '<div class="section"><div class="grid2"><button class="btn" data-act="ex-library">' + I.search + esc(t('Exercise library')) + '</button><button class="btn" data-act="change-plan" data-o="me">' + I.plans + esc(t('Change plan')) + '</button></div></div>';
-    if (ath.sessions.length) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('History')) + '</h2></div><div class="list">' + ath.sessions.slice(-6).reverse().map(function (s) { return '<div class="list-item"><div class="grow"><b>' + esc(t(s.title)) + '</b><div class="tiny muted">' + esc(F.fmtDay(s.date)) + ' · ' + Math.round(s.dur / 60) + ' min · ' + App.doneSetsCount(s) + ' ' + esc(t('sets')) + '</div></div>' + ((s.prs || []).length ? '<span class="pill accent">' + I.trophy + s.prs.length + ' PR</span>' : '') + '</div>'; }).join('') + '</div></div>';
+    if (ath.sessions.length) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('History')) + '</h2></div><div class="list">' + ath.sessions.slice(-6).reverse().map(function (s) { return '<div class="list-item"><div class="grow"><b>' + esc(t(s.title)) + '</b><div class="tiny muted">' + esc(F.fmtDay(s.date)) + ' · ' + Math.round(s.dur / 60) + ' min · ' + (s.ext ? [s.ext.dist ? s.ext.dist + ' km' : '', s.ext.kcal ? s.ext.kcal + ' kcal' : '', s.ext.hr ? s.ext.hr + ' bpm' : '', s.ext.src].filter(Boolean).join(' / ') : App.doneSetsCount(s) + ' ' + esc(t('sets'))) + '</div></div>' + ((s.prs || []).length ? '<span class="pill accent">' + I.trophy + s.prs.length + ' PR</span>' : '') + '</div>'; }).join('') + '</div></div>';
     return h;
+  };
+  App.historyHtml = function (ath) {
+    if (!ath.sessions.length) return '';
+    return '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('History')) + '</h2></div><div class="list">' + ath.sessions.slice(-8).reverse().map(function (s) { return '<div class="list-item"><div class="grow"><b>' + esc(t(s.title)) + '</b><div class="tiny muted">' + esc(F.fmtDay(s.date)) + ' · ' + Math.round(s.dur / 60) + ' min · ' + (s.ext ? [s.ext.dist ? s.ext.dist + ' km' : '', s.ext.kcal ? s.ext.kcal + ' kcal' : '', s.ext.hr ? s.ext.hr + ' bpm' : '', s.ext.src].filter(Boolean).join(' · ') : App.doneSetsCount(s) + ' ' + esc(t('sets'))) + '</div></div>' + ((s.prs || []).length ? '<span class="pill accent">' + I.trophy + s.prs.length + ' PR</span>' : '') + '</div>'; }).join('') + '</div></div>';
   };
   App.prList = function (ath) {
     var best = {};
@@ -444,6 +452,11 @@
     if (wa.length) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Waist')) + '</h2></div><div class="card">' + App.lineChart(wa.map(function (b) { return { x: b.date, y: b.waist }; })) + '</div></div>';
     var ad = App.adherence(ath, 7);
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Last 7 days')) + '</h2></div><div class="grid3"><div class="stat"><div class="v">' + ad.done + '/' + ad.planned + '</div><div class="l">' + esc(t('workouts')) + '</div></div><div class="stat"><div class="v">' + ad.logged + '/7</div><div class="l">' + esc(t('days food logged')) + '</div></div><div class="stat"><div class="v">' + App.pct(ad.overall) + '</div><div class="l">' + esc(t('adherence')) + '</div></div></div></div>';
+    var hh = (ath.health && ath.health.days) || {}, sb = [], ssum = 0, sn = 0, rh = [];
+    for (var si = 6; si >= 0; si--) { var sd = App.isoAdd(App.today(), -si), sx = hh[sd] || {}; sb.push({ l: F.parseISO(sd).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: sx.steps || 0, hi: si === 0 }); if (sx.steps) { ssum += sx.steps; sn++; } }
+    Object.keys(hh).sort().slice(-30).forEach(function (d) { if (hh[d].rhr) rh.push({ x: d, y: hh[d].rhr }); });
+    h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Steps')) + '</h2><a class="btn sm" href="#/health">' + I.heart + esc(t('Garmin / Apple Health')) + '</a></div>' + (sn ? '<div class="card">' + App.barChart(sb, 8000) + '<p class="tiny muted" style="margin:6px 0 0">' + esc(t('avg steps')) + ': ' + Math.round(ssum / sn).toLocaleString(S.lang) + '</p></div>' : '<p class="small muted">' + esc(t('Steps, weight, resting heart rate and active calories from Apple Health — one tap or automatic every day.')) + '</p>') + '</div>';
+    if (rh.length > 1) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('resting HR')) + '</h2></div><div class="card">' + App.lineChart(rh) + '</div></div>';
     var photos = body.filter(function (b) { return b.photo; });
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Progress photos')) + '</h2><span class="tiny muted">' + esc(t('optional · stay on this phone')) + '</span></div>' + (photos.length ? '<div class="photo-grid">' + photos.slice(-6).map(function (b) { return '<figure><img src="' + esc(b.photo) + '" alt=""><figcaption>' + esc(F.fmtDate(b.date, { day: 'numeric', month: 'short' })) + '</figcaption></figure>'; }).join('') + '</div>' : '<p class="small muted">' + esc(t('Add a photo when you log your weight to see the change over time.')) + '</p>') + '</div>';
     if (body.length) h += '<div class="section"><div class="list">' + body.slice(-8).reverse().map(function (b) { return '<div class="list-item"><div class="grow"><b>' + esc(F.fmtDay(b.date)) + '</b></div><span class="small">' + (b.weight ? b.weight + ' kg' : '') + (b.waist ? ' · ' + b.waist + ' cm' : '') + '</span></div>'; }).join('') + '</div></div>';

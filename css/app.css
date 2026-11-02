@@ -58,3 +58,8 @@
 .cam video { display: block; background: #000; }
 .cam-torch { position: absolute; right: 10px; bottom: 10px; z-index: 2; } .cam-torch.on { background: var(--accent); color: var(--accent-ink); }
 .cam-status { margin: 8px 0 0; min-height: 20px; }
+.hcard .plain-list { margin-top: 10px; } .hcard + .hcard { margin-top: 12px; }
+.health-today { text-decoration: none; color: inherit; }
+ol.steps { padding-left: 20px; margin: 0 0 12px; } ol.steps li { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
+.codebox { display: block; margin-top: 6px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; color: #f1d08b; }
+.suggest svg { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; }

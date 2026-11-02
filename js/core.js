@@ -503,13 +503,14 @@
   App.route = function () {
     var h = location.hash || '';
     if (h.indexOf('#imp=') === 0) { App.views.importLink(h.slice(5)); return; }
+    if (h.indexOf('#health') === 0 && App.applyHealthLink) { App.applyHealthLink(h); return; }
     var parts = h.replace(/^#\/?/, '').split('/'), name = parts[0], arg = parts.slice(1).join('/');
     var view = document.getElementById('view');
     if (!S.role) { App.renderTabs(''); view.innerHTML = App.views.welcome(); App.bind(view); return; }
     var def = S.role === 'coach' ? 'clients' : 'today';
-    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal'];
+    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more', 'health'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal', 'health'];
     if (allowed.indexOf(name) === -1 || !App.views[name]) name = def;
-    var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food' }[name] || name;
+    var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food', health: S.role === 'coach' ? 'more' : 'progress' }[name] || name;
     App.renderTabs(tab);
     var keep = App._keep; App._keep = false; var y = window.scrollY;
     view.innerHTML = App.views[name](arg);
