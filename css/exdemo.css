@@ -6,7 +6,7 @@
 .exd-la { animation: exdA 3.2s ease-in-out infinite; position: absolute; left: 0; bottom: 0; white-space: nowrap; }
 .exd-lb { animation: exdFade 3.2s ease-in-out infinite; position: absolute; left: 0; bottom: 0; white-space: nowrap; }
 .exd-pp { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(212,175,55,.6); background: rgba(0,0,0,.6); color: #d4af37; font-size: 12px; }
-.exd-fig.paused .exd-b, .exd-fig.paused .exd-la, .exd-fig.paused .exd-lb { animation-play-state: paused; }
+.exd-fig.paused img, .exd-fig.paused .exd-lbl span { animation-play-state: paused; }
 @keyframes exdFade { 0%, 35% { opacity: 0; } 50%, 85% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes exdA { 0%, 35% { opacity: 1; } 50%, 85% { opacity: 0; } 100% { opacity: 1; } }
 .exd-map { display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 16px; background: var(--card, rgba(255,255,255,.03)); border: 1px solid var(--line2); }
@@ -30,3 +30,14 @@ html[data-theme="light"] .mm-base { fill: #e4e1da; } html[data-theme="light"] .m
 body.rest-flash::after { content: ''; position: fixed; inset: 0; z-index: 44; pointer-events: none; background: rgba(212,175,55,.35); animation: restFlash 1.6s ease-out forwards; }
 @keyframes restPulse { 50% { transform: translateY(-4px); filter: brightness(1.15); } }
 @keyframes restFlash { 0%, 30%, 60% { opacity: 1; } 15%, 45% { opacity: .2; } 100% { opacity: 0; } }
+
+.exd-3 .exd-b { animation: exd3b 4.8s ease-in-out infinite; } .exd-3 .exd-c { animation: exd3c 4.8s ease-in-out infinite; }
+.exd-l1, .exd-l2, .exd-l3 { position: absolute; left: 0; bottom: 0; }
+.exd-l1 { animation: exd3a 4.8s ease-in-out infinite; } .exd-l2 { animation: exd3b 4.8s ease-in-out infinite; } .exd-l3 { animation: exd3c 4.8s ease-in-out infinite; }
+@keyframes exd3a { 0%, 25% { opacity: 1; } 33%, 92% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes exd3b { 0%, 25% { opacity: 0; } 33%, 58% { opacity: 1; } 66%, 100% { opacity: 0; } }
+@keyframes exd3c { 0%, 58% { opacity: 0; } 66%, 92% { opacity: 1; } 100% { opacity: 0; } }
+/* polish */
+.exd-fig { box-shadow: 0 6px 24px rgba(0,0,0,.45); border-color: rgba(212,175,55,.35); }
+.exd-map { margin-bottom: 4px; }
+.exd-m { margin: 0; } .exd-h { border-top: 1px solid var(--line2); padding-top: 12px; }
