@@ -1,0 +1,43 @@
+/* v2.5 — My Pet + Sweatpoints */
+.pet-card { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line2); background: var(--card); margin-bottom: 12px; }
+.pet-scene { display: block; width: 100%; height: auto; }
+.pet-name { padding: 10px 14px; }
+.pet-bob { animation: petbob 3.2s ease-in-out infinite; }
+@keyframes petbob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.pet-alert { border-radius: 14px; padding: 11px 14px; font-size: 14px; margin-bottom: 12px; border: 1px solid var(--line2); }
+.pet-alert.good { background: rgba(52,211,153,.10); border-color: rgba(52,211,153,.35); }
+.pet-alert.warn { background: rgba(251,191,36,.12); border-color: rgba(251,191,36,.45); }
+.pet-alert.bad { background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.45); }
+.warn-t { color: var(--warn); font-weight: 700; } .bad-t { color: var(--bad); font-weight: 700; }
+.pet-stats { display: grid; gap: 8px; }
+.sp-card { background: linear-gradient(140deg, rgba(212,162,76,.18), var(--card) 60%); border-color: rgba(212,162,76,.45); }
+.sp-bal { font-family: var(--display); font-size: 30px; font-weight: 900; color: var(--accent2); line-height: 1.1; }
+.sp-bal span { font-size: 14px; color: var(--accent); }
+.sp-bal.sm { font-size: 14px; display: inline; } .sp-bal.sm span { font-size: 11px; }
+.sp-coin { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #1a0b03; background: radial-gradient(circle at 35% 30%, #fbe3a6, #d4a24c 60%, #9a6d21); box-shadow: 0 6px 18px rgba(212,162,76,.35); }
+.sp-soon { margin-top: 10px; padding: 9px 12px; border-radius: 12px; border: 1px dashed rgba(212,162,76,.5); font-size: 13px; }
+.sp-row { padding: 7px 0; border-bottom: 1px solid var(--line); } .sp-row b, .sp-plus { color: var(--accent); }
+.pet-seg { margin: 14px 0 12px; } .pet-seg button { font-size: 12.5px; padding: 9px 2px; }
+.pet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pet-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; padding: 10px 6px; border-radius: 14px; border: 1px solid var(--line2); background: var(--card); color: var(--text); cursor: pointer; font-size: 12px; line-height: 1.2; }
+.pet-item b { font-size: 12px; } .pet-item .pe { font-size: 28px; line-height: 1.1; }
+.pet-item .pi-svg { width: 100%; height: 54px; }
+.pet-item .price { margin-top: auto; font-weight: 800; color: var(--accent); font-size: 12px; padding-top: 3px; }
+.pet-item.own { border-color: rgba(212,162,76,.45); } .pet-item.on { border-color: var(--accent); background: rgba(212,162,76,.14); }
+.pet-item:active, .pet-home:active, .pet-opt:active { transform: scale(.97); }
+.pet-homes { display: grid; gap: 10px; }
+.pet-home { padding: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--line2); background: var(--card); color: var(--text); text-align: left; cursor: pointer; }
+.pet-home .pet-scene { height: 110px; object-fit: cover; } .pet-home svg { width: 100%; height: 110px; }
+.pet-home .ph-meta { padding: 9px 12px; } .pet-home .price { font-weight: 800; color: var(--accent); font-size: 13px; }
+.pet-home.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,162,76,.35); }
+.pet-choose { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+.pet-opt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border-radius: 16px; border: 1px solid var(--line2); background: var(--card); color: var(--text); cursor: pointer; }
+.pet-opt svg { width: 100%; height: 120px; } .pet-opt b { font-size: 15px; }
+.pet-today { text-decoration: none; color: inherit; display: block; background: linear-gradient(140deg, rgba(212,162,76,.14), var(--card) 65%); }
+.pt-mini { width: 62px; height: 70px; flex: none; } .pt-mini.dead { filter: grayscale(1); opacity: .7; }
+.pt-bars { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; margin-top: 6px; }
+.pt-bars i { display: block; height: 6px; border-radius: 4px; min-width: 2px; }
+html[data-theme="light"] .sp-card { background: linear-gradient(140deg, #fbf1de, #fff 60%); }
+html[data-theme="light"] .pet-today { background: linear-gradient(140deg, #fbf1de, #fff 65%); }
+html[data-theme="light"] .sp-bal { color: #8a6420; }
+.pet-today{margin-bottom:12px}

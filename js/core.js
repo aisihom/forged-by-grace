@@ -510,9 +510,9 @@
     var view = document.getElementById('view');
     if (!S.role) { App.renderTabs(''); view.innerHTML = App.views.welcome(); App.bind(view); return; }
     var def = S.role === 'coach' ? 'clients' : 'today';
-    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more', 'health'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal', 'health'];
+    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more', 'health'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal', 'health', 'pet'];
     if (allowed.indexOf(name) === -1 || !App.views[name]) name = def;
-    var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food', health: S.role === 'coach' ? 'more' : 'progress' }[name] || name;
+    var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food', health: S.role === 'coach' ? 'more' : 'progress', pet: 'today' }[name] || name;
     App.renderTabs(tab);
     var keep = App._keep; App._keep = false; var y = window.scrollY;
     view.innerHTML = App.views[name](arg);
@@ -533,7 +533,7 @@
     var fn = App.acts[el.getAttribute('data-act')]; if (!fn) return;
     e.preventDefault(); fn(el, e);
   });
-  window.addEventListener('hashchange', App.route);
+  window.addEventListener('hashchange', function () { App.route(); });
   window.addEventListener('DOMContentLoaded', function () {
     document.documentElement.lang = S.lang;
     App.route();
