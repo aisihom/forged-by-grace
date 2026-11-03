@@ -29,17 +29,25 @@
       var fw = ci && ci.body && ci.body.length > 1 ? ci.body[0][1] : null, dl = fw && w ? App.r1(w - fw) : null;
       return '<a class="list-item client-row" href="#/client/' + c.id + '" data-name="' + esc(c.name.toLowerCase()) + '"><div class="avatar">' + esc(App.initials(c.name)) + (c.unread ? '<i class="unread"></i>' : '') + '</div><div class="grow"><div class="row between"><b class="ell">' + esc(c.name) + '</b><span class="pill ' + st[0] + '">' + (ci && ci.adh ? App.pct(ci.adh.overall) : '—') + '</span></div>' +
         '<div class="tiny muted ell"><span class="dot ' + st[0] + '"></span> ' + esc(st[1]) + ' · ' + esc(t('check-in')) + ': ' + esc(ci ? App.ago(ci.at) : t('never')) + (w ? ' · ' + w + ' kg' : '') + (dl != null ? ' (' + (dl > 0 ? '+' : '') + dl + ')' : '') + '</div></div></a>'; }).join('') + '</div>';
-    h += '<div class="section"><button class="btn block" data-act="paste-import">' + I.link + esc(t('Open a check-in (paste link or file)')) + '</button></div>';
+    h += '<div class="section"><button class="btn block" data-act="client-code" style="margin-bottom:8px">' + I.link + esc(t('Add client via code/link')) + '</button><button class="btn block" data-act="paste-import">' + I.link + esc(t('Open a check-in (paste link or file)')) + '</button></div>';
     setTimeout(function () { var q = document.getElementById('cq'); if (q) q.oninput = function () { var v = q.value.toLowerCase(); document.querySelectorAll('.client-row').forEach(function (r) { r.hidden = r.dataset.name.indexOf(v) === -1; }); }; });
     return h;
   };
   A.go = function (el) { App.go(el.dataset.p); };
-  A['client-new'] = function () { App.profileSheet('new', function (c) { App.go('client/' + c.id); }); };
+  A['client-new'] = function () {
+    var s = App.sheet(App.sheetHead(t('New client')) + '<button class="btn primary lg block" id="cn-code">' + I.link + esc(t('Add client via code/link')) + '</button><button class="btn lg block" id="cn-man" style="margin-top:10px">' + I.plus + esc(t('Enter manually')) + '</button>');
+    s.el.querySelector('#cn-code').onclick = function () { s.close(); A['client-code'](); };
+    s.el.querySelector('#cn-man').onclick = function () { s.close(); App.profileSheet('new', function (c) { App.go('client/' + c.id); }); };
+  };
+  A['client-code'] = function () {
+    var s = App.sheet(App.sheetHead(t('Add client via code/link'), t('Paste the code or link you received from your assistant.')) + '<textarea class="input mono" id="cc" rows="5" placeholder="fbg:…"></textarea><button class="btn primary lg block" id="ccgo" style="margin-top:12px">' + esc(t('Add client')) + '</button>');
+    s.el.querySelector('#ccgo').onclick = function () { var cl = App.parseClientText(s.el.querySelector('#cc').value); if (!cl) { App.toast(t('That is not a Forged by Grace link or code.')); return; } s.close(); App.openClientFile(cl.slug, true, cl.priv); };
+  };
   A['paste-import'] = function () {
     var s = App.sheet(App.sheetHead(t('Open link or file'), t('Paste a Forged by Grace link/code, or choose a .fbg.json file.')) + '<textarea class="input mono" id="pi" placeholder="https://…#imp=…"></textarea><input type="file" class="input" id="pif" accept=".json,.txt,application/json" style="margin-top:10px"><button class="btn primary lg block" id="pigo" style="margin-top:12px">' + esc(t('Open')) + '</button>');
     s.el.querySelector('#pigo').onclick = function () {
       var f = s.el.querySelector('#pif').files[0];
-      (f ? f.text() : Promise.resolve(s.el.querySelector('#pi').value)).then(App.decode).then(function (obj) { s.close(); App.showImport(obj); }).catch(function (e) { App.toast(e.message || t('Could not read that.')); });
+      (f ? f.text() : Promise.resolve(s.el.querySelector('#pi').value)).then(function (txt) { var cl = App.parseClientText && App.parseClientText(txt); if (cl) { s.close(); App.openClientFile(cl.slug, S.role === 'coach' || cl.coach, cl.priv); throw { handled: 1 }; } return App.decode(txt); }).then(function (obj) { s.close(); App.showImport(obj); }).catch(function (e) { if (e && e.handled) return; App.toast(e.message || t('Could not read that.')); });
     };
   };
 

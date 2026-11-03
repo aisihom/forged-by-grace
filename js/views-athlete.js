@@ -104,14 +104,20 @@
   // ---------------- client setup files (clients/<slug>.json, made from an intake) ----------------
   // ?client=<slug>          → client's phone: "Start my plan" (same as an assign link)
   // ?client=<slug>&coach=1  → coach's phone: adds/updates the client in the coach list
-  App.openClientFile = function (slug, asCoach) {
+  // parse a pasted link / code: full link, or "fbg:<slug>:<privcode>"
+  App.parseClientText = function (txt) {
+    txt = String(txt || '').trim(); var m = txt.match(/client=([a-z0-9-]{2,40})/i) || txt.match(/^fbg:([a-z0-9-]{2,40})/i); if (!m) return null;
+    var pm = txt.match(/[#&]p=([A-Za-z0-9_-]+)/) || txt.match(/^fbg:[a-z0-9-]+:([A-Za-z0-9_-]+)/i);
+    return { slug: m[1].toLowerCase(), priv: pm ? pm[1] : null, coach: /coach=1/.test(txt) };
+  };
+  App.openClientFile = function (slug, asCoach, privCode) {
     var view = document.getElementById('view');
     App.renderTabs(''); var tb = document.querySelector('.tabbar'); if (tb) tb.hidden = true;
     view.innerHTML = '<div class="welcome"><div class="logo-xl">' + App.LOGO + '</div><p class="center muted">' + esc(t('Opening…')) + '</p></div>';
     // private part (weight, health notes) travels only in the link's #p= hash — never stored in the public repo
-    var pm = (location.hash || '').match(/[#&]p=([A-Za-z0-9_-]+)/), priv = {};
+    var pm = privCode ? [0, privCode] : (location.hash || '').match(/[#&]p=([A-Za-z0-9_-]+)/), priv = {};
     history.replaceState(null, '', location.pathname + '#/');
-    (pm ? App.decode(pm[1]).catch(function () { return {}; }) : Promise.resolve({})).then(function (p) { priv = p || {}; return fetch('clients/' + slug + '.json', { cache: 'no-store' }); }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
+    (pm ? App.decode('z' === pm[1][0] || 'j' === pm[1][0] ? pm[1] : pm[1]).catch(function () { return {}; }) : Promise.resolve({})).then(function (p) { priv = p || {}; return fetch('clients/' + slug + '.json?t=' + Date.now(), { cache: 'no-store' }); }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
       obj.client.profile = Object.assign({}, obj.client.profile || {}, priv.profile || {});
       if (priv.msg) obj.msg = (obj.msg ? obj.msg + '\n\n' : '') + priv.msg;
       if (priv.coachNotes) obj.coachNotes = priv.coachNotes;
@@ -131,8 +137,8 @@
       if (obj.coachNotes && (c.notes || '').indexOf(obj.coachNotes.slice(0, 40)) === -1) c.notes = obj.coachNotes + (c.notes ? '\n\n' + c.notes : '');
       if (obj.flags) c.flags = obj.flags.slice();
       c.setupSlug = slug; c.sharedAt = c.sharedAt || new Date().toISOString();
-      App.save(); App.toast(t('Client added: {n}', { n: c.name }));
-      location.hash = '#/client/' + c.id;
+      App.save(); App.toast('✅ ' + t('Client added: {n}', { n: c.name })); if (tb) tb.hidden = false;
+      location.hash = '#/client/' + c.id; App.route();
     }).catch(function (err) {
       view.innerHTML = '<div class="welcome">' + App.empty('x', t('Could not open this link'), (err && err.message) || '', '<a class="btn" href="./">' + esc(t('Go to app')) + '</a>') + '</div>';
     });
