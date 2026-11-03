@@ -63,8 +63,8 @@
   function applyPlan(row) {
     var me = S.me, stamp = row.updated_at || '';
     if (me.cloudPlanAt === stamp) return;
-    if (row.plan && (!me.plan || me.cloudPlanAt)) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); }
-    if (row.meal && (!me.meal || me.cloudPlanAt)) me.meal = row.meal;
+    if (row.plan && true) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); }
+    if (row.meal && true) me.meal = row.meal;
     if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride) });
     if (!me.coach) me.coach = { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };
     me.cid = row.id; me.cloudPlanAt = stamp;
@@ -123,7 +123,10 @@
     var c = S.clients.filter(function (x) { return x.cloudId === id || (row.slug && x.setupSlug === row.slug) || x.id === id; })[0];
     if (!c) { c = { id: id, name: row.name, created: row.created_at, checkins: [], profile: row.profile || {} }; S.clients.push(c); }
     c.cloudId = id; c.email = row.email; c.cloudNotes = row.notes || ''; c.cloudStatus = row.status; c.name = row.name || c.name;
-    if (!c.plan && row.plan) c.plan = row.plan; if (!c.meal && row.meal) c.meal = row.meal;
+    var dirty = c._pj && JSON.stringify([c.plan || null, c.meal || null]) !== c._pj;
+    if (!dirty && (!c._cat || (row.updated_at || '') > c._cat)) { if (row.plan) c.plan = row.plan; if (row.meal) c.meal = row.meal; }
+    else { if (!c.plan && row.plan) c.plan = row.plan; if (!c.meal && row.meal) c.meal = row.meal; }
+    c._cat = row.updated_at || c._cat;
     c._pj = JSON.stringify([c.plan || null, c.meal || null]);
     var live = {}; Object.keys(d).forEach(function (k) { live[k] = d[k].data; });
     c.live = { at: Object.keys(d).reduce(function (a, k) { return d[k].updated_at > a ? d[k].updated_at : a; }, ''), d: live };
