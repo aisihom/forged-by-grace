@@ -140,6 +140,8 @@
     if (hasWa) btns += '<a class="btn ' + (hasEmail ? '' : 'primary ') + 'lg block" id="send-wa" target="_blank" rel="noopener" href="' + esc(waHref(p)) + '">' + ICON.wa + esc(t('sendWhatsApp')) + '</a>';
     if (navigator.share) btns += '<button class="btn block" data-act="share">' + ICON.share + esc(t('share')) + '</button>';
     btns += '<div class="grid2"><button class="btn" data-act="download">' + ICON.dl + esc(t('download')) + '</button><button class="btn" data-act="copy">' + ICON.copy + '<span>' + esc(t('copy')) + '</span></button></div>';
+    var jt = ''; try { jt = !localStorage.getItem('fbg.joined') && localStorage.getItem('fbg.join'); } catch (e) {}
+    if (jt) btns = '<a class="btn primary lg block" id="join-next" href="index.html#/join">' + esc(state.lang === 'nl' ? 'Ga verder: account aanmaken →' : 'Continue: create account →') + '</a>';
     return header() +
       '<div class="center" style="margin-top:10px"><div class="success-ring">' + ICON.check + '</div>' +
       '<h1 class="h1" tabindex="-1" id="step-title">' + esc(t('thanksTitle', { name: name })) + '</h1>' +

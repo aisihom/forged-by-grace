@@ -23,6 +23,8 @@
 
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
   var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; } };
+  C.restart = function () { role = null; myClient = null; return start(); };
+  C.user = function () { return user; }; C.role = function () { return role; };
 
   function load() {
     if (loading) return loading;
@@ -120,7 +122,7 @@
     var row = rows[id]; if (!row) return; var d = data[id] || {};
     var c = S.clients.filter(function (x) { return x.cloudId === id || (row.slug && x.setupSlug === row.slug) || x.id === id; })[0];
     if (!c) { c = { id: id, name: row.name, created: row.created_at, checkins: [], profile: row.profile || {} }; S.clients.push(c); }
-    c.cloudId = id; c.email = row.email; c.cloudStatus = row.status; c.name = row.name || c.name;
+    c.cloudId = id; c.email = row.email; c.cloudNotes = row.notes || ''; c.cloudStatus = row.status; c.name = row.name || c.name;
     if (!c.plan && row.plan) c.plan = row.plan; if (!c.meal && row.meal) c.meal = row.meal;
     c._pj = JSON.stringify([c.plan || null, c.meal || null]);
     var live = {}; Object.keys(d).forEach(function (k) { live[k] = d[k].data; });

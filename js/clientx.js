@@ -101,6 +101,7 @@
     var s = App.sheet(App.sheetHead(t('Paste your code'), t('Paste the link or code from your coach (or your export code).')) + '<textarea class="input mono" id="hc" rows="5" placeholder="fbg-client:…"></textarea><p class="tiny" id="hce" style="color:var(--bad,#e66);min-height:1em"></p><button class="btn primary lg block" id="hcgo">' + esc(t('Open')) + '</button>');
     s.el.querySelector('#hcgo').onclick = function () {
       var txt = s.el.querySelector('#hc').value, e = s.el.querySelector('#hce'), clean = txt.replace(/\s+/g, '');
+      var jm = clean.match(/(?:[?&]join=|^JOIN-?)([a-z0-9]{6,12})/i); if (jm && App.startJoin) { s.close(); App.startJoin(jm[1]); return; }
       if (/^fbg-all:/i.test(clean)) { App.decode(clean).then(function (o) { s.close(); App.showImport(o); }).catch(function () { e.textContent = t('That is not a Forged by Grace link or code.'); }); return; }
       if (/^fbg-move:/i.test(clean)) {
         App.decodeMove(clean).then(function (o) { if (!o || o.t !== 'move' || !o.me) throw 0; S.me = App.S.me = o.me; S.role = 'athlete'; if (o.lang) S.lang = o.lang; App.save(); try { sessionStorage.setItem('fbg.unlocked', '1'); } catch (x) {} s.close(); location.hash = '#/today'; App.route(); App.toast('✅ ' + t('Your data has been moved')); })
