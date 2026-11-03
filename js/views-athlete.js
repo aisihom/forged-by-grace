@@ -470,13 +470,14 @@
 
   // ---------------- Workout logger ----------------
   var W = null, restT = null;
+  App.getW = function () { return W; };
   A['start-workout'] = function (el) {
     App.closeSheets();
     var ath = me(), i = +el.dataset.day, d = App.dayOf(ath.plan, i);
-    W = { id: F.uid(), date: App.today(), day: i, title: d.title, type: d.type, startedAt: Date.now(), items: d.items.map(function (it) {
+    W = { id: F.uid(), date: App.today(), day: i, title: d.title, type: d.type, startedAt: Date.now(), items: d.items.map(function (it, pi) {
       var sug = App.suggest(ath, it, ath.plan), last = App.lastFor(ath, it.ex), ex = D.BY_ID[it.ex] || {};
       var reps = parseInt(String(it.reps).split('-')[0], 10) || 10;
-      return { ex: it.ex, target: it, sug: sug, sets: Array.from({ length: it.sets }, function (_, k) {
+      return { ex: it.ex, pi: pi, target: it, sug: sug, sets: Array.from({ length: it.sets }, function (_, k) {
         var ls = last && last.sets[k];
         return { w: sug ? sug.w : (ls ? ls.w : ''), r: ex.track === 'weight' || ex.track === 'reps' ? '' : reps, ph: ls ? ls.r : reps, done: false }; }) };
     }) };
@@ -490,11 +491,11 @@
       W.items.map(function (it, ii) {
         var ex = D.BY_ID[it.ex] || { name: it.ex, track: 'weight' }, tw = ex.track === 'weight', unit = ex.track === 'time' ? 's' : ex.track === 'min' ? 'min' : t('reps');
         var complete = it.sets.every(function (s) { return s.done; });
-        return '<div class="ex-card' + (complete ? ' complete' : '') + '"><div class="row between"><div><b>' + esc(ex.name) + '</b><div class="tiny muted">' + it.target.sets + ' × ' + esc(it.target.reps) + ' ' + esc(unit) + ' · RPE ' + it.target.rpe + ' · ' + esc(t('rest')) + ' ' + it.target.rest + 's</div></div><button class="icon-btn" data-act="w-info" data-ex="' + it.ex + '" aria-label="info">?</button></div>' +
+        return '<div class="ex-card' + (complete ? ' complete' : '') + '"><div class="row between"><div><b>' + esc(ex.name) + '</b><div class="tiny muted">' + it.target.sets + ' × ' + esc(it.target.reps) + ' ' + esc(unit) + ' · RPE ' + it.target.rpe + ' · ' + esc(t('rest')) + ' ' + it.target.rest + 's</div></div><div class="row" style="gap:6px"><button class="btn sm" data-act="w-swap" data-i="' + ii + '">🔄 ' + esc(t('Swap exercise')) + '</button><button class="icon-btn" data-act="w-info" data-ex="' + it.ex + '" aria-label="info">?</button></div></div>' +
           (it.sug ? '<div class="suggest">' + esc(t('Try')) + ' <b>' + it.sug.w + ' kg</b> — ' + esc(it.sug.why) + '</div>' : '') +
-          '<div class="set-head' + (tw ? '' : ' two') + '"><span>' + esc(t('Set')) + '</span>' + (tw ? '<span>kg</span>' : '') + '<span>' + esc(unit) + '</span>' + (tw ? '<span>' + esc(t('Last')) + '</span>' : '') + '<span></span></div>' +
+          '<div class="set-head' + (tw ? '' : ' two') + '"><span>' + esc(t('Set')) + '</span>' + (tw ? '<span>kg</span>' : '') + '<span>' + esc(unit) + '</span>' + (tw ? '<span>' + esc(t('Last')) + '</span>' : '') + '<span></span><span></span></div>' +
           it.sets.map(function (s, si) {
-            return '<div class="set-row' + (tw ? '' : ' two') + (s.done ? ' done' : '') + '"><span class="n">' + (si + 1) + '</span>' + (tw ? '<input inputmode="decimal" aria-label="kg" data-w="' + ii + ':' + si + '" value="' + esc(s.w) + '">' : '') + '<input inputmode="numeric" aria-label="' + esc(unit) + '" data-r="' + ii + ':' + si + '" value="' + esc(s.r) + '" placeholder="' + esc(s.ph) + '">' + (tw ? '<span class="prev">' + esc(s.ph || '—') + '</span>' : '') + '<button class="tick" data-act="w-tick" data-k="' + ii + ':' + si + '" aria-label="' + esc(t('Done')) + '">' + I.check + '</button></div>'; }).join('') +
+            return '<div class="set-row' + (tw ? '' : ' two') + (s.done ? ' done' : '') + '"><span class="n">' + (si + 1) + '</span>' + (tw ? '<input inputmode="decimal" aria-label="kg" data-w="' + ii + ':' + si + '" value="' + esc(s.w) + '">' : '') + '<input inputmode="numeric" aria-label="' + esc(unit) + '" data-r="' + ii + ':' + si + '" value="' + esc(s.r) + '" placeholder="' + esc(s.ph) + '">' + (tw ? '<span class="prev">' + esc(s.ph || '—') + '</span>' : '') + '<button class="tick" data-act="w-tick" data-k="' + ii + ':' + si + '" aria-label="' + esc(t('Done')) + '">' + I.check + '</button><button class="icon-btn set-del" data-act="w-delset" data-k="' + ii + ':' + si + '" aria-label="' + esc(t('Remove set')) + '">' + I.trash + '</button></div>'; }).join('') +
           '<button class="link-btn" data-act="w-addset" data-i="' + ii + '">+ ' + esc(t('Add set')) + '</button></div>';
       }).join('') + '<button class="btn block" style="margin-top:14px" data-act="w-addex">' + I.plus + esc(t('Add exercise')) + '</button></div>';
     sc.oninput = function (e) {
@@ -518,7 +519,7 @@
   A['w-finish'] = function () {
     var ath = me();
     var sess = { id: W.id, date: W.date, title: W.title, type: W.type, dur: Math.round((Date.now() - W.startedAt) / 1000), endedAt: Date.now(),
-      items: W.items.map(function (it) { return { ex: it.ex, sets: it.sets.map(function (s) { return { w: App.num(s.w), r: App.num(s.r), done: s.done }; }) }; }) };
+      items: W.items.filter(function (it) { return it.sets.length; }).map(function (it) { return { ex: it.ex, sets: it.sets.map(function (s) { return { w: App.num(s.w), r: App.num(s.r), done: s.done }; }) }; }) };
     var prs = [];
     sess.items.forEach(function (it) {
       var ex = D.BY_ID[it.ex]; if (!ex || ex.track !== 'weight') return;

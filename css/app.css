@@ -69,3 +69,11 @@ ol.steps { padding-left: 20px; margin: 0 0 12px; } ol.steps li { margin: 0 0 10p
 .offbox .list{margin:6px 0}
 .offbox .btn.block{width:100%;margin:6px 0}
 .offimg{width:40px;height:40px;object-fit:cover;border-radius:8px;margin-right:10px;flex:none;background:#fff}
+/* v3.15 set delete + swap */
+.set-head, .set-row { grid-template-columns: 30px 1fr 1fr 1fr 44px 34px; gap: 6px; }
+.set-row.two, .set-head.two { grid-template-columns: 30px 1fr 1fr 44px 34px; }
+.set-row .set-del { width: 34px; height: 34px; min-width: 0; padding: 0; opacity: .6; }
+.set-row .set-del:hover { opacity: 1; color: var(--bad, #e5484d); }
+.undo-bar { white-space: nowrap; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 999; background: #15130f; border: 1px solid var(--accent); color: #fff; border-radius: 14px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+.undo-bar button { background: none; border: 0; color: var(--accent); font-weight: 800; }
+.sw-sec { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin: 12px 0 4px; font-weight: 800; }
