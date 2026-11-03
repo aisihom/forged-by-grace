@@ -81,5 +81,65 @@
     'farmer-carry': e('forearms traps abs', 'obliques glutes calves', ['Opstelling: zware gewichten langs je zij, rechtop, schouders laag en naar achteren.', 'Loop met korte, rustige stappen en adem door.', 'Houd je romp stil en knijp de handvatten hard vast.', 'Let op: niet scheef hangen of je schouders laten optrekken.']),
     'mobility-flow': e('hipflex glutes erectors', 'hams adductors', ['Werk van top tot teen: nek, schouders, wervelkolom, heupen, enkels.', 'Beweeg langzaam en adem diep door je buik.', 'Blijf in een pijnvrije, comfortabele rek.', 'Let op: niet veren of forceren.'])
   };
+
+  // v3.4.0 — cross-checked with free-exercise-db (public domain) + ExRx/wger: secondary fixes and antagonists (a).
+  function S(id, p, s, a) { if (!X[id]) return; if (p) X[id].p = p.split(' '); if (s !== null) X[id].s = s ? s.split(' ') : []; X[id].a = a ? a.split(' ') : []; }
+  var SQ = 'hams hipflex';
+  ['back-squat', 'goblet-squat', 'leg-press', 'tempo-squat', 'bulgarian-split-squat', 'walking-lunge', 'reverse-lunge', 'step-up'].forEach(function (k) { S(k, null, X[k].s.concat(X[k].s.indexOf('calves') < 0 ? ['calves'] : []).join(' '), k === 'leg-press' ? 'hipflex abs' : 'hipflex abs'); });
+  S('romanian-deadlift', 'hams glutes', 'erectors forearms traps adductors', 'hipflex quads abs');
+  S('deadlift', 'glutes hams erectors', 'quads adductors traps lats forearms', 'abs hipflex');
+  S('db-rdl', 'hams glutes', 'erectors forearms traps', 'hipflex quads abs');
+  S('single-leg-rdl', 'hams glutes', 'erectors abs obliques', 'hipflex quads');
+  S('hip-thrust', 'glutes', 'hams adductors', 'hipflex abs');
+  S('glute-bridge', 'glutes', 'hams', 'hipflex quads');
+  S('leg-curl', 'hams', 'calves', 'quads');
+  S('slider-leg-curl', 'hams', 'glutes calves', 'quads');
+  S('leg-extension', 'quads', '', 'hams');
+  ['bench-press', 'db-bench-press', 'machine-chest-press', 'push-up', 'incline-push-up'].forEach(function (k) { S(k, 'chest', 'frontdelt triceps' + (k.indexOf('push') >= 0 ? ' abs' : ''), 'lats rhomboids biceps'); });
+  S('incline-db-press', 'upperchest', 'frontdelt triceps chest', 'lats rhomboids biceps');
+  ['barbell-row', 'db-row', 'cable-row', 'chest-supported-row', 'inverted-row', 'band-row'].forEach(function (k) { S(k, 'lats rhomboids midtraps', 'reardelt biceps forearms' + (k === 'barbell-row' ? ' erectors hams' : ''), 'chest frontdelt triceps'); });
+  S('overhead-press', 'frontdelt sidedelt', 'triceps traps upperchest abs', 'lats');
+  S('db-shoulder-press', 'frontdelt sidedelt', 'triceps traps upperchest', 'lats');
+  S('pike-push-up', 'frontdelt sidedelt', 'triceps upperchest traps', 'lats');
+  ['pull-up', 'lat-pulldown', 'band-pulldown'].forEach(function (k) { S(k, 'lats', 'biceps rhomboids midtraps reardelt forearms', 'frontdelt sidedelt triceps'); });
+  S('prone-lat-pull', 'lats midtraps', 'rhomboids reardelt erectors', 'frontdelt chest');
+  S('lateral-raise', 'sidedelt', 'frontdelt traps', 'lats');
+  S('face-pull', 'reardelt midtraps', 'rhomboids cuff traps', 'chest frontdelt');
+  S('band-pull-apart', 'reardelt rhomboids', 'midtraps cuff', 'chest frontdelt');
+  S('reverse-fly', 'reardelt', 'rhomboids midtraps', 'chest frontdelt');
+  S('prone-ytw', null, null, 'chest');
+  S('db-curl', 'biceps', 'forearms', 'triceps');
+  S('hammer-curl', 'biceps forearms', '', 'triceps');
+  S('triceps-pushdown', 'triceps', '', 'biceps');
+  S('oh-db-extension', 'triceps', '', 'biceps');
+  S('bench-dip', 'triceps', 'chest frontdelt', 'biceps');
+  S('plank', 'abs', 'obliques glutes frontdelt quads', 'erectors');
+  S('side-plank', 'obliques', 'abs glutes sidedelt', '');
+  S('dead-bug', 'abs', 'obliques hipflex', 'erectors');
+  S('hollow-hold', 'abs', 'hipflex obliques', 'erectors');
+  S('hanging-knee-raise', 'abs hipflex', 'obliques forearms', 'erectors glutes');
+  S('pallof-press', 'obliques abs', 'frontdelt chest triceps', '');
+  S('calf-raise', 'calves', '', '');
+  S('bike-intervals', 'quads glutes', 'hams calves', '');
+  S('rower-intervals', 'quads glutes lats', 'hams erectors rhomboids biceps calves', '');
+  S('kb-swing', 'glutes hams', 'erectors abs frontdelt forearms', 'hipflex');
+  S('burpee', 'quads glutes chest', 'frontdelt triceps abs calves', '');
+  S('mountain-climber', 'abs hipflex', 'frontdelt quads obliques chest', '');
+  S('jump-rope', 'calves', 'quads frontdelt forearms', '');
+  S('shadow-boxing', 'frontdelt obliques', 'calves triceps abs', '');
+  S('incline-walk', 'glutes calves', 'hams quads', '');
+  S('brisk-walk', 'glutes calves', 'quads hams', '');
+  S('farmer-carry', 'forearms traps abs', 'obliques glutes quads calves erectors', '');
+  S('mobility-flow', 'hipflex glutes hams', 'adductors erectors quads', '');
+  // form-point fixes (user feedback)
+  X['romanian-deadlift'].steps = ['Opstelling: bovenhandse greep (handpalmen naar je lichaam, knokkels naar voren), handen net buiten je dijen, voeten op heupbreedte, knieën licht gebogen.', 'Duw je heupen naar achteren; de stang glijdt langs je dijen en knieën omlaag en blijft tegen je benen.', 'Stop als je hamstrings rekken (meestal halverwege je scheen) en strek je heupen weer naar voren.', 'Bovenin billen aanspannen, rechtop staan — niet achterover hangen.', 'Let op: rug blijft neutraal (niet rond), armen hangen recht, stang nooit vóór je weg laten zweven.'];
+  X['deadlift'].steps[2] = 'Duw de vloer weg; de stang gaat in een rechte lijn omhoog en blijft vóór je lichaam, tegen je schenen en dijen.';
+  X['db-curl'].steps = ['Opstelling: rechtop, dumbbells langs je zij, beide handen stevig dicht om het handvat, handpalmen naar voren (supinatie).', 'Buig je ellebogen en krul de dumbbells omhoog; handpalmen blijven de hele beweging naar boven/voren wijzen — niet draaien.', 'Ellebogen blijven naast je lichaam; knijp bovenin je biceps aan.', 'Zak in 2–3 tellen tot je armen gestrekt zijn.', 'Let op: niet zwaaien met je rug, ellebogen niet naar voren brengen, polsen recht.'];
+  X['incline-db-press'].steps = ['Opstelling: bank op 30–45°, schouderbladen samen en omlaag, voeten plat op de grond.', 'Start: dumbbells naast je bovenste borst, handpalmen naar voren, ellebogen ±45–60° van je romp.', 'Druk de dumbbells recht omhoog boven je schouders (iets naar elkaar toe).', 'Zak gecontroleerd langs je borst terug tot naast je bovenste borst.', 'Let op: bank niet te steil, polsen recht boven je ellebogen.'];
+  X['hanging-knee-raise'].steps = ['Opstelling: hang aan een stang of steun in een dipstation (captain\u2019s chair), schouders actief omlaag, benen recht onder je.', 'Buig je knieën en trek ze omhoog naar je buik/borst; je bekken rolt op.', 'Je voeten blijven onder je knieën hangen — de knieën komen omhoog, niet de hielen naar achteren.', 'Zak gecontroleerd tot je benen weer gestrekt zijn, zonder te zwaaien.', 'Let op: geen momentum, beweging komt uit je buik.'];
+  X['farmer-carry'].steps = ['Opstelling: til de gewichten op als een deadlift (rug neutraal), sta rechtop.', 'Gewichten hangen naast je lichaam, armen gestrekt, neutrale greep (handpalmen naar je benen).', 'Loop met korte, rustige stappen en adem door; romp stil.', 'Let op: schouders laag en naar achteren, niet scheef hangen, gewichten niet tegen je benen laten slaan.'];
+  X['glute-bridge'].steps = ['Opstelling: op je rug, knieën gebogen, voeten plat op heupbreedte, armen naast je.', 'Duw via je hielen je heupen omhoog tot schouders, heupen en knieën één lijn vormen.', 'Knijp bovenin 1–2 tellen je billen aan en zak gecontroleerd.', 'Let op: beweging komt uit je heupen (bilspieren), niet uit een holle onderrug.'];
+  X['band-row'].steps.push('Foto toont de kabelvariant: dezelfde beweging en spieren als met een band.');
+  X['band-pulldown'].steps.push('Foto toont de kabelvariant: dezelfde beweging en spieren als met een band.');
   root.FBG_EXINFO = { M: M, X: X };
 })(this);
