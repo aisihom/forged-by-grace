@@ -101,6 +101,33 @@
     c.lastCheckin = obj.at; c.unread = true;
     App.save(); return c;
   };
+  // ---------------- client setup files (clients/<slug>.json, made from an intake) ----------------
+  // ?client=<slug>          → client's phone: "Start my plan" (same as an assign link)
+  // ?client=<slug>&coach=1  → coach's phone: adds/updates the client in the coach list
+  App.openClientFile = function (slug, asCoach) {
+    var view = document.getElementById('view');
+    App.renderTabs(''); var tb = document.querySelector('.tabbar'); if (tb) tb.hidden = true;
+    view.innerHTML = '<div class="welcome"><div class="logo-xl">' + App.LOGO + '</div><p class="center muted">' + esc(t('Opening…')) + '</p></div>';
+    fetch('clients/' + slug + '.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
+      history.replaceState(null, '', location.pathname + '#/');
+      obj.t = 'assign';
+      obj.coach = obj.coach || { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };
+      if (obj.plan && !obj.plan.id) obj.plan.id = F.uid();
+      if (!asCoach) { App.showImport(obj); return; }
+      S.role = 'coach'; S.me.isCoach = true;
+      var c = App.client(obj.client.id);
+      if (!c) { c = { id: obj.client.id, name: obj.client.name, created: new Date().toISOString(), checkins: [] }; S.clients.push(c); }
+      c.name = obj.client.name; c.profile = Object.assign({}, c.profile || {}, obj.client.profile || {});
+      if (obj.plan) c.plan = App.clone(obj.plan);
+      if (obj.meal) c.meal = App.clone(obj.meal);
+      if (obj.coachNotes && (c.notes || '').indexOf(obj.coachNotes.slice(0, 40)) === -1) c.notes = obj.coachNotes + (c.notes ? '\n\n' + c.notes : '');
+      c.setupSlug = slug; c.sharedAt = c.sharedAt || new Date().toISOString();
+      App.save(); App.toast(t('Client added: {n}', { n: c.name }));
+      location.hash = '#/client/' + c.id;
+    }).catch(function (err) {
+      view.innerHTML = '<div class="welcome">' + App.empty('x', t('Could not open this link'), (err && err.message) || '', '<a class="btn" href="./">' + esc(t('Go to app')) + '</a>') + '</div>';
+    });
+  };
   A['accept-import'] = function () {
     var obj = App._pendingImport; if (!obj) return;
     var ath = S.me;

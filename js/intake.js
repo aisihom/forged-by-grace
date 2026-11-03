@@ -153,7 +153,7 @@
   }
 
   function emailBody(p) {
-    var full = F.summaryText(p);
+    var full = F.coachReportText(p) + '\n\n(Importgegevens voor de app — niet wijzigen)\n' + F.coachReportData(p);
     // Some mail apps limit link length; fall back to the compact data-only version.
     if (encodeURIComponent(full).length > 7500) {
       var tt = I.T[p.lang] || I.T.en;
@@ -165,7 +165,7 @@
     return 'mailto:' + encodeURIComponent(coach.email).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(t('emailSubject', { name: p.answers.name })) + '&body=' + encodeURIComponent(emailBody(p));
   }
   function waHref(p) {
-    return 'https://wa.me/' + String(coach.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(F.summaryText(p));
+    return 'https://wa.me/' + String(coach.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(F.coachReportText(p));
   }
   function fileName(p) { return 'intake-' + F.slug(p.answers.name) + '-' + F.isoDate(new Date(p.submittedAt)) + '.txt'; }
 
@@ -248,15 +248,16 @@
     var p = state.submitted;
     if (act === 'start') { state.step = 1; saveDraft(); render(); }
     else if (act === 'back') { collect(document.getElementById('step-form')); state.step = Math.max(0, state.step - 1); saveDraft(); render(); }
-    else if (act === 'download') { F.download(fileName(p), F.summaryText(p), 'text/plain'); }
+    else if (act === 'download') { F.download(F.coachReportFile(p), F.coachReportHTML(p), 'text/html'); }
     else if (act === 'copy') {
-      F.copyText(F.summaryText(p)).then(function (ok) { if (ok) { toast(t('copied')); } });
+      F.copyText(emailBody(p)).then(function (ok) { if (ok) { toast(t('copied')); } });
     }
     else if (act === 'share') {
-      var text = F.summaryText(p);
+      var text = F.coachReportText(p);
       var file = null;
-      try { file = new File([text], fileName(p), { type: 'text/plain' }); } catch (err) { file = null; }
-      var data = (file && navigator.canShare && navigator.canShare({ files: [file] })) ? { files: [file], title: t('emailSubject', { name: p.answers.name }) } : { title: t('emailSubject', { name: p.answers.name }), text: text };
+      try { file = new File([F.coachReportHTML(p)], F.coachReportFile(p), { type: 'text/html' }); } catch (err) { file = null; }
+      var subj = t('emailSubject', { name: p.answers.name });
+      var data = (file && navigator.canShare && navigator.canShare({ files: [file], text: text })) ? { files: [file], title: subj, text: text } : { title: subj, text: emailBody(p) };
       navigator.share(data).catch(function () { /* user cancelled */ });
     }
     else if (act === 'edit') { draft.editing = true; state.answers = JSON.parse(JSON.stringify(p.answers)); state.id = p.id; state.step = 6; saveDraft(); render(); }

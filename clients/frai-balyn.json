@@ -1,0 +1,437 @@
+{
+ "v": 2,
+ "client": {
+  "id": "frai-balyn",
+  "name": "Frai Balyn",
+  "profile": {
+   "name": "Frai Balyn",
+   "sex": "m",
+   "age": 40,
+   "height": 178,
+   "weight": 85,
+   "activity": 1.375,
+   "goal": "lean",
+   "deficit": 20,
+   "level": "beginner",
+   "mode": "gym",
+   "days": 3
+  }
+ },
+ "msg": "Welkom bij Forged by Grace, Frai! 💪\nJouw plan: 3× per week full body (doordeweeks 's avonds of in het weekend, ±45-60 min). Vaste dagen = structuur: zet ze nu al in je agenda. Begin licht en focus op techniek. Elke week stuur je één check-in, dan stel ik je plan bij.",
+ "coachNotes": "INTAKE (aangemaakt door assistent):\nDoelen: gezonder, afvallen, fysiek sterker, beter eetpatroon. Wil duidelijk plan + structuur, mindset voor training.\nObstakels: uitstelgedrag, weinig tijd/structuur. Slaap 6-7 u. Motivatie 7/10. Beschikbaar: doordeweekse avonden + weekend. Leeftijd 35-44.\n\nAAN TE PASSEN (aannames, onbekend uit intake): geslacht = man, leeftijd 40, lengte 178 cm, gewicht 85 kg, activiteit licht, niveau beginner, trainen in sportschool, 3×/week full body (Beginner Foundation), 20% calorietekort, 4 maaltijden. Pas profiel aan zodra gewicht/lengte bekend zijn → macro's rekenen dan opnieuw.",
+ "plan": {
+  "tpl": "beginner3",
+  "name": "Beginner Foundation · 3 days",
+  "goal": "lean",
+  "mode": "gym",
+  "level": "beginner",
+  "weeks": 8,
+  "deload": true,
+  "progression": "double",
+  "start": null,
+  "days": [
+   {
+    "title": "Full Body A",
+    "type": "strength",
+    "focus": "Squat · Push · Pull",
+    "items": [
+     {
+      "ex": "back-squat",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "bench-press",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "barbell-row",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "hip-thrust",
+      "sets": 2,
+      "reps": "10-15",
+      "rest": 75,
+      "rpe": 8
+     },
+     {
+      "ex": "hanging-knee-raise",
+      "sets": 3,
+      "reps": "10-15",
+      "rest": 45,
+      "rpe": 7
+     },
+     {
+      "ex": "bike-intervals",
+      "sets": 5,
+      "reps": "30",
+      "rest": 30,
+      "rpe": 9
+     }
+    ]
+   },
+   {
+    "title": "Active Recovery",
+    "type": "active",
+    "focus": "Walk + mobility",
+    "items": [
+     {
+      "ex": "brisk-walk",
+      "sets": 1,
+      "reps": "30",
+      "rest": 0,
+      "rpe": 5
+     },
+     {
+      "ex": "mobility-flow",
+      "sets": 1,
+      "reps": "10",
+      "rest": 0,
+      "rpe": 5
+     }
+    ]
+   },
+   {
+    "title": "Full Body B",
+    "type": "strength",
+    "focus": "Hinge · Press · Pulldown",
+    "items": [
+     {
+      "ex": "romanian-deadlift",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "overhead-press",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "lat-pulldown",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "bulgarian-split-squat",
+      "sets": 2,
+      "reps": "10-15",
+      "rest": 75,
+      "rpe": 8
+     },
+     {
+      "ex": "pallof-press",
+      "sets": 3,
+      "reps": "10-15",
+      "rest": 45,
+      "rpe": 7
+     },
+     {
+      "ex": "rower-intervals",
+      "sets": 5,
+      "reps": "30",
+      "rest": 30,
+      "rpe": 9
+     }
+    ]
+   },
+   {
+    "title": "Active Recovery",
+    "type": "active",
+    "focus": "Walk + mobility",
+    "items": [
+     {
+      "ex": "brisk-walk",
+      "sets": 1,
+      "reps": "30",
+      "rest": 0,
+      "rpe": 5
+     },
+     {
+      "ex": "mobility-flow",
+      "sets": 1,
+      "reps": "10",
+      "rest": 0,
+      "rpe": 5
+     }
+    ]
+   },
+   {
+    "title": "Full Body C",
+    "type": "strength",
+    "focus": "Legs · Upper volume · Carries",
+    "items": [
+     {
+      "ex": "walking-lunge",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "incline-db-press",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "cable-row",
+      "sets": 2,
+      "reps": "6-10",
+      "rest": 120,
+      "rpe": 8
+     },
+     {
+      "ex": "leg-curl",
+      "sets": 2,
+      "reps": "10-15",
+      "rest": 75,
+      "rpe": 8
+     },
+     {
+      "ex": "lateral-raise",
+      "sets": 2,
+      "reps": "10-15",
+      "rest": 75,
+      "rpe": 8
+     },
+     {
+      "ex": "kb-swing",
+      "sets": 5,
+      "reps": "12",
+      "rest": 30,
+      "rpe": 9
+     }
+    ]
+   },
+   {
+    "title": "Active Recovery",
+    "type": "active",
+    "focus": "Walk + mobility",
+    "items": [
+     {
+      "ex": "brisk-walk",
+      "sets": 1,
+      "reps": "30",
+      "rest": 0,
+      "rpe": 5
+     },
+     {
+      "ex": "mobility-flow",
+      "sets": 1,
+      "reps": "10",
+      "rest": 0,
+      "rpe": 5
+     }
+    ]
+   },
+   {
+    "title": "Rest Day",
+    "type": "rest",
+    "focus": "Recover, sleep, eat your protein",
+    "items": []
+   }
+  ]
+ },
+ "meal": {
+  "name": "Meal plan",
+  "perDay": 4,
+  "targets": {
+   "kcal": 1940,
+   "p": 170,
+   "c": 162,
+   "f": 68
+  },
+  "meals": [
+   {
+    "key": "breakfast",
+    "name": "Breakfast",
+    "items": [
+     {
+      "food": "quark-low",
+      "g": 355,
+      "role": "p",
+      "swaps": [
+       "skyr",
+       "cottage",
+       "egg",
+       "protein-pudding"
+      ]
+     },
+     {
+      "food": "oats",
+      "g": 45,
+      "role": "c",
+      "swaps": [
+       "muesli",
+       "bread-wholegrain",
+       "banana"
+      ]
+     },
+     {
+      "food": "berries",
+      "g": 100,
+      "role": "x",
+      "swaps": [
+       "strawberries",
+       "apple",
+       "kiwi"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "lunch",
+    "name": "Lunch",
+    "items": [
+     {
+      "food": "bread-wholegrain",
+      "g": 30,
+      "role": "c",
+      "swaps": [
+       "wrap",
+       "crispbread",
+       "rice-cake"
+      ]
+     },
+     {
+      "food": "chicken-fillet-slices",
+      "g": 30,
+      "role": "p",
+      "swaps": [
+       "tuna-can",
+       "egg",
+       "smoked-beef",
+       "cottage"
+      ]
+     },
+     {
+      "food": "cheese-30",
+      "g": 20,
+      "role": "x",
+      "swaps": [
+       "hummus",
+       "avocado"
+      ]
+     },
+     {
+      "food": "cucumber",
+      "g": 100,
+      "role": "x",
+      "swaps": []
+     },
+     {
+      "food": "tomato",
+      "g": 100,
+      "role": "x",
+      "swaps": []
+     }
+    ]
+   },
+   {
+    "key": "snack1",
+    "name": "Snack",
+    "items": [
+     {
+      "food": "skyr",
+      "g": 215,
+      "role": "p",
+      "swaps": [
+       "protein-pudding",
+       "greek-yogurt",
+       "cottage"
+      ]
+     },
+     {
+      "food": "apple",
+      "g": 150,
+      "role": "x",
+      "swaps": [
+       "banana",
+       "pear",
+       "orange"
+      ]
+     },
+     {
+      "food": "almonds",
+      "g": 55,
+      "role": "f",
+      "swaps": [
+       "walnuts",
+       "peanut-butter",
+       "dark-chocolate"
+      ]
+     }
+    ]
+   },
+   {
+    "key": "dinner",
+    "name": "Dinner",
+    "items": [
+     {
+      "food": "chicken-breast",
+      "g": 215,
+      "role": "p",
+      "swaps": [
+       "beef-lean-mince",
+       "salmon",
+       "cod",
+       "turkey-breast",
+       "tofu",
+       "pork-tenderloin",
+       "shrimp"
+      ]
+     },
+     {
+      "food": "rice-brown",
+      "g": 155,
+      "role": "c",
+      "swaps": [
+       "potato",
+       "sweet-potato",
+       "pasta-wholewheat",
+       "quinoa",
+       "couscous"
+      ]
+     },
+     {
+      "food": "broccoli",
+      "g": 200,
+      "role": "x",
+      "swaps": [
+       "green-beans",
+       "stir-fry-veg",
+       "spinach",
+       "cauliflower",
+       "mixed-salad"
+      ]
+     },
+     {
+      "food": "olive-oil",
+      "g": 20,
+      "role": "f",
+      "swaps": [
+       "butter",
+       "avocado"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

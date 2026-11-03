@@ -251,7 +251,7 @@
     s.el.querySelector('#il-copy').onclick = function () { F.copyText(link).then(function () { App.toast(t('Link copied')); }); };
   };
   A['intake-import'] = function () {
-    var s = App.sheet(App.sheetHead(t('Import intake answers'), t('Paste the whole email or WhatsApp message, or choose the file.')) + '<textarea class="input" id="ii" rows="6"></textarea><input type="file" class="input" id="iif" accept=".txt,.json" style="margin-top:10px"><button class="btn primary lg block" id="iigo" style="margin-top:12px">' + esc(t('Import')) + '</button>');
+    var s = App.sheet(App.sheetHead(t('Import intake answers'), t('Paste the whole email or WhatsApp message, or choose the file.')) + '<textarea class="input" id="ii" rows="6"></textarea><input type="file" class="input" id="iif" accept=".txt,.json,.html,.htm" style="margin-top:10px"><button class="btn primary lg block" id="iigo" style="margin-top:12px">' + esc(t('Import')) + '</button>');
     s.el.querySelector('#iigo').onclick = function () {
       var f = s.el.querySelector('#iif').files[0];
       (f ? f.text() : Promise.resolve(s.el.querySelector('#ii').value)).then(function (txt) {

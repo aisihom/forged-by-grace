@@ -503,6 +503,8 @@
   App.route = function () {
     var h = location.hash || '';
     if (h.indexOf('#imp=') === 0) { App.views.importLink(h.slice(5)); return; }
+    var cm = (location.search || '').match(/[?&]client=([a-z0-9-]{2,40})/);
+    if (cm && App.openClientFile) { App.openClientFile(cm[1], /[?&]coach=1/.test(location.search)); return; }
     if (h.indexOf('#health') === 0 && App.applyHealthLink) { App.applyHealthLink(h); return; }
     var qs = location.search || '';
     if (/[?&](steps|weight|rhr|kcal|fat)=/.test(qs) && App.applyHealthLink) { history.replaceState(null, '', location.pathname + '#/health'); App.applyHealthLink(qs); return; }

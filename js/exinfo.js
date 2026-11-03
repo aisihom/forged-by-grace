@@ -80,8 +80,16 @@
     'brisk-walk': e('glutes calves', 'quads hams', ['Tempo: stevig genoeg dat je iets zwaarder ademt, maar nog kunt praten.', 'Loop rechtop, armen zwaaien mee.', 'Rol af van hiel naar teen.', 'Let op: goede schoenen; liever elke dag dan af en toe heel lang.']),
     'farmer-carry': e('forearms traps abs', 'obliques glutes calves', ['Opstelling: zware gewichten langs je zij, rechtop, schouders laag en naar achteren.', 'Loop met korte, rustige stappen en adem door.', 'Houd je romp stil en knijp de handvatten hard vast.', 'Let op: niet scheef hangen of je schouders laten optrekken.']),
     'mobility-flow': e('hipflex glutes erectors', 'hams adductors', ['Werk van top tot teen: nek, schouders, wervelkolom, heupen, enkels.', 'Beweeg langzaam en adem diep door je buik.', 'Blijf in een pijnvrije, comfortabele rek.', 'Let op: niet veren of forceren.'])
+    'seated-leg-curl': e('hams', 'calves', ['Opstelling: knie op één lijn met het draaipunt, kussen net boven je enkels, bovenbeenkussen strak.', 'Buig je knieën en duw je hielen naar onder en achter, onder de stoel.', 'Laat in 2–3 tellen gecontroleerd terugkomen.', 'Let op: rug tegen het kussen, niet zwaaien of je heupen optillen.']),
+    'high-leg-press': e('glutes hams', 'quads adductors', ['Opstelling: voeten op heupbreedte hoog op het plateau, rug en billen tegen het kussen.', 'Zak gecontroleerd zo ver als je onderrug plat tegen het kussen blijft.', 'Duw via je hielen omhoog; strek niet hard op slot.', 'Let op: bekken niet laten oprollen, knieën in lijn met je tenen. Stop bij rugpijn.']),
+    'bicycle-crunch': e('abs obliques', 'hipflex', ['Opstelling: op je rug, onderrug tegen de grond, handen licht naast je hoofd.', 'Breng één knie in terwijl je de tegenovergestelde schouder ernaartoe draait; het andere been strek je.', 'Wissel rustig en gecontroleerd van kant.', 'Let op: niet aan je nek trekken, onderrug blijft op de grond.']),
+    'back-extension': e('erectors glutes', 'hams', ['Opstelling: heupbot net boven het kussen, enkels vast, armen gekruist voor je borst.', 'Zak met een neutrale rug gecontroleerd voorover.', 'Kom omhoog tot je lichaam één rechte lijn is en span je billen aan.', 'Let op: niet doorbuigen voorbij recht, geen rukbewegingen. Licht houden en stoppen bij rugpijn.']),
   };
 
+  S('seated-leg-curl', 'hams', 'calves', 'quads');
+  S('high-leg-press', 'glutes hams', 'quads adductors calves', 'hipflex abs');
+  S('bicycle-crunch', 'abs obliques', 'hipflex', 'erectors');
+  S('back-extension', 'erectors glutes', 'hams', 'abs');
   // v3.4.0 — cross-checked with free-exercise-db (public domain) + ExRx/wger: secondary fixes and antagonists (a).
   function S(id, p, s, a) { if (!X[id]) return; if (p) X[id].p = p.split(' '); if (s !== null) X[id].s = s ? s.split(' ') : []; X[id].a = a ? a.split(' ') : []; }
   var SQ = 'hams hipflex';
