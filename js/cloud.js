@@ -52,7 +52,7 @@
         if (myClient) {
           if (localStorage.getItem('fbg.consent') && !myClient.consent_at) sb.rpc('give_consent').then(function () {});
           applyPlan(myClient); push(true);
-          subscribe();
+          subscribe(); if (App.healthSyncPull) App.healthSyncPull();
         }
         rer();
       });
@@ -129,6 +129,7 @@
     c.live = { at: Object.keys(d).reduce(function (a, k) { return d[k].updated_at > a ? d[k].updated_at : a; }, ''), d: live };
     if (live.profile) c.profile = Object.assign({}, c.profile || {}, live.profile);
     var sum = live.checkins && live.checkins.summary;
+    if (App.overlayHealthSync) App.overlayHealthSync(c, live, sum);
     if (sum) { sum.live = true; sum.at = c.live.at || sum.at; c.checkins = (c.checkins || []).filter(function (x) { return !x.live; }); c.checkins.push(sum); c.checkins.sort(function (a, b) { return a.at < b.at ? -1 : 1; }); if (c.lastCheckin !== sum.at) { c.lastCheckin = sum.at; c.unread = true; } }
   }
   function subscribe() {
@@ -136,6 +137,7 @@
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
       if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(); merge(d.client_id); rawSave(); rer(); }
+      else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;
       if (role === 'coach') { rows[r.id] = r; merge(r.id); rawSave(); rer(); }
