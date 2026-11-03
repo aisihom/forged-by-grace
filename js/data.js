@@ -380,7 +380,33 @@
       ['5-10 minutes: cat-cow, world\'s greatest stretch, hip circles, thoracic rotations.',
        'Move slowly and breathe through the nose.',
        'Never stretch into pain.'],
-      'Rushing through it.')
+      'Rushing through it.'),
+    // ---------- v3.16 additions (Upper/Lower programme) ----------
+    ex('cable-oh-triceps', 'Cable Overhead Triceps Extension', 'Triceps', 'triceps', ['cable', 'band'], 'isolation', 'weight',
+      ['Face away from the cable, rope behind your head.', 'Elbows point forward and stay close.', 'Extend fully overhead.', 'Lower slowly into a deep stretch.'],
+      'Elbows flaring wide or arching the lower back.'),
+    ex('incline-db-curl', 'Incline Dumbbell Curl', 'Biceps', 'biceps', ['dumbbell'], 'isolation', 'weight',
+      ['Sit back on an incline bench, arms hanging straight down.', 'Keep the upper arm still.', 'Curl up, palms turning up.', 'Lower slowly to a full stretch.'],
+      'Swinging the elbows forward.'),
+    ex('cable-hip-abduction', 'Standing Cable Hip Abduction', 'Glutes', 'glute', ['cable', 'band'], 'isolation', 'weight',
+      ['Ankle strap on the outside leg, hold on for balance.', 'Stand tall, hips level.', 'Sweep the leg out to the side.', 'Return slowly.'],
+      'Leaning the torso to swing the leg higher.'),
+    ex('copenhagen-adduction', 'Copenhagen Adduction', 'Adductors', 'core', ['bodyweight'], 'isolation', 'reps',
+      ['Side plank with the top leg on a bench (knee = easier, ankle = harder).', 'Lift the hips in a straight line.', 'Bring the bottom leg up to the bench.', 'Lower with control, both sides.'],
+      'Hips sagging or rotating.'),
+    ex('tbar-row-wide', 'Wide Grip Chest-Supported T-Bar Row', 'Back', 'hpull', ['machine', 'barbell'], 'compound', 'weight',
+      ['Chest on the pad, wide grip.', 'Pull elbows out and back (arm abduction).', 'Squeeze the upper back.', 'Lower to a full stretch.'],
+      'Lifting the chest off the pad.'),
+    ex('barbell-reverse-curl', 'Barbell Reverse Curl', 'Biceps', 'biceps', ['barbell'], 'isolation', 'weight',
+      ['Overhand grip, shoulder width.', 'Elbows pinned to your sides.', 'Curl with straight wrists.', 'Lower slowly.'],
+      'Wrists bending back or swinging.'),
+    ex('cable-core-rotation', 'Cable Core Rotation', 'Obliques', 'core', ['cable', 'band'], 'core', 'reps',
+      ['Cable at chest height, side-on, arms straight.', 'Rotate from the torso, hips stable.', 'Control the return.', 'Both sides.'],
+      'Twisting with the arms only.'),
+    ex('hip-adduction-machine', 'Machine Hip Adduction', 'Adductors', 'glute', ['machine'], 'isolation', 'weight',
+      ['Sit tall, pads inside the knees.', 'Squeeze the legs together.', 'Pause, open slowly.'], 'Letting the weight slam open.'),
+    ex('hip-abduction-machine', 'Machine Hip Abduction', 'Glutes', 'glute', ['machine'], 'isolation', 'weight',
+      ['Sit tall, pads outside the knees.', 'Push the knees out.', 'Pause, return slowly.'], 'Rocking the torso.')
   ];
 
   var BY_ID = {};
