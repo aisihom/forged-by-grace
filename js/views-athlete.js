@@ -108,8 +108,16 @@
     var view = document.getElementById('view');
     App.renderTabs(''); var tb = document.querySelector('.tabbar'); if (tb) tb.hidden = true;
     view.innerHTML = '<div class="welcome"><div class="logo-xl">' + App.LOGO + '</div><p class="center muted">' + esc(t('Opening…')) + '</p></div>';
-    fetch('clients/' + slug + '.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
-      history.replaceState(null, '', location.pathname + '#/');
+    // private part (weight, health notes) travels only in the link's #p= hash — never stored in the public repo
+    var pm = (location.hash || '').match(/[#&]p=([A-Za-z0-9_-]+)/), priv = {};
+    history.replaceState(null, '', location.pathname + '#/');
+    (pm ? App.decode(pm[1]).catch(function () { return {}; }) : Promise.resolve({})).then(function (p) { priv = p || {}; return fetch('clients/' + slug + '.json', { cache: 'no-store' }); }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
+      obj.client.profile = Object.assign({}, obj.client.profile || {}, priv.profile || {});
+      if (priv.msg) obj.msg = (obj.msg ? obj.msg + '\n\n' : '') + priv.msg;
+      if (priv.coachNotes) obj.coachNotes = priv.coachNotes;
+      if (priv.flags) obj.flags = priv.flags;
+      if (priv.planNotes && obj.plan) obj.plan.notes = (obj.plan.notes || []).concat(priv.planNotes);
+      if (priv.mealTips && obj.meal && obj.meal.ideas) { obj.meal.ideas.tips = (obj.meal.ideas.tips || []).concat(priv.mealTips); if (priv.tipsTitle) obj.meal.ideas.tipsTitle = priv.tipsTitle; }
       obj.t = 'assign';
       obj.coach = obj.coach || { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };
       if (obj.plan && !obj.plan.id) obj.plan.id = F.uid();
@@ -121,6 +129,7 @@
       if (obj.plan) c.plan = App.clone(obj.plan);
       if (obj.meal) c.meal = App.clone(obj.meal);
       if (obj.coachNotes && (c.notes || '').indexOf(obj.coachNotes.slice(0, 40)) === -1) c.notes = obj.coachNotes + (c.notes ? '\n\n' + c.notes : '');
+      if (obj.flags) c.flags = obj.flags.slice();
       c.setupSlug = slug; c.sharedAt = c.sharedAt || new Date().toISOString();
       App.save(); App.toast(t('Client added: {n}', { n: c.name }));
       location.hash = '#/client/' + c.id;

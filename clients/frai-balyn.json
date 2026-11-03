@@ -1,27 +1,28 @@
 {
  "v": 2,
+ "setup": true,
  "client": {
   "id": "frai-balyn",
   "name": "Frai Balyn",
   "profile": {
    "name": "Frai Balyn",
-   "sex": "m",
-   "age": 40,
-   "height": 178,
-   "weight": 85,
-   "activity": 1.375,
    "goal": "lean",
-   "deficit": 20,
    "level": "beginner",
    "mode": "gym",
-   "days": 3
+   "activity": 1.375,
+   "days": 3,
+   "targetsOverride": {
+    "kcal": 2300,
+    "p": 175,
+    "c": 200,
+    "f": 89
+   }
   }
  },
- "msg": "Welkom bij Forged by Grace, Frai! 💪\nJouw plan: 3× per week full body (doordeweeks 's avonds of in het weekend, ±45-60 min). Vaste dagen = structuur: zet ze nu al in je agenda. Begin licht en focus op techniek. Elke week stuur je één check-in, dan stel ik je plan bij.",
- "coachNotes": "INTAKE (aangemaakt door assistent):\nDoelen: gezonder, afvallen, fysiek sterker, beter eetpatroon. Wil duidelijk plan + structuur, mindset voor training.\nObstakels: uitstelgedrag, weinig tijd/structuur. Slaap 6-7 u. Motivatie 7/10. Beschikbaar: doordeweekse avonden + weekend. Leeftijd 35-44.\n\nAAN TE PASSEN (aannames, onbekend uit intake): geslacht = man, leeftijd 40, lengte 178 cm, gewicht 85 kg, activiteit licht, niveau beginner, trainen in sportschool, 3×/week full body (Beginner Foundation), 20% calorietekort, 4 maaltijden. Pas profiel aan zodra gewicht/lengte bekend zijn → macro's rekenen dan opnieuw.",
+ "msg": "Welkom bij Forged by Grace, Frai! 💪\nJouw plan: 3× per week full body op maandag, woensdag en vrijdag. Vaste dagen = structuur: zet ze nu al in je agenda. Elke week stuur je één check-in, dan stel ik je plan bij.",
  "plan": {
-  "tpl": "beginner3",
-  "name": "Beginner Foundation · 3 days",
+  "tpl": "custom",
+  "name": "Full Body · 3 dagen (Frai)",
   "goal": "lean",
   "mode": "gym",
   "level": "beginner",
@@ -31,210 +32,194 @@
   "start": null,
   "days": [
    {
-    "title": "Full Body A",
+    "title": "Training A · Quads",
     "type": "strength",
-    "focus": "Squat · Push · Pull",
+    "focus": "Full body · machines · rug neutraal",
     "items": [
      {
-      "ex": "back-squat",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
+      "ex": "leg-press",
+      "sets": 4,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "bench-press",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
+      "ex": "db-bench-press",
+      "sets": 4,
+      "reps": "8-12",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "barbell-row",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
+      "ex": "chest-supported-row",
+      "sets": 4,
+      "reps": "8-12",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "hip-thrust",
-      "sets": 2,
-      "reps": "10-15",
-      "rest": 75,
-      "rpe": 8
+      "ex": "leg-extension",
+      "sets": 3,
+      "reps": "12-15",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "triceps-pushdown",
+      "sets": 3,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "plank",
+      "sets": 3,
+      "reps": "30-60",
+      "rest": 60,
+      "rpe": 7
+     }
+    ]
+   },
+   {
+    "title": "Rest Day",
+    "type": "rest",
+    "focus": "Herstel, slaap, eet je eiwitten",
+    "items": []
+   },
+   {
+    "title": "Training B · Hamstrings",
+    "type": "strength",
+    "focus": "Full body · machines · rug neutraal",
+    "items": [
+     {
+      "ex": "high-leg-press",
+      "sets": 4,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "incline-db-press",
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "lat-pulldown",
+      "sets": 4,
+      "reps": "6-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "seated-leg-curl",
+      "sets": 3,
+      "reps": "12-15",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "db-curl",
+      "sets": 3,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "face-pull",
+      "sets": 3,
+      "reps": "12-15",
+      "rest": 90,
+      "rpe": 7
      },
      {
       "ex": "hanging-knee-raise",
       "sets": 3,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
+     }
+    ]
+   },
+   {
+    "title": "Rest Day",
+    "type": "rest",
+    "focus": "Herstel, slaap, eet je eiwitten",
+    "items": []
+   },
+   {
+    "title": "Training C · Mix",
+    "type": "strength",
+    "focus": "Full body · machines · rug neutraal",
+    "items": [
+     {
+      "ex": "leg-curl",
+      "sets": 4,
       "reps": "10-15",
-      "rest": 45,
+      "rest": 90,
       "rpe": 7
      },
      {
-      "ex": "bike-intervals",
-      "sets": 5,
-      "reps": "30",
-      "rest": 30,
-      "rpe": 9
-     }
-    ]
-   },
-   {
-    "title": "Active Recovery",
-    "type": "active",
-    "focus": "Walk + mobility",
-    "items": [
-     {
-      "ex": "brisk-walk",
-      "sets": 1,
-      "reps": "30",
-      "rest": 0,
-      "rpe": 5
-     },
-     {
-      "ex": "mobility-flow",
-      "sets": 1,
-      "reps": "10",
-      "rest": 0,
-      "rpe": 5
-     }
-    ]
-   },
-   {
-    "title": "Full Body B",
-    "type": "strength",
-    "focus": "Hinge · Press · Pulldown",
-    "items": [
-     {
-      "ex": "romanian-deadlift",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
-     },
-     {
-      "ex": "overhead-press",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
-     },
-     {
-      "ex": "lat-pulldown",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
-     },
-     {
-      "ex": "bulgarian-split-squat",
-      "sets": 2,
-      "reps": "10-15",
-      "rest": 75,
-      "rpe": 8
-     },
-     {
-      "ex": "pallof-press",
+      "ex": "db-shoulder-press",
       "sets": 3,
-      "reps": "10-15",
-      "rest": 45,
+      "reps": "8-12",
+      "rest": 90,
       "rpe": 7
-     },
-     {
-      "ex": "rower-intervals",
-      "sets": 5,
-      "reps": "30",
-      "rest": 30,
-      "rpe": 9
-     }
-    ]
-   },
-   {
-    "title": "Active Recovery",
-    "type": "active",
-    "focus": "Walk + mobility",
-    "items": [
-     {
-      "ex": "brisk-walk",
-      "sets": 1,
-      "reps": "30",
-      "rest": 0,
-      "rpe": 5
-     },
-     {
-      "ex": "mobility-flow",
-      "sets": 1,
-      "reps": "10",
-      "rest": 0,
-      "rpe": 5
-     }
-    ]
-   },
-   {
-    "title": "Full Body C",
-    "type": "strength",
-    "focus": "Legs · Upper volume · Carries",
-    "items": [
-     {
-      "ex": "walking-lunge",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
-     },
-     {
-      "ex": "incline-db-press",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
      },
      {
       "ex": "cable-row",
-      "sets": 2,
-      "reps": "6-10",
-      "rest": 120,
-      "rpe": 8
+      "sets": 3,
+      "reps": "8-12",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "leg-curl",
-      "sets": 2,
-      "reps": "10-15",
-      "rest": 75,
-      "rpe": 8
+      "ex": "leg-press",
+      "sets": 3,
+      "reps": "12-15",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "lateral-raise",
-      "sets": 2,
-      "reps": "10-15",
-      "rest": 75,
-      "rpe": 8
+      "ex": "db-curl",
+      "sets": 3,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
      },
      {
-      "ex": "kb-swing",
-      "sets": 5,
-      "reps": "12",
-      "rest": 30,
-      "rpe": 9
+      "ex": "oh-db-extension",
+      "sets": 3,
+      "reps": "10-12",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "back-extension",
+      "sets": 2,
+      "reps": "12-15",
+      "rest": 90,
+      "rpe": 7
+     },
+     {
+      "ex": "side-plank",
+      "sets": 3,
+      "reps": "30-60",
+      "rest": 60,
+      "rpe": 7
      }
     ]
    },
    {
     "title": "Active Recovery",
     "type": "active",
-    "focus": "Walk + mobility",
+    "focus": "Wandelen 30 min (8–10.000 stappen)",
     "items": [
      {
       "ex": "brisk-walk",
       "sets": 1,
       "reps": "30",
-      "rest": 0,
-      "rpe": 5
-     },
-     {
-      "ex": "mobility-flow",
-      "sets": 1,
-      "reps": "10",
       "rest": 0,
       "rpe": 5
      }
@@ -243,19 +228,29 @@
    {
     "title": "Rest Day",
     "type": "rest",
-    "focus": "Recover, sleep, eat your protein",
+    "focus": "Herstel, slaap, eet je eiwitten",
     "items": []
    }
+  ],
+  "notes": [
+   "Train op niet-opeenvolgende dagen: maandag, woensdag, vrijdag.",
+   "Opwarmen: 5–8 minuten licht cardio + dynamische mobiliteit.",
+   "Rust tussen sets: 60–90 seconden.",
+   "Tempo: gecontroleerd, 2 seconden omlaag, 1 seconde omhoog.",
+   "Progressie: verhoog gewicht of herhalingen elke week als je techniek perfect is.",
+   "Houd je onderrug neutraal; machines hebben de voorkeur.",
+   "Dag A leg press: voeten laag en smal (focus quads). Dag C leg press: licht of éénbenig.",
+   "Dag C: biceps curl + triceps extensie als superset. Back extension alleen licht en als je rug het toelaat."
   ]
  },
  "meal": {
-  "name": "Meal plan",
+  "name": "Eetschema",
   "perDay": 4,
   "targets": {
-   "kcal": 1940,
-   "p": 170,
-   "c": 162,
-   "f": 68
+   "kcal": 2300,
+   "p": 175,
+   "c": 200,
+   "f": 89
   },
   "meals": [
    {
@@ -264,7 +259,7 @@
     "items": [
      {
       "food": "quark-low",
-      "g": 355,
+      "g": 345,
       "role": "p",
       "swaps": [
        "skyr",
@@ -275,7 +270,7 @@
      },
      {
       "food": "oats",
-      "g": 45,
+      "g": 60,
       "role": "c",
       "swaps": [
        "muesli",
@@ -301,7 +296,7 @@
     "items": [
      {
       "food": "bread-wholegrain",
-      "g": 30,
+      "g": 45,
       "role": "c",
       "swaps": [
        "wrap",
@@ -311,7 +306,7 @@
      },
      {
       "food": "chicken-fillet-slices",
-      "g": 30,
+      "g": 25,
       "role": "p",
       "swaps": [
        "tuna-can",
@@ -349,7 +344,7 @@
     "items": [
      {
       "food": "skyr",
-      "g": 215,
+      "g": 205,
       "role": "p",
       "swaps": [
        "protein-pudding",
@@ -369,7 +364,7 @@
      },
      {
       "food": "almonds",
-      "g": 55,
+      "g": 75,
       "role": "f",
       "swaps": [
        "walnuts",
@@ -385,7 +380,7 @@
     "items": [
      {
       "food": "chicken-breast",
-      "g": 215,
+      "g": 205,
       "role": "p",
       "swaps": [
        "beef-lean-mince",
@@ -399,7 +394,7 @@
      },
      {
       "food": "rice-brown",
-      "g": 155,
+      "g": 225,
       "role": "c",
       "swaps": [
        "potato",
@@ -423,7 +418,7 @@
      },
      {
       "food": "olive-oil",
-      "g": 20,
+      "g": 30,
       "role": "f",
       "swaps": [
        "butter",
@@ -432,6 +427,65 @@
      }
     ]
    }
-  ]
+  ],
+  "ideas": {
+   "principle": "Elke maaltijd bevat eiwitten + vezelrijke koolhydraten + gezonde vetten. Lage GI-voeding, geen suikerrijke dranken, veel groenten. Porties aanpassen naar 2.300 kcal totaal.",
+   "split": "Ontbijt: 500–550 kcal | Lunch: 600–650 kcal | Diner: 600–650 kcal | Snacks: 2× 250–300 kcal",
+   "groups": [
+    {
+     "title": "Ontbijt-opties (kies er 1, varieer dagelijks)",
+     "items": [
+      "Griekse yoghurt (0% of 2%) 250 g + bessen (100 g) + 30 g havermout + 10 g amandelen",
+      "Omelet van 3 eieren + spinazie + tomaat + 1 sneet volkorenbrood",
+      "Skyr 200 g + appel + kaneel + 20 g notenmix",
+      "Overnight oats: 40 g haver + melk/soja + chiazaad + aardbeien",
+      "Volkoren pannenkoekjes (2 stuks) met cottage cheese en komkommer",
+      "Roerei met champignons, paprika en 1/2 avocado"
+     ]
+    },
+    {
+     "title": "Lunch-opties",
+     "items": [
+      "Kipfilet 150 g + quinoa 80 g (droog) + veel groenten (broccoli, wortel) + olijfolie",
+      "Zalm 120 g + zoete aardappel 150 g + spinazie + citroen",
+      "Volkoren wraps met kalkoen, hummus, sla, tomaat en komkommer",
+      "Linzensoep (groot bord) + 100 g mager rundvlees of tofu",
+      "Salade met 150 g tonijn (in water), kikkererwten, feta (30 g) en olijfolie",
+      "Volkoren pasta 70 g (droog) met kalkoengehakt, tomatensaus en courgette",
+      "Eiersalade (3 eieren) op volkoren crackers met avocado"
+     ]
+    },
+    {
+     "title": "Diner-opties",
+     "items": [
+      "Gegrilde kip of kalkoen + groene groenten + 100 g bruine rijst",
+      "Biefstuk (mager) 150 g + bloemkoolrijst + asperges",
+      "Vis (kabeljauw, schol) + aardappelen (150 g) + groene bonen",
+      "Tofu of tempeh roerbak met veel groenten en zilvervliesrijst",
+      "Gehaktballen van mager rund of kip + zoete aardappel puree + broccoli",
+      "Lamsvlees of kipcurry (lage GI) met bloemkool en een beetje basmati",
+      "Ovenzalm met notenkorst + quinoa + gegrilde paprika"
+     ]
+    },
+    {
+     "title": "Snack-opties (tussen maaltijden)",
+     "items": [
+      "Appel of peer + 20 g amandelen of pindakaas (natuurlijk)",
+      "Griekse yoghurt 150 g + handje walnoten",
+      "Wortels, komkommer of paprika met hummus",
+      "Cottage cheese 150 g + tomaat",
+      "Proteïneshake (wei of plantaardig) + bessen",
+      "2 rijstwafels met avocado en kipfilet",
+      "Handje notenmix (30 g) + 1 stuk fruit"
+     ]
+    }
+   ],
+   "tips": [
+    "Combineer altijd koolhydraten met eiwit en/of vet om pieken te dempen.",
+    "Drink minimaal 2.5–3 liter water per dag.",
+    "Beweeg ook op niet-trainingsdagen (wandelen 8–10.000 stappen).",
+    "Slaap 7–9 uur."
+   ]
+  }
  }
 }
