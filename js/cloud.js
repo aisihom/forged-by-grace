@@ -131,6 +131,7 @@
     var live = {}; Object.keys(d).forEach(function (k) { live[k] = d[k].data; });
     c.live = { at: Object.keys(d).reduce(function (a, k) { return d[k].updated_at > a ? d[k].updated_at : a; }, ''), d: live };
     if (live.profile) c.profile = Object.assign({}, c.profile || {}, live.profile);
+    if (row.profile && row.profile.targetsOverride) c.profile = Object.assign({}, c.profile || {}, { targetsOverride: row.profile.targetsOverride });
     var sum = live.checkins && live.checkins.summary;
     if (App.overlayHealthSync) App.overlayHealthSync(c, live, sum);
     if (sum) { sum.live = true; sum.at = c.live.at || sum.at; c.checkins = (c.checkins || []).filter(function (x) { return !x.live; }); c.checkins.push(sum); c.checkins.sort(function (a, b) { return a.at < b.at ? -1 : 1; }); if (c.lastCheckin !== sum.at) { c.lastCheckin = sum.at; c.unread = true; } }
