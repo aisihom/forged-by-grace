@@ -191,7 +191,7 @@
       out.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () { rows.splice(+b.dataset.del, 1); render(); }; });
       out.querySelector('#tf-add').onclick = function () {
         var meal = out.querySelector('#tf-m').value;
-        rows.forEach(function (r, i) { if (r.g > 0) App.logFood(r.food, r.g, meal, opts.src || 'text', Object.assign({ est: true }, i === 0 && opts.photo ? { photo: opts.photo } : {})); });
+        rows.forEach(function (r, i) { if (r.g > 0) App.logFood(r.food, r.g, meal, opts.src || 'text', Object.assign({ est: true }, opts.photo && (i === 0 || opts.photoAll) ? { photo: opts.photo } : {})); });
         App.toast(t('Added')); App.closeSheets(); App.rerender();
       };
     }

@@ -244,12 +244,12 @@
     h += '<div class="row between date-nav"><button class="icon-btn" data-act="food-day" data-d="-1" aria-label="prev">' + I.back + '</button><b>' + esc(iso === App.today() ? t('Today') : F.fmtDay(iso)) + '</b><button class="icon-btn flip" data-act="food-day" data-d="1" aria-label="next"' + (iso >= App.today() ? ' disabled' : '') + '>' + I.back + '</button></div>';
     h += '<div class="card"><div class="row" style="gap:16px"><div style="width:118px;flex:none">' + App.ring(tot.kcal, T.kcal, String(tot.kcal), '/ ' + T.kcal + ' kcal') + '</div><div class="grow">' + App.macroBars(tot, T) + '</div></div></div>';
     h += '<div class="grid3 add-row"><button class="btn" data-act="food-add">' + I.search + esc(t('Search')) + '</button><button class="btn" data-act="scan">' + I.barcode + esc(t('Barcode')) + '</button><button class="btn" data-act="photo">' + I.camera + esc(t('AI photo')) + '</button></div>';
-    h += '<button class="btn primary block" data-act="food-text" style="margin-top:8px">✍️ ' + esc(t('What did you eat?')) + '</button>';
+    h += '<div class="grid2" style="margin-top:8px"><button class="btn primary" data-act="food-text">✍️ ' + esc(t('What did you eat?')) + '</button><button class="btn" data-act="food-shot">🧾 ' + esc(t('Order screenshot')) + '</button></div>';
     App.MEALS.forEach(function (m) {
       var list = entries.filter(function (e) { return e.meal === m[0]; }), mt = App.dayTotals(list);
       h += '<div class="section meal-sec"><div class="section-head"><h3 class="h3">' + esc(t(m[1])) + '</h3><span class="small muted">' + mt.kcal + ' kcal</span></div>';
       if (list.length) h += '<div class="list">' + list.map(function (e) {
-        return '<div class="list-item tap" data-act="food-edit" data-id="' + e.id + '" role="button" style="cursor:pointer">' + (e.photo ? '<img class="thumb" src="' + esc(e.photo) + '" alt="">' : '<div class="ex-icon">' + (e.src === 'scan' ? I.barcode : e.src === 'photo' ? I.camera : I.food) + '</div>') +
+        return '<div class="list-item tap" data-act="food-edit" data-id="' + e.id + '" role="button" style="cursor:pointer">' + (e.photo ? '<img class="thumb" src="' + esc(e.photo) + '" alt="">' : '<div class="ex-icon">' + (e.src === 'scan' ? I.barcode : e.src === 'screenshot' ? '🧾' : e.src === 'photo' ? I.camera : I.food) + '</div>') +
           '<div class="grow"><div class="ell"><b>' + esc(e.name) + '</b>' + (e.est ? ' <span class="pill warn">' + esc(t('estimate')) + '</span>' : '') + '</div><div class="tiny muted">' + e.g + ' g · ' + Math.round(e.kcal) + ' kcal · P ' + Math.round(e.p) + ' C ' + Math.round(e.c) + ' F ' + Math.round(e.f) + '</div></div>' +
           '<button class="icon-btn" data-act="food-del" data-id="' + e.id + '" aria-label="' + esc(t('Remove')) + '">' + I.trash + '</button></div>'; }).join('') + '</div>';
       // planned meal quick-log
