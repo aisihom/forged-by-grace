@@ -216,3 +216,38 @@
   window.FBG_I18N.nl = Object.assign(window.FBG_I18N.nl || {}, NL);
   window.FBG_I18N.es = Object.assign(window.FBG_I18N.es || {}, ES);
 })();
+
+/* v3.13 — edit an already-logged food entry (any source). Syncs through App.save (cloud push). */
+(function () {
+  'use strict';
+  var App = window.App, S = App.S, A = App.acts, I = App.I || {}, esc = App.esc, t = App.t;
+  function r1(x) { return Math.round(x * 10) / 10; }
+  App.editFoodSheet = function (iso, id) {
+    var day = S.me.food[iso] || [], e = day.filter(function (x) { return x.id === id; })[0]; if (!e) return;
+    var g0 = e.g || 100, base = { kcal: e.kcal / g0, p: e.p / g0, c: e.c / g0, f: e.f / g0 };
+    function fld(k, lab, v, w) { return '<label class="field"><span class="label">' + esc(lab) + '</span><input class="input" id="fe-' + k + '" inputmode="decimal" value="' + v + '"' + (w ? ' style="width:100%"' : '') + '></label>'; }
+    var s = App.sheet(App.sheetHead(t('Edit entry'), t('Change grams and the macros scale along. You can also overwrite kcal and macros yourself.')) +
+      '<label class="field"><span class="label">' + esc(t('Name')) + '</span><input class="input" id="fe-name" value="' + esc(e.name || '') + '"></label>' +
+      '<div class="grid2">' + fld('g', t('Amount (g)'), e.g) + fld('kcal', 'kcal', Math.round(e.kcal)) + '</div>' +
+      '<div class="grid3">' + fld('p', t('protein') + ' (g)', r1(e.p)) + fld('c', t('carbs') + ' (g)', r1(e.c)) + fld('f', t('fat') + ' (g)', r1(e.f)) + '</div>' +
+      '<div class="grid2"><label class="field"><span class="label">' + esc(t('Meal')) + '</span><select class="input" id="fe-meal">' + App.MEALS.map(function (m) { return '<option value="' + m[0] + '"' + (m[0] === e.meal ? ' selected' : '') + '>' + esc(t(m[1])) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span class="label">' + esc(t('Date')) + '</span><input class="input" type="date" id="fe-date" value="' + iso + '" max="' + App.today() + '"></label></div>' +
+      '<div class="grid2" style="margin-top:12px"><button class="btn" id="fe-del">' + (I.trash || '') + esc(t('Delete')) + '</button><button class="btn primary" id="fe-save">' + (I.check || '') + esc(t('Save')) + '</button></div>');
+    var q = function (k) { return s.el.querySelector('#fe-' + k); };
+    q('g').oninput = function () { var g = App.num(q('g').value); if (!g) return; q('kcal').value = Math.round(base.kcal * g); ['p', 'c', 'f'].forEach(function (k) { q(k).value = r1(base[k] * g); }); };
+    q('save').onclick = function () {
+      var g = App.num(q('g').value); if (!g) return;
+      e.name = q('name').value.trim() || e.name; e.g = Math.round(g); e.kcal = Math.round(App.num(q('kcal').value)); e.p = r1(App.num(q('p').value)); e.c = r1(App.num(q('c').value)); e.f = r1(App.num(q('f').value));
+      e.meal = q('meal').value; e.edited = Date.now();
+      var nd = q('date').value;
+      if (nd && nd !== iso && nd <= App.today()) { S.me.food[iso] = day.filter(function (x) { return x !== e; }); (S.me.food[nd] = S.me.food[nd] || []).push(e); }
+      App.save(); App.toast(t('Saved')); App.closeSheets(); App.rerender();
+    };
+    q('del').onclick = function () { S.me.food[iso] = day.filter(function (x) { return x !== e; }); App.save(); App.toast(t('Removed')); App.closeSheets(); App.rerender(); };
+  };
+  A['food-edit'] = function (el) { App.editFoodSheet(App.foodDate, el.dataset.id); };
+  var NL = { 'Edit entry': 'Invoer bewerken', 'Change grams and the macros scale along. You can also overwrite kcal and macros yourself.': 'Pas de grammen aan en de macro\'s schalen mee. Je kunt kcal en macro\'s ook zelf overschrijven.', 'Name': 'Naam', 'Date': 'Datum', 'Delete': 'Verwijderen', 'Save': 'Opslaan', 'Saved': 'Opgeslagen', 'Removed': 'Verwijderd', 'Tap an entry to edit it.': 'Tik op een item om het te bewerken.' };
+  var ES = { 'Edit entry': 'Editar entrada', 'Change grams and the macros scale along. You can also overwrite kcal and macros yourself.': 'Cambia los gramos y los macros se ajustan. También puedes sobrescribir kcal y macros.', 'Name': 'Nombre', 'Date': 'Fecha', 'Delete': 'Eliminar', 'Save': 'Guardar', 'Saved': 'Guardado', 'Removed': 'Eliminado', 'Tap an entry to edit it.': 'Toca una entrada para editarla.' };
+  Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
+  window.FBG_I18N.es = window.FBG_I18N.es || {}; Object.keys(ES).forEach(function (k) { if (!window.FBG_I18N.es[k]) window.FBG_I18N.es[k] = ES[k]; });
+})();
