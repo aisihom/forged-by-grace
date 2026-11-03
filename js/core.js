@@ -86,7 +86,7 @@
     return Promise.resolve('j' + bytesToB64u(json));
   };
   App.decode = function (code) {
-    code = String(code || '').trim();
+    code = String(code || '').replace(/\s+/g, '');
     var m = code.match(/#imp=([A-Za-z0-9_-]+)/); if (m) code = m[1];
     if (/^\s*\{/.test(code)) return Promise.resolve(JSON.parse(code));
     var kind = code[0], body = code.slice(1);
@@ -500,6 +500,23 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
+  App.VERSION = '3.7.2';
+  App.forceUpdate = function () {
+    var jobs = [];
+    if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
+    if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+    Promise.all(jobs).catch(function () {}).then(function () { location.replace(location.pathname + '?u=' + Date.now() + (location.hash || '')); });
+  };
+  App.checkVersion = function () {
+    if (!App.secure() || !window.fetch) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.v || j.v === App.VERSION || document.getElementById('upd-bar')) return;
+      var b = document.createElement('button'); b.id = 'upd-bar';
+      b.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 8px);z-index:10000;padding:14px;border-radius:14px;border:1px solid #d4af37;background:#111;color:#f3d27a;font-weight:700;font-size:15px';
+      b.textContent = (S.lang === 'nl' ? 'Nieuwe versie (' + j.v + ') beschikbaar — tik om bij te werken' : 'New version (' + j.v + ') available — tap to update');
+      b.onclick = App.forceUpdate; document.body.appendChild(b);
+    }).catch(function () {});
+  };
   App.route = function () {
     var h = location.hash || '';
     if (h.indexOf('#imp=') === 0) { App.views.importLink(h.slice(5)); return; }
@@ -539,6 +556,12 @@
   window.addEventListener('DOMContentLoaded', function () {
     document.documentElement.lang = S.lang;
     App.route();
-    if ('serviceWorker' in navigator && App.secure()) navigator.serviceWorker.register('sw.js').catch(function () {});
+    if ('serviceWorker' in navigator && App.secure()) {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (r) { r.update().catch(function () {}); }).catch(function () {});
+      var had = !!navigator.serviceWorker.controller, reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () { if (had && !reloaded && !document.querySelector('.pw-ov,.sheet')) { reloaded = true; location.reload(); } });
+    }
+    App.checkVersion();
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') App.checkVersion(); });
   });
 })();

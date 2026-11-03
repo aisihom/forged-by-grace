@@ -87,3 +87,44 @@
   setTimeout(App.lockCheck, 0);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') App.lockCheck(); });
 })();
+/* v3.7.2 — client "paste your code" + move data Safari → Home Screen app. */
+(function () {
+  'use strict';
+  var App = window.App, S = App.S, esc = App.esc, t = App.t, A = App.acts, V = App.views, F = App.F;
+  var NL = { 'I have a code from my coach': 'Ik heb een code van mijn coach', 'Paste your code': 'Plak je code', 'Paste the link or code from your coach (or your export code).': 'Plak de link of code van je coach (of je exportcode).',
+    'Open': 'Openen', 'Export to app': 'Exporteer naar app', 'Move your data to the Home Screen app': 'Zet je gegevens over naar de app op je beginscherm',
+    'Copy this code, open the app from your Home Screen, tap “I have a code from my coach” and paste it.': 'Kopieer deze code, open de app vanaf je beginscherm, tik op “Ik heb een code van mijn coach” en plak hem.',
+    'Copy code': 'Code kopiëren', 'Copied': 'Gekopieerd', 'Your data has been moved': 'Je gegevens zijn overgezet' };
+  Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
+  App.decodeMove = function (txt) { return App.decode(String(txt).replace(/\s+/g, '').replace(/^fbg-move:/i, '')); };
+  A['have-code'] = function () {
+    var s = App.sheet(App.sheetHead(t('Paste your code'), t('Paste the link or code from your coach (or your export code).')) + '<textarea class="input mono" id="hc" rows="5" placeholder="fbg-client:…"></textarea><p class="tiny" id="hce" style="color:var(--bad,#e66);min-height:1em"></p><button class="btn primary lg block" id="hcgo">' + esc(t('Open')) + '</button>');
+    s.el.querySelector('#hcgo').onclick = function () {
+      var txt = s.el.querySelector('#hc').value, e = s.el.querySelector('#hce'), clean = txt.replace(/\s+/g, '');
+      if (/^fbg-move:/i.test(clean)) {
+        App.decodeMove(clean).then(function (o) { if (!o || o.t !== 'move' || !o.me) throw 0; S.me = App.S.me = o.me; S.role = 'athlete'; if (o.lang) S.lang = o.lang; App.save(); try { sessionStorage.setItem('fbg.unlocked', '1'); } catch (x) {} s.close(); location.hash = '#/today'; App.route(); App.toast('✅ ' + t('Your data has been moved')); })
+          .catch(function () { e.textContent = t('That is not a Forged by Grace link or code.'); });
+        return;
+      }
+      if (/#imp=/.test(clean) || /^[zj][A-Za-z0-9_-]{40,}$/.test(clean) && !App.parseClientText(clean)) { App.decode(clean).then(function (o) { s.close(); App.showImport(o); }).catch(function () { e.textContent = t('That is not a Forged by Grace link or code.'); }); return; }
+      var cl = App.parseClientText(clean); if (!cl) { e.textContent = t('That is not a Forged by Grace link or code.'); return; }
+      s.close(); App.openClientFile(cl.slug, false, cl.priv);
+    };
+  };
+  A['export-app'] = function () {
+    var me = App.clone(S.me);
+    Object.keys(me.food || {}).forEach(function (d) { (me.food[d] || []).forEach(function (x) { delete x.photo; }); });
+    (me.body || []).forEach(function (b) { delete b.photo; delete b.photos; });
+    (me.checkins || []).forEach(function (c) { delete c.photos; });
+    App.encode({ t: 'move', v: 1, lang: S.lang, me: me }).then(function (c) {
+      var code = 'fbg-move:' + c;
+      var s = App.sheet(App.sheetHead(t('Export to app'), t('Copy this code, open the app from your Home Screen, tap “I have a code from my coach” and paste it.')) + '<textarea class="input mono" rows="5" readonly>' + esc(code) + '</textarea><button class="btn primary lg block" id="exc" style="margin-top:10px">' + esc(t('Copy code')) + '</button>');
+      s.el.querySelector('#exc').onclick = function () { F.copyText(code).then(function () { App.toast(t('Copied')); }); };
+    });
+  };
+  var oMore = V.more; V.more = function () {
+    var h = oMore.apply(this, arguments); if (S.role === 'coach') return h;
+    return '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>📲 ' + esc(t('Export to app')) + '</b><div class="tiny muted">' + esc(t('Move your data to the Home Screen app')) + '</div></div><button class="btn sm" data-act="export-app">' + esc(t('Export to app')) + '</button></div>' +
+      '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>🔑 ' + esc(t('I have a code from my coach')) + '</b></div><button class="btn sm" data-act="have-code">' + esc(t('Open')) + '</button></div>' + h;
+  };
+})();

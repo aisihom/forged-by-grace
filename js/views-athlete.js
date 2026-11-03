@@ -14,6 +14,7 @@
       '<div class="stack" style="margin-top:22px">' +
       '<button class="btn primary lg block" data-act="start-coach">' + I.users + esc(t("I'm the coach")) + '</button>' +
       '<button class="btn lg block" data-act="start-client">' + I.train + esc(t("I'm a client")) + '</button>' +
+      '<button class="btn lg block" data-act="have-code">' + I.link + esc(t('I have a code from my coach')) + '</button>' +
       '<p class="tiny muted center">' + esc(t('Got a link from your coach? Just open it — your plan loads automatically.')) + '</p></div></div>';
   };
   App.langSwitch = function () {
@@ -106,9 +107,14 @@
   // ?client=<slug>&coach=1  → coach's phone: adds/updates the client in the coach list
   // parse a pasted link / code: full link, or "fbg:<slug>:<privcode>"
   App.parseClientText = function (txt) {
-    txt = String(txt || '').trim(); var m = txt.match(/client=([a-z0-9-]{2,40})/i) || txt.match(/^fbg:([a-z0-9-]{2,40})/i); if (!m) return null;
-    var pm = txt.match(/[#&]p=([A-Za-z0-9_-]+)/) || txt.match(/^fbg:[a-z0-9-]+:([A-Za-z0-9_-]+)/i);
-    return { slug: m[1].toLowerCase(), priv: pm ? pm[1] : null, coach: /coach=1/.test(txt) };
+    txt = String(txt || '').replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+    if (!txt || /#imp=/.test(txt)) return null;
+    var coach = /coach=1/.test(txt) || /^fbg:/i.test(txt), slug = null, priv = null, m;
+    if ((m = txt.match(/[?&]client=([a-z0-9-]{2,40})/i))) { slug = m[1]; m = txt.match(/[#&]p=([A-Za-z0-9_-]+)/); priv = m ? m[1] : null; }
+    else if ((m = txt.match(/^fbg(?:-client|-coach)?:([a-z0-9-]{2,40})(?::([A-Za-z0-9_-]+))?$/i))) { slug = m[1]; priv = m[2] || null; if (/^fbg-client:/i.test(txt)) coach = false; }
+    else if (/^[zj][A-Za-z0-9_-]{40,}$/.test(txt)) { priv = txt; }
+    else return null;
+    return { slug: slug ? slug.toLowerCase() : null, priv: priv, coach: coach };
   };
   App.openClientFile = function (slug, asCoach, privCode) {
     var view = document.getElementById('view');
@@ -117,7 +123,7 @@
     // private part (weight, health notes) travels only in the link's #p= hash — never stored in the public repo
     var pm = privCode ? [0, privCode] : (location.hash || '').match(/[#&]p=([A-Za-z0-9_-]+)/), priv = {};
     history.replaceState(null, '', location.pathname + '#/');
-    (pm ? App.decode('z' === pm[1][0] || 'j' === pm[1][0] ? pm[1] : pm[1]).catch(function () { return {}; }) : Promise.resolve({})).then(function (p) { priv = p || {}; return fetch('clients/' + slug + '.json?t=' + Date.now(), { cache: 'no-store' }); }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
+    (pm ? App.decode('z' === pm[1][0] || 'j' === pm[1][0] ? pm[1] : pm[1]).catch(function () { return {}; }) : Promise.resolve({})).then(function (p) { priv = p || {}; slug = slug || priv.slug; if (!slug) throw new Error(t('That is not a Forged by Grace link or code.')); return fetch('clients/' + slug + '.json?t=' + Date.now(), { cache: 'no-store' }); }).then(function (r) { if (!r.ok) throw new Error(t('Could not open this link')); return r.json(); }).then(function (obj) {
       obj.client.profile = Object.assign({}, obj.client.profile || {}, priv.profile || {});
       if (priv.msg) obj.msg = (obj.msg ? obj.msg + '\n\n' : '') + priv.msg;
       if (priv.coachNotes) obj.coachNotes = priv.coachNotes;
