@@ -7,8 +7,13 @@
   function lastCI(c) { return c.checkins && c.checkins.length ? c.checkins[c.checkins.length - 1] : null; }
   function status(c) {
     var ci = lastCI(c), n = ci ? App.daysAgo(ci.at) : null;
-    if (!c.sharedAt) return ['info', t('Not shared yet')];
-    if (n == null) return ['warn', t('Waiting for first check-in')];
+    var start = c.sharedAt || (c.cloudId && c.created);
+    if (!start) return ['info', t('Not shared yet')];
+    if (n == null) {
+      var due = new Date(new Date(start).getTime() + 7 * 864e5);
+      if (Date.now() < due.getTime()) return ['wait', t('First check-in: {d}', { d: due.toLocaleDateString(S.lang === 'nl' ? 'nl-NL' : S.lang === 'es' ? 'es-ES' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) })];
+      return ['warn', t('Waiting for first check-in')];
+    }
     if (n > 10) return ['bad', t('No check-in for {n} days', { n: n })];
     if (ci.adh && ci.adh.overall != null && ci.adh.overall < 0.5) return ['warn', t('Low adherence')];
     return ['good', t('On track')];
