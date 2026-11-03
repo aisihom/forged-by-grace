@@ -48,3 +48,4 @@ html[data-theme="light"] .sp-bal { color: #8a6420; }
 .rw-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .rw-acts { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .rw-code { font: 900 34px/1.2 ui-monospace, Menlo, monospace; letter-spacing: 4px; color: var(--accent); text-align: center; margin: 10px 0; }
+.rw-ltd{background:linear-gradient(135deg,#d4af37,#f5d77a);color:#111;font-weight:700;font-size:10px;margin-left:4px}.wt-tot b{font-size:26px;color:#d4af37}

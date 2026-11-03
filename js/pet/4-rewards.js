@@ -23,7 +23,7 @@
   };
   window.FBG_I18N = window.FBG_I18N || {}; window.FBG_I18N.nl = window.FBG_I18N.nl || {};
   Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
-  var CAP = 150, NOCAP = { welcome: 1, streak: 1 }, MAXONE = { in: 5, st6: 10, st8: 10, st10: 15, wk: 30, sp: 20, fl: 10, ft: 20, welcome: 50, streak: 50 };
+  var CAP = 150, NOCAP = { welcome: 1, streak: 1 }, MAXONE = { in: 5, st6: 10, st8: 10, st10: 15, wk: 30, sp: 20, fl: 10, ft: 20, wa: 5, wg: 10, welcome: 50, streak: 50 };
   var DEF = [
     { id: 'r1', n: 'FBG shaker bottle', p: 1500, d: 'Example — edit name & price' },
     { id: 'r2', n: 'Protein bar box', p: 2500, d: 'Example' },
@@ -45,8 +45,8 @@
   function G() { var g = App.game(); if (!Array.isArray(g.redeem)) g.redeem = []; return g; }
   function lg(g, k, pts, l) { g.log.unshift({ d: App.today(), ts: Date.now(), k: k, pts: pts, l: l }); if (g.log.length > 300) g.log.length = 300; }
   function activity(ath, from) {
-    var a = { st: {}, sx: {}, wk: {}, sp: {}, fl: {} };
-    for (var d = from; d <= App.today(); d = App.isoAdd(d, 1)) { var hd = App.healthDay && App.healthDay(d); if (hd && hd.steps) { a.st[d] = hd.steps; if (hd.extraSteps) a.sx[d] = hd.extraSteps; } var fe = (ath.food && ath.food[d]) || []; if (fe.length) a.fl[d] = fe.length; }
+    var a = { st: {}, sx: {}, wk: {}, sp: {}, fl: {}, wa: {} };
+    for (var d = from; d <= App.today(); d = App.isoAdd(d, 1)) { var hd = App.healthDay && App.healthDay(d); if (hd && hd.steps) { a.st[d] = hd.steps; if (hd.extraSteps) a.sx[d] = hd.extraSteps; } var fe = (ath.food && ath.food[d]) || []; if (fe.length) a.fl[d] = fe.length; if (ath.water && ath.water[d]) a.wa[d] = ath.water[d]; }
     (ath.sessions || []).forEach(function (s) { if (!s.date || s.date < from) return; var k = (s.type === 'sport' || s.type === 'external') ? 'sp' : 'wk'; a[k][s.date] = (a[k][s.date] || 0) + 1; });
     return a;
   }
@@ -72,6 +72,7 @@
       if (x[1] === 'wk' && !(a.wk && a.wk[x[0]])) w.push('Workout points on ' + x[0] + ' without a logged workout');
       if (x[1] === 'sp' && !(a.sp && a.sp[x[0]])) w.push('Sport points on ' + x[0] + ' without a logged session');
       if ((x[1] === 'fl' || x[1] === 'ft') && !(a.fl && (a.fl[x[0]] || 0) >= 3)) w.push('Food points on ' + x[0] + ' without 3+ food logs');
+      if ((x[1] === 'wa' || x[1] === 'wg') && !(a.wa && a.wa[x[0]])) w.push('Water points on ' + x[0] + ' without logged water');
       if (x[0] > r.at.slice(0, 10)) w.push('Points dated in the future: ' + x[0]);
     });
     Object.keys(day).forEach(function (d) { if (day[d] > CAP) w.push('Over the daily cap on ' + d + ': ' + day[d] + ' SP (max ' + CAP + ')'); });
@@ -90,7 +91,7 @@
   App.rewardsBlock = function () {
     var g = G(), rw = App.rewards();
     var h = '<div class="rw"><div class="row between"><b>🎁 ' + esc(t('Rewards')) + '</b><button class="btn sm ghost" data-act="rw-how">' + esc(t('How it works')) + '</button></div><p class="tiny muted" style="margin:4px 0 8px">' + esc(t('Rewards are approved by your coach.')) + '</p><div class="rw-list">';
-    h += rw.map(function (x) { var can = g.sp >= x.p; return '<div class="rw-item"><div class="grow"><b>' + esc(x.n) + '</b>' + (x.d ? '<div class="tiny muted">' + esc(x.d) + '</div>' : '') + '</div><div class="rw-r"><span class="price">' + x.p.toLocaleString(S.lang) + ' SP</span><button class="btn sm ' + (can ? 'primary' : '') + '" data-act="rw-redeem" data-id="' + esc(x.id) + '"' + (can ? '' : ' disabled') + '>' + esc(t('Redeem')) + '</button></div></div>'; }).join('');
+    h += rw.map(function (x) { var can = g.sp >= x.p; return '<div class="rw-item"><div class="grow"><b>' + esc(x.n) + '</b>' + (/shirt|shaker|shake|protein|eiwit/i.test(x.n) ? ' <span class="pill rw-ltd">' + esc(t('Limited offer – while stocks last')) + '</span>' : '') + (x.d ? '<div class="tiny muted">' + esc(x.d) + '</div>' : '') + '</div><div class="rw-r"><span class="price">' + x.p.toLocaleString(S.lang) + ' SP</span><button class="btn sm ' + (can ? 'primary' : '') + '" data-act="rw-redeem" data-id="' + esc(x.id) + '"' + (can ? '' : ' disabled') + '>' + esc(t('Redeem')) + '</button></div></div>'; }).join('');
     h += '</div>';
     if (g.redeem.length) h += '<div class="tiny kicker" style="margin-top:10px">' + esc(t('My requests')) + '</div>' + g.redeem.slice(0, 8).map(function (x) {
       return '<div class="rw-req"><div class="grow"><b>' + esc(x.rn) + '</b> <span class="pill ' + (x.status === 'done' ? 'good' : x.status === 'pending' ? 'warn' : '') + '">' + esc(t(stLabel(x.status))) + '</span><div class="tiny muted mono">' + esc(x.code) + ' · ' + x.amt + ' SP</div></div>' +
