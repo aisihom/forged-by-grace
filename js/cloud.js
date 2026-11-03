@@ -22,7 +22,7 @@
   var PRIV_EN = 'Privacy: Forged by Grace (Aarón Ricardo) stores your data with Supabase in Frankfurt (EU), encrypted and visible only to you and your coach. It is used only to coach you, never for ads or resale. You can request access, correction or deletion at any time via ' + (S.coach.email || 'your coach') + ' (GDPR).';
 
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
-  var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; } };
+  var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; }, myFeedback: function () { return (myClient && myClient.coach_feedback) || null; } };
   C.restart = function () { role = null; myClient = null; return start(); };
   C.user = function () { return user; }; C.role = function () { return role; };
 
@@ -122,7 +122,7 @@
     var row = rows[id]; if (!row) return; var d = data[id] || {};
     var c = S.clients.filter(function (x) { return x.cloudId === id || (row.slug && x.setupSlug === row.slug) || x.id === id; })[0];
     if (!c) { c = { id: id, name: row.name, created: row.created_at, checkins: [], profile: row.profile || {} }; S.clients.push(c); }
-    c.cloudId = id; c.email = row.email; c.cloudNotes = row.notes || ''; c.cloudStatus = row.status; c.name = row.name || c.name;
+    c.cloudId = id; c.coachFb = row.coach_feedback || {}; c.email = row.email; c.cloudNotes = row.notes || ''; c.cloudStatus = row.status; c.name = row.name || c.name;
     var dirty = c._pj && JSON.stringify([c.plan || null, c.meal || null]) !== c._pj;
     if (!dirty && (!c._cat || (row.updated_at || '') > c._cat)) { if (row.plan) c.plan = row.plan; if (row.meal) c.meal = row.meal; }
     else { if (!c.plan && row.plan) c.plan = row.plan; if (!c.meal && row.meal) c.meal = row.meal; }

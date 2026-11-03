@@ -169,6 +169,7 @@
     var first = String(p.name || '').split(' ')[0];
     var h = App.header('', ath.coach && ath.coach.name ? t('Coached by {n}', { n: ath.coach.name }) : '');
     h += '<p class="kicker">' + esc(new Date().toLocaleDateString(S.lang, { weekday: 'long', day: 'numeric', month: 'long' })) + '</p><h1 class="h1">' + esc(first ? t('Hi {n}', { n: first }) : t('Today')) + '</h1>';
+    if (App.coachFbCard) h += App.coachFbCard(ath);
     if (S.verse) { var v = App.verse(); h += '<div class="verse"><span>' + I.cross + '</span><p>“' + esc(v[1]) + '” <b>' + esc(v[0]) + '</b></p></div>'; }
     // workout hero
     if (!plan) h += '<div class="hero"><p class="kicker">' + esc(t('Training')) + '</p><h2 class="h2">' + esc(t('No training plan yet')) + '</h2><p class="small muted">' + esc(t('Pick a template — you can tweak every exercise.')) + '</p><a class="btn primary" href="#/train">' + esc(t('Choose a plan')) + '</a></div>';

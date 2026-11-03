@@ -92,6 +92,7 @@
         if (c.phone || c.email) h += '<div class="grid2" style="margin-top:10px">' + (c.phone ? '<a class="btn" target="_blank" rel="noopener" href="https://wa.me/' + esc(c.phone) + '?text=' + encodeURIComponent(t('Hi {n}, thanks for your check-in!', { n: c.name.split(' ')[0] })) + '">' + I.wa + esc(t('Reply')) + '</a>' : '') + (c.email ? '<a class="btn" href="mailto:' + esc(c.email) + '?subject=' + encodeURIComponent('Check-in') + '">' + I.mail + esc(t('Email')) + '</a>' : '') + '</div>';
       }
       h += '</div>';
+      if (App.weekOverview) h += App.weekOverview(c);
       // mental coaching brief
       h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Mental coaching')) + '</h2></div>' + (c.intake ? App.briefHtml(c) : '<p class="small muted">' + esc(t('Send the intake questionnaire from the Mind tab. Answers turn into a coaching brief here.')) + '</p><a class="btn" href="#/mind">' + I.heart + esc(t('Mind tab')) + '</a>') + '</div>';
       h += '<div class="section"><label class="field"><span class="label">' + esc(t('Coach notes')) + ' <span class="opt">' + esc(t('private')) + '</span></span><textarea class="input" data-notes="' + c.id + '">' + esc(c.notes || '') + '</textarea></label></div>';
