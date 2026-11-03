@@ -86,7 +86,9 @@
     return Promise.resolve('j' + bytesToB64u(json));
   };
   App.decode = function (code) {
+    if (/^\s*\{/.test(String(code || ''))) return Promise.resolve(JSON.parse(code));
     code = String(code || '').replace(/\s+/g, '');
+    code = code.replace(/^fbg-(all|move):/i, '');
     var m = code.match(/#imp=([A-Za-z0-9_-]+)/); if (m) code = m[1];
     if (/^\s*\{/.test(code)) return Promise.resolve(JSON.parse(code));
     var kind = code[0], body = code.slice(1);
@@ -500,7 +502,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.7.2';
+  App.VERSION = '3.7.3';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));

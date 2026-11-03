@@ -41,7 +41,7 @@
   };
   A['client-code'] = function () {
     var s = App.sheet(App.sheetHead(t('Add client via code/link'), t('Paste the code or link you received from your assistant.')) + '<textarea class="input mono" id="cc" rows="5" placeholder="fbg:…"></textarea><button class="btn primary lg block" id="ccgo" style="margin-top:12px">' + esc(t('Add client')) + '</button>');
-    s.el.querySelector('#ccgo').onclick = function () { var cl = App.parseClientText(s.el.querySelector('#cc').value); if (!cl) { App.toast(t('That is not a Forged by Grace link or code.')); return; } s.close(); App.openClientFile(cl.slug, true, cl.priv); };
+    s.el.querySelector('#ccgo').onclick = function () { var raw = s.el.querySelector('#cc').value.replace(/\s+/g, ''); if (/^fbg-(all|move):/i.test(raw)) { s.close(); App.decode(raw).then(App.showImport).catch(function () { App.toast(t('That is not a Forged by Grace link or code.')); }); return; } var cl = App.parseClientText(s.el.querySelector('#cc').value); if (!cl) { App.toast(t('That is not a Forged by Grace link or code.')); return; } s.close(); App.openClientFile(cl.slug, true, cl.priv); };
   };
   A['paste-import'] = function () {
     var s = App.sheet(App.sheetHead(t('Open link or file'), t('Paste a Forged by Grace link/code, or choose a .fbg.json file.')) + '<textarea class="input mono" id="pi" placeholder="https://…#imp=…"></textarea><input type="file" class="input" id="pif" accept=".json,.txt,application/json" style="margin-top:10px"><button class="btn primary lg block" id="pigo" style="margin-top:12px">' + esc(t('Open')) + '</button>');

@@ -101,6 +101,7 @@
     var s = App.sheet(App.sheetHead(t('Paste your code'), t('Paste the link or code from your coach (or your export code).')) + '<textarea class="input mono" id="hc" rows="5" placeholder="fbg-client:…"></textarea><p class="tiny" id="hce" style="color:var(--bad,#e66);min-height:1em"></p><button class="btn primary lg block" id="hcgo">' + esc(t('Open')) + '</button>');
     s.el.querySelector('#hcgo').onclick = function () {
       var txt = s.el.querySelector('#hc').value, e = s.el.querySelector('#hce'), clean = txt.replace(/\s+/g, '');
+      if (/^fbg-all:/i.test(clean)) { App.decode(clean).then(function (o) { s.close(); App.showImport(o); }).catch(function () { e.textContent = t('That is not a Forged by Grace link or code.'); }); return; }
       if (/^fbg-move:/i.test(clean)) {
         App.decodeMove(clean).then(function (o) { if (!o || o.t !== 'move' || !o.me) throw 0; S.me = App.S.me = o.me; S.role = 'athlete'; if (o.lang) S.lang = o.lang; App.save(); try { sessionStorage.setItem('fbg.unlocked', '1'); } catch (x) {} s.close(); location.hash = '#/today'; App.route(); App.toast('✅ ' + t('Your data has been moved')); })
           .catch(function () { e.textContent = t('That is not a Forged by Grace link or code.'); });
@@ -127,4 +128,62 @@
     return '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>📲 ' + esc(t('Export to app')) + '</b><div class="tiny muted">' + esc(t('Move your data to the Home Screen app')) + '</div></div><button class="btn sm" data-act="export-app">' + esc(t('Export to app')) + '</button></div>' +
       '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>🔑 ' + esc(t('I have a code from my coach')) + '</b></div><button class="btn sm" data-act="have-code">' + esc(t('Open')) + '</button></div>' + h;
   };
+})();
+/* v3.7.3 — full-state export (coach + athlete): "📲 Exporteer alles naar app" → fbg-all: code or .fbg.json file. */
+(function () {
+  'use strict';
+  var App = window.App, S = App.S, esc = App.esc, t = App.t, A = App.acts, V = App.views, F = App.F;
+  var NL = { 'Export everything to app': 'Exporteer alles naar app', 'Clients, plans, logs, your own profile and settings → Home Screen app': 'Klanten, schema\u2019s, logs, je eigen profiel en instellingen → app op beginscherm',
+    'Download file': 'Bestand downloaden', 'Everything has been moved': 'Alles is overgezet', 'Photos are not included.': 'Foto\u2019s gaan niet mee.',
+    'Copy this code, open the app from your Home Screen and paste it: welcome screen → “I have a code from my coach”, or Clients → “Add client via code/link”.': 'Kopieer deze code, open de app vanaf je beginscherm en plak hem: startscherm → “Ik heb een code van mijn coach”, of Klanten → “Klant toevoegen via code/link”.' };
+  Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
+  function strip(o) {
+    if (Array.isArray(o)) return o.filter(function (x) { return !(typeof x === 'string' && /^data:/.test(x)); }).map(strip);
+    if (o && typeof o === 'object') { Object.keys(o).forEach(function (k) { var v = o[k]; if (typeof v === 'string' && /^data:/.test(v) && v.length > 200) delete o[k]; else o[k] = strip(v); }); }
+    return o;
+  }
+  App.exportAll = function () {
+    App.save();
+    var ls = {};
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('fbg.') === 0 && k.indexOf('fbg.remNotified') !== 0) ls[k] = localStorage.getItem(k); }
+    var st = strip(App.clone(S)); ls['fbg.state.v2'] = JSON.stringify(st);
+    ['fbg.intakes', 'fbg.intakeDraft'].forEach(function (k) { if (ls[k]) { try { ls[k] = JSON.stringify(strip(JSON.parse(ls[k]))); } catch (e) {} } });
+    return { t: 'all', v: 1, at: new Date().toISOString(), ls: ls };
+  };
+  App.importAll = function (o) {
+    Object.keys(o.ls || {}).forEach(function (k) { if (k.indexOf('fbg.') === 0) localStorage.setItem(k, o.ls[k]); });
+    try { sessionStorage.setItem('fbg.unlocked', '1'); sessionStorage.setItem('fbg.importedAll', '1'); } catch (e) {}
+    var st = JSON.parse(o.ls['fbg.state.v2'] || '{}');
+    location.replace(location.pathname + '#/' + (st.role === 'coach' ? 'clients' : 'today')); location.reload();
+  };
+  var oShow = App.showImport;
+  App.showImport = function (obj) {
+    if (obj && obj.t === 'all') { App.importAll(obj); return; }
+    if (obj && obj.t === 'move' && obj.me) { S.me = App.S.me = obj.me; S.role = 'athlete'; App.save(); location.hash = '#/today'; App.route(); App.toast('✅ ' + t('Your data has been moved')); return; }
+    return oShow.apply(this, arguments);
+  };
+  try { if (sessionStorage.getItem('fbg.importedAll') === '1') { sessionStorage.removeItem('fbg.importedAll'); setTimeout(function () { App.toast('✅ ' + t('Everything has been moved') + ' · ' + S.clients.length + ' ' + (S.lang === 'nl' ? 'klant(en)' : 'client(s)')); }, 600); } } catch (e) {}
+  A['export-all'] = function () {
+    var obj = App.exportAll();
+    App.encode(obj).then(function (c) {
+      var code = 'fbg-all:' + c, big = code.length > 60000;
+      var s = App.sheet(App.sheetHead(t('Export everything to app'), t('Copy this code, open the app from your Home Screen and paste it: welcome screen → “I have a code from my coach”, or Clients → “Add client via code/link”.')) +
+        '<p class="tiny muted">' + S.clients.length + ' clients · ' + Math.round(code.length / 1024) + ' KB · ' + esc(t('Photos are not included.')) + '</p>' +
+        '<textarea class="input mono" rows="4" readonly>' + esc(big ? code.slice(0, 300) + '…' : code) + '</textarea>' +
+        '<div class="grid2" style="margin-top:10px"><button class="btn primary" id="ea-c">' + esc(t('Copy code')) + '</button><button class="btn" id="ea-f">' + esc(t('Download file')) + '</button></div>');
+      s.el.querySelector('#ea-c').onclick = function () { F.copyText(code).then(function () { App.toast(t('Copied')); }); };
+      s.el.querySelector('#ea-f').onclick = function () {
+        var name = 'forged-by-grace-alles-' + App.today() + '.fbg.json', txt = JSON.stringify(obj);
+        try { var file = new File([txt], name, { type: 'application/json' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file] }).catch(function () {}); return; } } catch (e) {}
+        F.download(name, txt, 'application/json');
+      };
+    });
+  };
+  var oMore = V.more; V.more = function () {
+    var h = oMore.apply(this, arguments);
+    return '<div class="card row" style="margin-bottom:12px;border:1px solid rgba(212,175,55,.5)"><div class="grow"><b>📲 ' + esc(t('Export everything to app')) + '</b><div class="tiny muted">' + esc(t('Clients, plans, logs, your own profile and settings → Home Screen app')) + '</div></div><button class="btn sm primary" data-act="export-all">' + esc(S.lang === 'nl' ? 'Exporteer' : 'Export') + '</button></div>' + h;
+  };
+  // welcome screen: also accept an all-export file
+  var oWel = V.welcome; V.welcome = function () { var h = oWel.apply(this, arguments), i = h.lastIndexOf('</div></div>'); return h.slice(0, i) + '<label class="btn ghost block small" style="margin-top:4px">📁 ' + esc(S.lang === 'nl' ? 'Bestand (.fbg.json) openen' : 'Open file (.fbg.json)') + '<input type="file" id="wel-file" accept=".json,application/json" hidden></label>' + h.slice(i); };
+  document.addEventListener('change', function (e) { if (e.target && e.target.id === 'wel-file' && e.target.files[0]) e.target.files[0].text().then(function (x) { return App.decode(x); }).then(App.showImport).catch(function () { App.toast(t('That is not a Forged by Grace link or code.')); }); });
 })();
