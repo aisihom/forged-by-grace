@@ -242,7 +242,7 @@
     }).then(function (p) { pipe = p; S.modelReady = true; App.save(); return p; }).catch(function (e) { loading = null; throw e; });
     return loading;
   };
-  App.classifyFood = function (dataUrl) { return App.loadFoodModel().then(function (p) { return p(dataUrl, { top_k: 5 }); }); };
+  App.classifyFood = function (dataUrl) { return App.loadFoodModel().then(function (p) { return p(dataUrl, { top_k: 10 }); }); };
   App.prettyLabel = function (l) { return String(l).replace(/_/g, ' ').replace(/^\w/, function (c) { return c.toUpperCase(); }); };
   App.f101Food = function (label) {
     var m = FD.F101[label]; if (!m) return null;
@@ -252,8 +252,10 @@
     var s = App.sheet(App.sheetHead(t('AI food photo'), t('Snap your plate. The AI guesses the dish, you pick the portion — always an estimate.')) +
       '<label class="photo-drop" id="ph-drop"><input type="file" id="ph-file" accept="image/*" capture="environment" hidden><div id="ph-prev">' + I.camera + '<b>' + esc(t('Take or choose a photo')) + '</b></div></label>' +
       '<div id="ph-out" aria-live="polite"></div>' +
+      '<div class="row" style="gap:8px;margin-top:10px"><input class="input grow" id="ph-txt" placeholder="' + esc(t('Or type what is on the plate (e.g. burger met friet)')) + '"><button class="btn primary" id="ph-txt-go">' + esc(t('Describe it & log')) + '</button></div>' +
       '<p class="tiny muted" style="margin-top:10px">' + esc(t('Runs on your phone with a free AI model (Food-101, 101 dishes). First use downloads ~90 MB once — use Wi-Fi. Photos are not uploaded anywhere.')) + '</p>');
     var out = s.el.querySelector('#ph-out'), photo = null;
+    s.el.querySelector('#ph-txt-go').onclick = function () { var v = s.el.querySelector('#ph-txt').value.trim(); App.textFoodSheet({ text: v, photo: photo, src: 'photo' }); };
     s.el.querySelector('#ph-file').onchange = function (e) {
       var file = e.target.files[0]; if (!file) return;
       App.resizeImage(file, 384, 0.8).then(function (url) {
@@ -269,12 +271,14 @@
     function showGuesses(res) {
       var top = res[0] || { score: 0 };
       var conf = top.score >= 0.6 ? ['good', t('fairly sure')] : top.score >= 0.3 ? ['warn', t('not sure')] : ['bad', t('guess')];
-      out.innerHTML = '<h3 class="h3" style="margin-top:12px">' + esc(t('Looks like…')) + ' <span class="pill ' + conf[0] + '">' + esc(conf[1]) + '</span></h3><div class="list">' + res.slice(0, 3).map(function (r, i) {
+      out.innerHTML = '<h3 class="h3" style="margin-top:12px">' + esc(t('Looks like…')) + ' <span class="pill ' + conf[0] + '">' + esc(conf[1]) + '</span></h3><div class="list">' + res.filter(function (r) { return App.f101Food(r.label); }).slice(0, 5).map(function (r, i) {
         var f = App.f101Food(r.label); if (!f) return '';
         return '<button class="list-item" data-l="' + esc(r.label) + '"><div class="grow"><b>' + esc(f.en) + '</b><div class="tiny muted">' + Math.round(r.score * 100) + '% · ≈' + Math.round(f.kcal * f.g / 100) + ' kcal ' + esc(t('per typical plate')) + '</div></div><span class="chev">›</span></button>'; }).join('') +
+        '<button class="list-item" data-act="ph-txt"><div class="grow"><b>' + esc(t('Not right? Describe it:')) + '</b> <span class="tiny muted">' + esc(t('Type what you ate')) + '</span></div><span class="chev">›</span></button>' +
         '<button class="list-item" data-act="ph-db"><div class="grow"><b>' + esc(t('None of these — pick from food list')) + '</b></div><span class="chev">›</span></button></div>';
+      var tx = s.el.querySelector('#ph-txt'); if (tx && !tx.value && top.label) tx.value = App.prettyLabel(top.label).toLowerCase();
       out.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { pickPortion(App.f101Food(b.dataset.l), res[0] && res[0].score); }; });
-      A['ph-db'] = dbPick;
+      A['ph-db'] = dbPick; A['ph-txt'] = function () { s.el.querySelector('#ph-txt-go').click(); };
     }
     function pickPortion(f, score) {
       App.portionSheet(f, { src: 'photo', extra: { photo: photo, est: true }, cta: t('Add estimate to log'),
@@ -282,7 +286,7 @@
     }
     function dbPick() { App.foodSearchSheet(function (fd) { App.portionSheet(fd, { src: 'photo', extra: { photo: photo }, note: esc(t('Photo saved with this log entry.')) }); }, t('What is on the plate?')); }
     function fallback(msg) {
-      out.innerHTML = '<p class="suggest">' + esc(msg) + ' ' + esc(t('You can still log it: pick the food and portion, the photo is saved with the entry.')) + '</p><button class="btn primary block" id="ph-fb">' + I.search + esc(t('Pick food + portion')) + '</button>';
+      out.innerHTML = '<p class="suggest">' + esc(msg) + ' ' + esc(t('You can still log it: pick the food and portion, the photo is saved with the entry.')) + '</p><button class="btn primary block" id="ph-fb">' + I.search + esc(t('Pick food + portion')) + '</button><p class="tiny muted">' + esc(t('Or type what is on the plate (e.g. burger met friet)')) + ' ↓</p>';
       out.querySelector('#ph-fb').onclick = dbPick;
     }
   };
