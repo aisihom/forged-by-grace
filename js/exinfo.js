@@ -9,7 +9,7 @@
     sidedelt: ['Zijkant schouder', 'm. deltoideus lateralis'], reardelt: ['Achterste schouderspier', 'm. deltoideus posterior'],
     triceps: ['Triceps', 'm. triceps brachii'], biceps: ['Biceps', 'm. biceps brachii & m. brachialis'],
     forearms: ['Onderarm', 'm. brachioradialis & onderarmflexoren'], lats: ['Brede rugspier', 'm. latissimus dorsi'],
-    traps: ['Monnikskapspier', 'm. trapezius'], rhomboids: ['Ruitvormige spieren', 'm. rhomboideus'],
+    traps: ['Monnikskapspier', 'm. trapezius'], rhomboids: ['Ruitvormige spieren', 'mm. rhomboidei major et minor'], midtraps: ['Middelste + onderste monnikskapspier', 'm. trapezius pars transversa et ascendens'], cuff: ['Rotator cuff (onderdoornspier + kleine ronde spier)', 'm. infraspinatus + m. teres minor'],
     erectors: ['Rugstrekkers', 'm. erector spinae'], abs: ['Rechte buikspier', 'm. rectus abdominis'],
     obliques: ['Schuine buikspieren', 'm. obliquus externus/internus'], hipflex: ['Heupbuigers', 'm. iliopsoas']
   };
@@ -56,7 +56,7 @@
     'face-pull': e('reardelt rhomboids', 'traps', ['Opstelling: kabel op ooghoogte met touw, handpalmen naar elkaar.', 'Trek het touw naar je gezicht en draai je handen naar buiten (dubbele biceps-pose).', 'Pauzeer en laat gecontroleerd terug.', 'Let op: niet achterover leunen, ellebogen hoog.']),
     'band-pull-apart': e('reardelt rhomboids', 'traps', ['Opstelling: band op schouderhoogte vast in beide handen, armen gestrekt.', 'Trek de band uit elkaar tot hij je borst raakt.', 'Laat gecontroleerd terug.', 'Let op: schouders laag, geen holle rug.']),
     'reverse-fly': e('reardelt rhomboids', 'traps', ['Opstelling: voorover gebogen met platte rug, dumbbells onder je borst.', 'Breng je armen zijwaarts omhoog met licht gebogen ellebogen.', 'Knijp bovenin je schouderbladen samen en zak langzaam.', 'Let op: licht gewicht, geen zwaai vanuit je rug.']),
-    'prone-ytw': e('traps rhomboids reardelt', 'erectors', ['Opstelling: op je buik of schuine bank, duimen omhoog.', 'Maak achtereenvolgens een Y, T en W met je armen en til ze van de grond.', 'Houd elke positie 1–2 tellen.', 'Let op: nek neutraal, beweging uit je schouderbladen.']),
+    'prone-ytw': e('midtraps rhomboids reardelt', 'cuff', ['Opstelling: op je buik op de grond of een schuine bank, voorhoofd omlaag, benen gestrekt.', 'Y: armen schuin boven je hoofd (±135°), duimen omhoog, til ze los.', 'T: armen recht opzij (90°), duimen omhoog, knijp je schouderbladen naar elkaar.', 'W: buig je ellebogen en trek ze omlaag naar je ribben; knijp je schouderbladen samen en omlaag.', 'Let op: houd elke positie 1–2 tellen, nek neutraal, schouders weg van je oren.']),
     'db-curl': e('biceps', 'forearms', ['Opstelling: rechtop, dumbbells langs je zij, handpalmen naar voren.', 'Buig je ellebogen en krul de dumbbells omhoog; ellebogen blijven naast je lichaam.', 'Zak in 2–3 tellen tot je armen gestrekt zijn.', 'Let op: niet zwaaien met je rug of je ellebogen naar voren brengen.']),
     'hammer-curl': e('biceps forearms', '', ['Opstelling: dumbbells langs je zij, handpalmen naar elkaar (hamergreep).', 'Krul omhoog zonder je pols te draaien.', 'Zak gecontroleerd terug.', 'Let op: ellebogen stil naast je lichaam.']),
     'triceps-pushdown': e('triceps', '', ['Opstelling: kabel hoog, ellebogen vast tegen je zij.', 'Druk de stang of het touw omlaag tot je armen gestrekt zijn.', 'Laat gecontroleerd terug tot ongeveer 90°.', 'Let op: ellebogen niet naar voren laten komen, niet met je lichaam meeduwen.']),
