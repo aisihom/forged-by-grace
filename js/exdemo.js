@@ -101,20 +101,20 @@
       '</svg>';
   }
   var FR3 = { 'prone-ytw': ['Y-positie', 'T-positie', 'W-positie'] };
-  var FIXED = {}; 'prone-ytw calf-raise pallof-press mountain-climber incline-walk brisk-walk push-up overhead-press bench-dip hip-thrust dead-bug'.split(' ').forEach(function (k) { FIXED[k] = 1; });
+  var IMPERFECT = {}; 'brisk-walk incline-walk mobility-flow burpee prone-lat-pull'.split(' ').forEach(function (k) { IMPERFECT[k] = 1; });
   App.exDemo = function (ex) {
     if (!ex) return;
     var x = XI.X[ex.id];
     if (!x) return App.sheet(App.sheetHead(ex.name, ex.muscle) + '<ol class="plain-list">' + ex.cues.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>');
     var src = 'assets/ex/' + ex.id;
     var h = App.sheetHead(ex.name, ex.muscle) +
-      '<div class="exd-fig' + (FR3[ex.id] ? ' exd-3' : '') + '" data-exd>' + (ex.id === 'prone-ytw' ? [ytwSvg()] : []).concat(ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k) { return k.length > 1 ? k : null; }).filter(Boolean).join('') + (ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k, i) { var lb = FR3[ex.id] ? FR3[ex.id][i] : (k === 'a' ? 'startpositie' : 'eindpositie'); return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=3.2.1"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=3.2.1" width="448" height="504" alt="' + esc(ex.name) + ' — ' + lb + '"></picture>'; }).join('') +
+      '<div class="exd-fig' + (FR3[ex.id] ? ' exd-3' : '') + '" data-exd>' + (ex.id === 'prone-ytw' ? [ytwSvg()] : []).concat(ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k) { return k.length > 1 ? k : null; }).filter(Boolean).join('') + (ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k, i) { var lb = FR3[ex.id] ? FR3[ex.id][i] : (k === 'a' ? 'startpositie' : 'eindpositie'); return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=3.3.0"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=3.3.0" width="448" height="504" alt="' + esc(ex.name) + ' — ' + lb + '"></picture>'; }).join('') +
       (FR3[ex.id] ? '<div class="exd-lbl"><span class="exd-l1">Y · 135°</span><span class="exd-l2">T · 90°</span><span class="exd-l3">W · knijpen</span></div>' : '<div class="exd-lbl"><span class="exd-la">Start</span><span class="exd-lb">Eind</span></div>') + '<button class="exd-pp" type="button" aria-label="Pauze/afspelen">❚❚</button></div>' +
       '<div class="exd-map">' + App.muscleMap(x.p, x.s) + '<div class="exd-leg"><span><i class="lg-p"></i>Agonist (primair)</span><span><i class="lg-s"></i>Ondersteunend</span></div></div>' +
       '<h3 class="h3 exd-h">Agonisten — deze spieren train je</h3><ul class="plain-list exd-m">' + names(x.p) + '</ul>' +
       (x.s.length ? '<h3 class="h3 exd-h">Ondersteunende spieren (synergisten/stabilisatoren)</h3><ul class="plain-list exd-m small">' + names(x.s) + '</ul>' : '') +
       '<h3 class="h3 exd-h">Stappenplan — hier let je op</h3><ol class="exd-steps">' + x.steps.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' +
-      (FIXED[ex.id] ? '' : '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>');
+      (!IMPERFECT[ex.id] ? '' : '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>');
     var s = App.sheet(h, { label: ex.name });
     s.el.querySelectorAll('.exd-fig img').forEach(function (im) { im.onerror = function () { if (!im.dataset.retry) { im.dataset.retry = 1; im.src = im.src.split('?')[0] + '?r=' + Date.now(); } }; });
     var fig = s.el.querySelector('[data-exd]'), pp = s.el.querySelector('.exd-pp');
