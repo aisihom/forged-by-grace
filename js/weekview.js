@@ -21,7 +21,7 @@
     var d = (c.live && c.live.d) || {}, end = addD(wk, 6);
     var ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date >= wk && s.date <= end; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var food = d.food || {}, days = [];
-    for (var i = 0; i < 7; i++) { var k = addD(wk, i); if (food[k] && food[k].length) days.push([k, ftot(food[k])]); }
+    for (var i = 0; i < 7; i++) { var k = addD(wk, i); if (food[k] && food[k].length) days.push([k, ftot(food[k]), food[k]]); }
     return { wk: wk, end: end, ss: ss, days: days };
   }
   function weeks(c) {
@@ -69,10 +69,18 @@
     var icon = s.type === 'sport' ? ((App.sportEmoji && App.sportEmoji(s.sport)) || '🥊') : s.type === 'external' ? '⌚' : s.type === 'cardio' ? '🏃' : '🏋️';
     return icon + ' ' + esc(s.title || (s.type === 'sport' ? 'Sport' : 'Training')) + ' · ' + bits.join(' · ') + (s.notes ? ' · 📝 ' + esc(s.notes) : '');
   }
+  var CTX = {};
+  function rb(r, sm) { return App.rateBadge ? App.rateBadge(r, sm) : ''; }
+  function ateLine(food) {
+    var g = {}, order = []; (food || []).slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); }).forEach(function (e) { var m = e.meal || 'other'; if (!g[m]) { g[m] = []; order.push(m); } g[m].push(e); });
+    return order.map(function (m) { return mealName(m) + ': ' + g[m].map(function (e) { return String(e.name || e.fid || 'item').replace(/\s*\(.*?\)\s*/g, ' ').trim().toLowerCase(); }).join(', '); }).join(' · ');
+  }
+  App.ateLine = ateLine;
   function dayHtml(x, T, WG) {
+    var ctxd = Object.assign({}, CTX, { T: T || CTX.T }), dr = App.rateGroup && x.food.length ? App.rateGroup(x.food, ctxd, true) : null;
     var has = x.food.length || x.water != null || x.steps != null || x.sleep != null || x.sleepHab || x.ss.length;
-    var h = '<details class="card" style="margin-top:8px;border-color:#3a3222"' + '><summary class="row between" style="cursor:pointer"><b>' + esc(fmt(x.k)) + '</b><span class="tiny muted">' +
-      (x.food.length ? r0(x.t.kcal) + ' kcal' : '— kcal') + ' · 💧 ' + (x.water != null ? (x.water / 1000).toFixed(1).replace('.', ',') + ' L' : '—') + ' · 👣 ' + (x.steps != null ? r0(x.steps).toLocaleString('nl-NL') : '—') + ' · 😴 ' + (x.sleep != null ? n1(x.sleep) + ' u' : x.sleepHab ? '7u+ ✓' : '—') + ' · 🏋️ ' + x.ss.length + '</span></summary>';
+    var h = '<details class="card" style="margin-top:8px;border-color:#3a3222"' + '><summary style="cursor:pointer;display:block"><div class="row between"><b>' + esc(fmt(x.k)) + (dr ? ' ' + rb(dr, true) : '') + '</b><span class="tiny muted">' +
+      (x.food.length ? r0(x.t.kcal) + ' kcal' : '— kcal') + ' · 💧 ' + (x.water != null ? (x.water / 1000).toFixed(1).replace('.', ',') + ' L' : '—') + ' · 👣 ' + (x.steps != null ? r0(x.steps).toLocaleString('nl-NL') : '—') + ' · 😴 ' + (x.sleep != null ? n1(x.sleep) + ' u' : x.sleepHab ? '7u+ ✓' : '—') + ' · 🏋️ ' + x.ss.length + '</span></div>' + (x.food.length ? '<div class="tiny" style="color:#e8d9a8;margin-top:3px;line-height:1.4">🍽️ ' + esc(ateLine(x.food)) + '</div>' : '') + '</summary>';
     if (!has) return h + '<p class="tiny muted">Niets gelogd.</p></details>';
     // food per meal
     h += '<div style="margin-top:8px"><span class="label" style="color:#c9a227">🍽️ Voeding</span>';
@@ -80,11 +88,11 @@
     else {
       var g = {}, order = []; x.food.slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); }).forEach(function (e) { var m = e.meal || 'other'; if (!g[m]) { g[m] = []; order.push(m); } g[m].push(e); });
       order.forEach(function (m) { var mt = ftot(g[m]);
-        h += '<div class="tiny" style="margin:6px 0 2px;color:#c9a227"><b>' + esc(mealName(m)) + '</b> · ' + r0(mt.kcal) + ' kcal · E ' + r0(mt.p) + ' · K ' + r0(mt.c) + ' · V ' + r0(mt.f) + '</div>';
-        g[m].forEach(function (e) { var img = e.photo || e.img || e.thumb;
+        h += '<div class="tiny" style="margin:6px 0 2px;color:#c9a227"><b>' + esc(mealName(m)) + '</b> ' + (App.rateGroup ? rb(App.rateGroup(g[m], ctxd), true) + ' ' : '') + '· ' + r0(mt.kcal) + ' kcal · E ' + r0(mt.p) + ' · K ' + r0(mt.c) + ' · V ' + r0(mt.f) + '</div>';
+        g[m].forEach(function (e) { var img = e.photo || e.img || e.thumb, fr = App.rateFood ? App.rateFood(e, ctxd) : null;
           h += '<div class="tiny" style="display:flex;gap:6px;align-items:center;padding:2px 0;border-bottom:1px solid #2a2418">' + (img && /^(data:image|https:)/.test(img) ? '<img src="' + esc(img) + '" style="width:32px;height:32px;object-fit:cover;border-radius:6px" alt="">' : '') +
-            '<span style="flex:1">' + esc(e.name || e.fid || 'Item') + ' <span class="muted">' + (e.g ? r0(e.g) + ' g' : e.qty ? esc(e.qty) : '') + (hm(e.at) ? ' · ' + hm(e.at) : '') + '</span></span><span>' + r0(e.kcal) + ' kcal · E ' + n1(e.p) + ' K ' + n1(e.c) + ' V ' + n1(e.f) + '</span></div>'; }); });
-      h += '<div class="tiny" style="margin-top:4px"><b>Totaal:</b> ' + r0(x.t.kcal) + (T ? '/' + T.kcal : '') + ' kcal' + pct(x.t.kcal, T && T.kcal) + ' · E ' + r0(x.t.p) + (T ? '/' + T.p : '') + ' g · K ' + r0(x.t.c) + (T ? '/' + T.c : '') + ' g · V ' + r0(x.t.f) + (T ? '/' + T.f : '') + ' g</div>';
+            '<span style="flex:1"><b style="font-size:15px;color:#f3e6c0">' + esc(e.name || e.fid || 'Item') + '</b> ' + (fr ? rb(fr, true) : '') + '<br><span class="muted">' + (e.g ? r0(e.g) + ' g' : e.qty ? esc(e.qty) : '') + (hm(e.at) ? ' · ' + hm(e.at) : '') + ' · ' + r0(e.kcal) + ' kcal · E ' + n1(e.p) + ' K ' + n1(e.c) + ' V ' + n1(e.f) + '</span>' + (fr ? '<br><span class="muted">' + esc(fr.lv.l + ': ' + fr.why.join(' · ')) + '</span>' + (fr.warn ? '<br><span style="color:#e0a030">' + esc(fr.warn.msg) + '</span>' : '') : '') + '</span></div>'; }); });
+      h += '<div class="tiny" style="margin-top:4px"><b>Totaal:</b> ' + r0(x.t.kcal) + (T ? '/' + T.kcal : '') + ' kcal' + pct(x.t.kcal, T && T.kcal) + ' · E ' + r0(x.t.p) + (T ? '/' + T.p : '') + ' g · K ' + r0(x.t.c) + (T ? '/' + T.c : '') + ' g · V ' + r0(x.t.f) + (T ? '/' + T.f : '') + ' g</div>' + (dr ? '<div class="tiny" style="margin-top:2px"><b>Dagoordeel:</b> ' + rb(dr) + ' <span class="muted">' + esc(dr.why.join(' · ')) + '</span></div>' : '');
     }
     h += '</div><div class="tiny" style="margin-top:8px;line-height:1.7"><b style="color:#c9a227">💧 Water:</b> ' + (x.water != null ? r0(x.water) + ' / ' + WG + ' ml' + pct(x.water, WG) : '—') +
       '<br><b style="color:#c9a227">😴 Slaap:</b> ' + (x.sleep != null ? n1(x.sleep) + ' uur' : x.sleepHab ? '7u+ afgevinkt' : '—') +
@@ -107,7 +115,7 @@
   App.weekSummary = function (c, W) {
     var T = App.calcTargets(c.profile || {}) || (c.meal && c.meal.targets) || null;
     var planned = App.trainDays(c.plan) || 0, first = String(c.name || '').split(' ')[0] || '';
-    var L = [], good = [], better = [];
+    var L = [], good = [], better = []; CTX = App.foodCtx ? App.foodCtx(c) : {};
     var tv = 0, tm = 0, ts = 0;
     W.ss.forEach(function (s) { tv += vol(s); tm += (s.dur || 0) / 60; ts += nsets(s); });
     L.push('Weekoverzicht ' + fmt(W.wk) + ' – ' + fmt(W.end) + (first ? ' · ' + first : ''));
@@ -132,7 +140,14 @@
       var a = { kcal: 0, p: 0, c: 0, f: 0 }; W.days.forEach(function (x) { a.kcal += x[1].kcal; a.p += x[1].p; a.c += x[1].c; a.f += x[1].f; });
       var n = W.days.length; Object.keys(a).forEach(function (k) { a[k] = r0(a[k] / n); });
       L.push('🍽️ Voeding: ' + n + '/7 dagen gelogd · gem. ' + a.kcal + ' kcal · E ' + a.p + ' g · K ' + a.c + ' g · V ' + a.f + ' g' + (T ? ' (doel ' + T.kcal + ' kcal · E ' + T.p + ' · K ' + T.c + ' · V ' + T.f + ')' : '') + '.');
-      W.days.forEach(function (x) { L.push('• ' + fmt(x[0]) + ': ' + r0(x[1].kcal) + ' kcal · E ' + r0(x[1].p) + ' · K ' + r0(x[1].c) + ' · V ' + r0(x[1].f)); });
+      var RC = { hg: 0, g: 0, m: 0, s: 0 }, warns = [], worst = [];
+      W.days.forEach(function (x) { var dr = App.rateGroup ? App.rateGroup(x[2] || [], Object.assign({}, CTX, { T: T || CTX.T }), true) : null;
+        L.push('• ' + fmt(x[0]) + (dr ? ' ' + dr.lv.e : '') + ': ' + r0(x[1].kcal) + ' kcal · E ' + r0(x[1].p) + ' · K ' + r0(x[1].c) + ' · V ' + r0(x[1].f) + ' — ' + (App.ateLine ? App.ateLine(x[2]) : ''));
+        (x[2] || []).forEach(function (e) { if (!App.rateFood) return; var r = App.rateFood(e, Object.assign({}, CTX, { T: T })); RC[r.lv.k]++; if (r.warn) warns.push(e.name); if (r.lv.k === 's') worst.push(e.name); }); });
+      if (App.rateFood) { L.push('🍽️ Voedingsoordeel items: ' + RC.hg + '× 🟢 heel goed · ' + RC.g + '× 👍 goed · ' + RC.m + '× 🟡 matig · ' + RC.s + '× 🔴 slecht.');
+        var tot = RC.hg + RC.g + RC.m + RC.s; if (tot && (RC.hg + RC.g) / tot >= 0.75) good.push('Voedingskeuzes vooral goed (' + (RC.hg + RC.g) + '/' + tot + ' items 🟢/👍).');
+        if (worst.length) better.push('Minder vaak: ' + worst.filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 4).join(', ') + ' (🔴).');
+        if (warns.length) better.push('Check je logs: waarden van ' + warns.filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ') + ' kloppen niet — kies het juiste product.'); }
       if (T) {
         var hit = W.days.filter(function (x) { return Math.abs(x[1].kcal - T.kcal) <= T.kcal * 0.1; }).length;
         L.push('Binnen ±10% van je caloriedoel: ' + hit + '/' + n + ' dagen.');
@@ -177,7 +192,10 @@
   }
 
   App.weekOverview = function (c) {
+    CTX = App.foodCtx ? App.foodCtx(c) : {};
     var fb = c.coachFb || {}, h = '<div class="section"><div class="section-head"><h2 class="h2">Week overzicht</h2></div>';
+    var tdF = (((c.live && c.live.d) || {}).food || {})[App.today()] || [];
+    if (tdF.length) { var tr = App.rateGroup ? App.rateGroup(tdF, CTX, true) : null, tt = ftot(tdF); h += '<div class="card" style="border-color:#c9a227"><b style="color:#c9a227">🍽️ Vandaag gegeten</b> ' + rb(tr) + ' <span class="tiny muted">' + r0(tt.kcal) + ' kcal · E ' + r0(tt.p) + ' g</span><div style="margin-top:4px;font-weight:600">' + esc(ateLine(tdF)) + '</div></div>'; }
     if (!c.live) h += '<p class="small muted">Zodra de klant live gekoppeld is, zie je hier elke gelogde training en voeding.</p>';
     weeks(c).forEach(function (wk) {
       var W = weekData(c, wk), tv = 0, tm = 0; W.ss.forEach(function (s) { tv += vol(s); tm += (s.dur || 0) / 60; });

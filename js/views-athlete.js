@@ -246,13 +246,15 @@
     h += '<div class="card"><div class="row" style="gap:16px"><div style="width:118px;flex:none">' + App.ring(tot.kcal, T.kcal, String(tot.kcal), '/ ' + T.kcal + ' kcal') + '</div><div class="grow">' + App.macroBars(tot, T) + '</div></div></div>';
     h += '<div class="grid3 add-row"><button class="btn" data-act="food-add">' + I.search + esc(t('Search')) + '</button><button class="btn" data-act="scan">' + I.barcode + esc(t('Barcode')) + '</button><button class="btn" data-act="photo">' + I.camera + esc(t('AI photo')) + '</button></div>';
     h += '<div class="grid2" style="margin-top:8px"><button class="btn primary" data-act="food-text">✍️ ' + esc(t('What did you eat?')) + '</button><button class="btn" data-act="food-shot">🧾 ' + esc(t('Order screenshot')) + '</button></div>';
+    var frx = App.foodCtx ? App.foodCtx(ath) : {};
+    if (App.rateGroup && entries.length) { var dr = App.rateGroup(entries, frx, true); h += '<div class="card fr-day"><b>Dagoordeel:</b> ' + App.rateBadge(dr) + '<div class="tiny muted">' + esc(dr.why.join(' · ')) + '</div></div>'; }
     App.MEALS.forEach(function (m) {
       var list = entries.filter(function (e) { return e.meal === m[0]; }), mt = App.dayTotals(list);
-      h += '<div class="section meal-sec"><div class="section-head"><h3 class="h3">' + esc(t(m[1])) + '</h3><span class="small muted">' + mt.kcal + ' kcal</span></div>';
+      h += '<div class="section meal-sec"><div class="section-head"><h3 class="h3">' + esc(t(m[1])) + (App.rateGroup && list.length ? ' ' + App.rateBadge(App.rateGroup(list, frx), true) : '') + '</h3><span class="small muted">' + mt.kcal + ' kcal</span></div>';
       if (list.length) h += '<div class="list">' + list.map(function (e) {
         return '<div class="list-item tap" data-act="food-edit" data-id="' + e.id + '" role="button" style="cursor:pointer">' + (e.photo ? '<img class="thumb" src="' + esc(e.photo) + '" alt="">' : '<div class="ex-icon">' + (e.src === 'scan' ? I.barcode : e.src === 'screenshot' ? '🧾' : e.src === 'photo' ? I.camera : I.food) + '</div>') +
           '<div class="grow"><div class="ell"><b>' + esc(e.name) + '</b>' + (e.est ? ' <span class="pill warn">' + esc(t('estimate')) + '</span>' : '') + '</div><div class="tiny muted">' + e.g + ' g · ' + Math.round(e.kcal) + ' kcal · P ' + Math.round(e.p) + ' C ' + Math.round(e.c) + ' F ' + Math.round(e.f) + '</div></div>' +
-          '<button class="icon-btn" data-act="food-del" data-id="' + e.id + '" aria-label="' + esc(t('Remove')) + '">' + I.trash + '</button></div>'; }).join('') + '</div>';
+          '<button class="icon-btn" data-act="food-del" data-id="' + e.id + '" aria-label="' + esc(t('Remove')) + '">' + I.trash + '</button></div>' + (App.rateFood ? App.rateWhyHtml(App.rateFood(e, frx), e.id) : ''); }).join('') + '</div>';
       // planned meal quick-log
       var pm = ath.meal && App.planMealFor(ath.meal, m[0]);
       if (pm && !list.length) h += '<button class="card tap planned" data-act="log-planned" data-k="' + m[0] + '"><div class="row"><div class="grow"><div class="tiny kicker" style="margin:0">' + esc(t('From your meal plan')) + '</div><div class="small">' + esc(pm.items.map(function (it) { return it.g + 'g ' + App.foodName(App.findFood(it.food)); }).join(' · ')) + '</div></div><span class="pill accent">' + I.check + esc(t('Eaten')) + '</span></div></button>';

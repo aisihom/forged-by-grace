@@ -77,3 +77,10 @@ ol.steps { padding-left: 20px; margin: 0 0 12px; } ol.steps li { margin: 0 0 10p
 .undo-bar { white-space: nowrap; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom)); z-index: 999; background: #15130f; border: 1px solid var(--accent); color: #fff; border-radius: 14px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
 .undo-bar button { background: none; border: 0; color: var(--accent); font-weight: 800; }
 .sw-sec { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin: 12px 0 4px; font-weight: 800; }
+/* v3.19 food rating (black & gold) */
+.fr-badge{display:inline-block;font-size:12px;padding:1px 7px;border-radius:999px;border:1px solid #c9a227;color:#e8d9a8;background:#14110a;white-space:nowrap;vertical-align:middle}
+.fr-badge.fr-hg,.fr-badge.fr-g{border-color:#c9a227;color:#f3d77a}.fr-badge.fr-m{border-color:#8a7330;color:#c9b27a}.fr-badge.fr-s{border-color:#6b5a2a;color:#a8956a}
+.fr-why{font-size:12px;color:#bfb08a;padding:4px 10px 8px;line-height:1.45}
+.fr-warn{margin-top:4px;padding:6px 8px;border:1px dashed #c9a227;border-radius:8px;color:#f3d77a}
+.fr-card{position:fixed;left:10px;right:10px;bottom:84px;z-index:9999;background:#0b0a07;border:1px solid #c9a227;border-radius:14px;padding:12px;max-height:55vh;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.6);color:#f3e6c0}
+.fr-item{border-top:1px solid #2a2418;padding-top:8px;margin-top:8px}.fr-day{margin:8px 0}
