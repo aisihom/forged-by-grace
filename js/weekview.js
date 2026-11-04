@@ -29,7 +29,78 @@
     set[monday(iso(new Date()))] = 1;
     (d.sessions || []).forEach(function (s) { if (s.date) set[monday(s.date)] = 1; });
     Object.keys(d.food || {}).forEach(function (k) { if ((d.food[k] || []).length) set[monday(k)] = 1; });
+    Object.keys(d.water || {}).forEach(function (k) { set[monday(k)] = 1; });
     return Object.keys(set).sort().reverse().slice(0, 8);
+  }
+
+
+  var MEAL = { breakfast: 'Ontbijt', lunch: 'Lunch', dinner: 'Avondeten', snack: 'Snack', snacks: 'Snack', pre: 'Pre-workout', post: 'Post-workout' };
+  function mealName(m) { return MEAL[m] || (m ? String(m) : 'Overig'); }
+  function hm(ts) { if (!ts) return ''; var d = new Date(+ts || ts); return isNaN(d) ? '' : pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function n1(x) { return Math.round((+x || 0) * 10) / 10; }
+  function dash(v, suf) { return v == null || v === '' ? '—' : v + (suf || ''); }
+  function hdays(d) { var a = (d.health && d.health.days) || {}, b = (d.health_sync && d.health_sync.days) || {}; return [a, b]; }
+  function dayInfo(c, d, k) {
+    var food = (d.food || {})[k] || [], H = hdays(d), h = H[0][k] || {}, hs = H[1][k] || {};
+    var ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date === k; });
+    var est = 0; ss.forEach(function (s) { if (s.estSteps > 0) est += s.estSteps; });
+    var sync = h.steps != null ? h.steps : (hs.steps != null ? hs.steps : null), steps = null;
+    if (h.ov != null) steps = h.ov; else if (sync != null || h.man || est) steps = (sync || 0) + (h.man || 0) + est;
+    var hab = (d.habits || {})[k] || {};
+    var sleep = h.sleep != null ? h.sleep : (hs.sleep != null ? hs.sleep : null);
+    var water = d.water && d.water[k] != null ? +d.water[k] : null;
+    return { k: k, food: food, t: ftot(food), water: water, steps: steps, stepsSync: sync, sleep: sleep, sleepHab: !!hab.sleep, hab: hab, ss: ss, kcalBurn: hs.kcal != null ? hs.kcal : (h.kcal != null ? h.kcal : null), rhr: h.rhr || hs.rhr || null };
+  }
+  function tgt(c) { var P = c.profile || {}; return P.targetsOverride || (App.calcTargets && App.calcTargets(P)) || (c.meal && c.meal.targets) || null; }
+  function wGoal(c, d) { return (d.extra && d.extra.waterGoal) || c.waterGoal || 3000; }
+  function weekStats(c, W) {
+    var d = (c.live && c.live.d) || {}, D = [], A = { fd: 0, kcal: 0, p: 0, c: 0, f: 0, wd: 0, w: 0, sd: 0, s: 0, ld: 0, l: 0, sh: 0, n: W.ss.length };
+    for (var i = 0; i < 7; i++) { var x = dayInfo(c, d, addD(W.wk, i)); D.push(x);
+      if (x.food.length) { A.fd++; A.kcal += x.t.kcal; A.p += x.t.p; A.c += x.t.c; A.f += x.t.f; }
+      if (x.water != null) { A.wd++; A.w += x.water; } if (x.steps != null) { A.sd++; A.s += x.steps; } if (x.sleep != null) { A.ld++; A.l += +x.sleep; } if (x.sleepHab) A.sh++; }
+    function av(t, n) { return n ? r0(t / n) : null; }
+    return { D: D, A: A, avg: { kcal: av(A.kcal, A.fd), p: av(A.p, A.fd), c: av(A.c, A.fd), f: av(A.f, A.fd), w: av(A.w, A.wd), s: av(A.s, A.sd), l: A.ld ? n1(A.l / A.ld) : null }, T: tgt(c), WG: wGoal(c, d) };
+  }
+  function pct(v, t) { return v != null && t ? ' <span class="muted">(' + r0(v / t * 100) + '%)</span>' : ''; }
+  function sessLine(s) {
+    var e = s.ext || {}, bits = [r0((s.dur || 0) / 60) + ' min'];
+    if (s.type === 'sport' || s.type === 'external' || s.type === 'cardio') { if (e.dist) bits.push(e.dist + ' km'); if (e.kcal) bits.push(e.kcal + ' kcal'); if (s.rpe) bits.push('RPE ' + s.rpe); }
+    else { bits.push(nsets(s) + ' sets'); bits.push(r0(vol(s)).toLocaleString('nl-NL') + ' kg'); }
+    var icon = s.type === 'sport' ? ((App.sportEmoji && App.sportEmoji(s.sport)) || '🥊') : s.type === 'external' ? '⌚' : s.type === 'cardio' ? '🏃' : '🏋️';
+    return icon + ' ' + esc(s.title || (s.type === 'sport' ? 'Sport' : 'Training')) + ' · ' + bits.join(' · ') + (s.notes ? ' · 📝 ' + esc(s.notes) : '');
+  }
+  function dayHtml(x, T, WG) {
+    var has = x.food.length || x.water != null || x.steps != null || x.sleep != null || x.sleepHab || x.ss.length;
+    var h = '<details class="card" style="margin-top:8px;border-color:#3a3222"' + '><summary class="row between" style="cursor:pointer"><b>' + esc(fmt(x.k)) + '</b><span class="tiny muted">' +
+      (x.food.length ? r0(x.t.kcal) + ' kcal' : '— kcal') + ' · 💧 ' + (x.water != null ? (x.water / 1000).toFixed(1).replace('.', ',') + ' L' : '—') + ' · 👣 ' + (x.steps != null ? r0(x.steps).toLocaleString('nl-NL') : '—') + ' · 😴 ' + (x.sleep != null ? n1(x.sleep) + ' u' : x.sleepHab ? '7u+ ✓' : '—') + ' · 🏋️ ' + x.ss.length + '</span></summary>';
+    if (!has) return h + '<p class="tiny muted">Niets gelogd.</p></details>';
+    // food per meal
+    h += '<div style="margin-top:8px"><span class="label" style="color:#c9a227">🍽️ Voeding</span>';
+    if (!x.food.length) h += '<p class="tiny muted">—</p>';
+    else {
+      var g = {}, order = []; x.food.slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); }).forEach(function (e) { var m = e.meal || 'other'; if (!g[m]) { g[m] = []; order.push(m); } g[m].push(e); });
+      order.forEach(function (m) { var mt = ftot(g[m]);
+        h += '<div class="tiny" style="margin:6px 0 2px;color:#c9a227"><b>' + esc(mealName(m)) + '</b> · ' + r0(mt.kcal) + ' kcal · E ' + r0(mt.p) + ' · K ' + r0(mt.c) + ' · V ' + r0(mt.f) + '</div>';
+        g[m].forEach(function (e) { var img = e.photo || e.img || e.thumb;
+          h += '<div class="tiny" style="display:flex;gap:6px;align-items:center;padding:2px 0;border-bottom:1px solid #2a2418">' + (img && /^(data:image|https:)/.test(img) ? '<img src="' + esc(img) + '" style="width:32px;height:32px;object-fit:cover;border-radius:6px" alt="">' : '') +
+            '<span style="flex:1">' + esc(e.name || e.fid || 'Item') + ' <span class="muted">' + (e.g ? r0(e.g) + ' g' : e.qty ? esc(e.qty) : '') + (hm(e.at) ? ' · ' + hm(e.at) : '') + '</span></span><span>' + r0(e.kcal) + ' kcal · E ' + n1(e.p) + ' K ' + n1(e.c) + ' V ' + n1(e.f) + '</span></div>'; }); });
+      h += '<div class="tiny" style="margin-top:4px"><b>Totaal:</b> ' + r0(x.t.kcal) + (T ? '/' + T.kcal : '') + ' kcal' + pct(x.t.kcal, T && T.kcal) + ' · E ' + r0(x.t.p) + (T ? '/' + T.p : '') + ' g · K ' + r0(x.t.c) + (T ? '/' + T.c : '') + ' g · V ' + r0(x.t.f) + (T ? '/' + T.f : '') + ' g</div>';
+    }
+    h += '</div><div class="tiny" style="margin-top:8px;line-height:1.7"><b style="color:#c9a227">💧 Water:</b> ' + (x.water != null ? r0(x.water) + ' / ' + WG + ' ml' + pct(x.water, WG) : '—') +
+      '<br><b style="color:#c9a227">😴 Slaap:</b> ' + (x.sleep != null ? n1(x.sleep) + ' uur' : x.sleepHab ? '7u+ afgevinkt' : '—') +
+      '<br><b style="color:#c9a227">👣 Stappen:</b> ' + (x.steps != null ? r0(x.steps).toLocaleString('nl-NL') + (x.stepsSync != null && x.stepsSync !== x.steps ? ' <span class="muted">(waarvan ' + r0(x.stepsSync).toLocaleString('nl-NL') + ' gesynct)</span>' : x.stepsSync != null ? ' <span class="muted">(gesynct)</span>' : '') : '—') +
+      (x.kcalBurn != null ? '<br><b style="color:#c9a227">🔥 Actief verbrand:</b> ' + r0(x.kcalBurn) + ' kcal' : '') + (x.rhr ? ' · ❤️ ' + x.rhr + ' bpm' : '') +
+      '<br><b style="color:#c9a227">🏋️ Trainingen:</b> ' + (x.ss.length ? x.ss.map(sessLine).join('<br>') : '—');
+    var hb = Object.keys(x.hab).filter(function (k) { return x.hab[k]; }); if (hb.length) h += '<br><b style="color:#c9a227">✔️ Gewoontes:</b> ' + esc(hb.join(', '));
+    return h + '</div></details>';
+  }
+  function totalsHtml(S, W) {
+    var a = S.avg, A = S.A, T = S.T;
+    function cell(v, l) { return '<div class="stat"><div class="v" style="color:#c9a227">' + v + '</div><div class="l">' + l + '</div></div>'; }
+    var adh = T && A.fd ? S.D.filter(function (x) { return x.food.length && Math.abs(x.t.kcal - T.kcal) <= T.kcal * 0.1; }).length + '/' + A.fd : '—';
+    return '<div class="grid3" style="margin-top:8px">' + cell(dash(a.kcal), 'gem. kcal' + (T ? ' (doel ' + T.kcal + ')' : '')) + cell(dash(a.p, ' g'), 'gem. eiwit' + (T ? ' (' + T.p + ')' : '')) + cell(A.fd + '/7', 'dagen eten gelogd') +
+      cell(a.w != null ? (a.w / 1000).toFixed(1).replace('.', ',') + ' L' : '—', 'gem. water (' + (S.WG / 1000).toFixed(1).replace('.', ',') + ' L)') + cell(a.l != null ? a.l + ' u' : (A.sh ? A.sh + '× 7u+' : '—'), 'gem. slaap') + cell(a.s != null ? a.s.toLocaleString('nl-NL') : '—', 'gem. stappen') +
+      cell(A.n, 'trainingen') + cell(dash(a.c, ' g') + ' / ' + dash(a.f, ' g'), 'gem. K / V') + cell(adh, 'dagen ±10% kcal') + '</div>';
   }
 
   // ---- rule-based Dutch weekly summary ----
@@ -77,6 +148,15 @@
       else good.push('Voeding goed bijgehouden (' + n + '/7 dagen).');
     } else { L.push('🍽️ Voeding: niets gelogd deze week.'); better.push('Begin met je eten loggen (foto, tekst of screenshot) — minimaal 5 dagen per week.'); }
     L.push('');
+    (function () { var X = weekStats(c, W), a = X.avg, A = X.A;
+      L.push('💧 Water: ' + (a.w != null ? 'gem. ' + a.w + ' ml/dag (' + A.wd + ' dagen gelogd, doel ' + X.WG + ' ml).' : 'niet gelogd.'));
+      if (a.w != null) { if (a.w >= X.WG * 0.9) good.push('Goed gedronken: gem. ' + (a.w / 1000).toFixed(1) + ' L per dag.'); else better.push('Drink meer water: gem. ' + (a.w / 1000).toFixed(1) + ' L i.p.v. ' + (X.WG / 1000).toFixed(1) + ' L.'); } else better.push('Log je water elke dag (tik +0,5 L).');
+      L.push('😴 Slaap: ' + (a.l != null ? 'gem. ' + a.l + ' uur (' + A.ld + ' nachten).' : A.sh ? A.sh + '× 7u+ afgevinkt.' : 'niet gelogd.'));
+      if (a.l != null) { if (a.l >= 7) good.push('Slaap op orde (gem. ' + a.l + ' u).'); else better.push('Meer slaap: gem. ' + a.l + ' u — mik op 7–9 uur.'); }
+      L.push('👣 Stappen: ' + (a.s != null ? 'gem. ' + a.s.toLocaleString('nl-NL') + ' per dag (' + A.sd + ' dagen).' : 'niet gelogd/gesynct.'));
+      if (a.s != null) { if (a.s >= 8000) good.push('Lekker actief: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen.'); else better.push('Meer bewegen: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen — doel 8.000+.'); }
+      var sp = W.ss.filter(function (s) { return s.type && s.type !== 'strength'; }); if (sp.length) L.push('🥊 Sport/cardio: ' + sp.map(function (s) { return (s.title || s.type) + ' ' + r0((s.dur || 0) / 60) + ' min'; }).join(', ') + '.');
+      L.push(''); })();
     L.push('✅ Wat ging goed:'); (good.length ? good : ['Je bent bezig — dat is de eerste stap.']).forEach(function (x) { L.push('• ' + x); });
     L.push('🎯 Verbeterpunten:'); (better.length ? better : ['Zo doorgaan en volgende week iets zwaarder of een herhaling meer.']).forEach(function (x) { L.push('• ' + x); });
     L.push('');
@@ -105,8 +185,7 @@
       h += '<div class="card" style="margin-top:10px;border-color:#c9a227"><div class="row between"><b>Week ' + esc(fmt(wk)) + ' – ' + esc(fmt(W.end)) + '</b><span class="tiny muted">' + W.ss.length + ' trainingen · ' + r0(tm) + ' min · ' + r0(tv).toLocaleString('nl-NL') + ' kg</span></div>';
       if (!W.ss.length) h += '<p class="tiny muted">Geen trainingen gelogd.</p>';
       W.ss.forEach(function (s) { h += sessionHtml(c, s, fb); });
-      if (W.days.length) h += '<div class="tiny" style="margin-top:8px"><b>Voeding</b> · ' + W.days.map(function (x) { return esc(fmt(x[0])) + ': ' + r0(x[1].kcal) + ' kcal (E' + r0(x[1].p) + ' K' + r0(x[1].c) + ' V' + r0(x[1].f) + ')'; }).join(' · ') + '</div>';
-      else h += '<p class="tiny muted" style="margin-top:8px">Geen voeding gelogd.</p>';
+      var X = weekStats(c, W); h += '<div style="margin-top:10px"><span class="label" style="color:#c9a227">📊 Weektotaal / gemiddeld</span>' + totalsHtml(X, W) + '</div><div style="margin-top:10px"><span class="label" style="color:#c9a227">📅 Per dag</span>' + X.D.map(function (x) { return dayHtml(x, X.T, X.WG); }).join('') + '</div>';
       h += '<div style="margin-top:10px"><span class="label">Opmerking voor de week</span><div class="grid2" style="margin:6px 0"><button class="btn sm" data-act="wv-manual" data-w="' + wk + '">✍️ Handmatig</button><button class="btn sm primary" data-act="wv-ai" data-c="' + esc(c.id) + '" data-w="' + wk + '">✨ AI samenvatting</button></div>' +
         '<textarea class="input" rows="' + (wc.text ? 8 : 3) + '" id="wv-w-' + wk + '" placeholder="Schrijf je opmerking of tik op AI samenvatting en pas aan…">' + esc(wc.text || '') + '</textarea>' +
         '<button class="btn primary block" style="margin-top:6px" data-act="wv-save-w" data-c="' + esc(c.id) + '" data-w="' + wk + '">Opslaan &amp; naar klant</button>' + (wc.at ? '<p class="tiny muted">Opgeslagen ' + esc(App.ago ? App.ago(wc.at) : wc.at) + '</p>' : '') + '</div></div>';
