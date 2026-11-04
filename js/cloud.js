@@ -223,7 +223,7 @@
   function showPhotos(c) {
     var el = document.getElementById('cl-ph'); if (!el || !sb) return;
     sb.storage.from('checkin-photos').list(c.cloudId, { limit: 6, sortBy: { column: 'created_at', order: 'desc' } }).then(function (r) {
-      var names = (r.data || []).map(function (f) { return c.cloudId + '/' + f.name; }); if (!names.length) return;
+      var names = (r.data || []).filter(function (f) { return f.name !== 'avatar.jpg' && f.id; }).map(function (f) { return c.cloudId + '/' + f.name; }); if (!names.length) return;
       return sb.storage.from('checkin-photos').createSignedUrls(names, 3600).then(function (u) { el.innerHTML = (u.data || []).map(function (x) { return x.signedUrl ? '<img src="' + esc(x.signedUrl) + '" alt="" style="width:100%;border-radius:10px">' : ''; }).join(''); });
     }).catch(function () {});
   }
