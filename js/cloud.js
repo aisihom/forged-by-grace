@@ -63,7 +63,7 @@
   function applyPlan(row) {
     var me = S.me, stamp = row.updated_at || '';
     if (me.cloudPlanAt === stamp) return;
-    if (row.plan && true) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); }
+    if (row.plan && true) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); if (!me.plan.start || me.plan.start > App.today()) me.plan.start = App.today(); }
     if (row.meal && true) me.meal = row.meal;
     if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride) });
     if (!me.coach) me.coach = { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };

@@ -154,7 +154,7 @@
     var ath = S.me;
     ath.cid = obj.client.id; ath.coach = obj.coach;
     ath.profile = Object.assign({}, ath.profile || {}, obj.client.profile || {}, { name: obj.client.name });
-    if (obj.plan) { ath.plan = obj.plan; if (!ath.plan.start) ath.plan.start = App.today(); }
+    if (obj.plan) { ath.plan = obj.plan; if (!ath.plan.start || ath.plan.start > App.today()) ath.plan.start = App.today(); }
     if (obj.meal) ath.meal = obj.meal;
     if (!ath.body.length && ath.profile.weight) ath.body.push({ date: App.today(), weight: ath.profile.weight });
     if (S.role !== 'coach') S.role = 'athlete'; else S.role = 'athlete';

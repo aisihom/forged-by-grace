@@ -191,6 +191,7 @@
   };
   App.planWeek = function (plan) {
     if (!plan || !plan.start) return 1;
+    if (plan.start > App.today()) return 1; // future start never blocks: plan is active immediately
     var n = Math.floor((Date.now() - F.parseISO(plan.start).getTime()) / (7 * 86400000)) + 1;
     return Math.max(1, n);
   };
@@ -502,7 +503,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.21.0';
+  App.VERSION = '3.22.0';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
