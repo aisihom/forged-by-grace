@@ -473,11 +473,11 @@
 
   // ---------------- Workout logger ----------------
   var W = null, restT = null;
-  App.getW = function () { return W; };
+  App.getW = function () { return W; }; App.setW = function (w) { W = w; };
   A['start-workout'] = function (el) {
     App.closeSheets();
     var ath = me(), i = +el.dataset.day, d = App.dayOf(ath.plan, i);
-    W = { id: F.uid(), date: App.today(), day: i, title: d.title, type: d.type, startedAt: Date.now(), items: d.items.map(function (it, pi) {
+    W = { id: F.uid(), date: App.today(), day: i, title: d.title, type: d.type, startedAt: Date.now(), pausedMs: 0, items: d.items.map(function (it, pi) {
       var sug = App.suggest(ath, it, ath.plan), last = App.lastFor(ath, it.ex), ex = D.BY_ID[it.ex] || {};
       var reps = parseInt(String(it.reps).split('-')[0], 10) || 10;
       return { ex: it.ex, pi: pi, target: it, sug: sug, sets: Array.from({ length: it.sets }, function (_, k) {
@@ -490,7 +490,7 @@
     var sc = document.getElementById('logger');
     if (!sc) { sc = document.createElement('div'); sc.id = 'logger'; sc.className = 'screen'; document.body.appendChild(sc); }
     var done = W.items.reduce(function (a, it) { return a + it.sets.filter(function (s) { return s.done; }).length; }, 0), all = W.items.reduce(function (a, it) { return a + it.sets.length; }, 0);
-    sc.innerHTML = '<div class="log-head"><div class="app row between"><button class="btn sm ghost" data-act="w-cancel">' + esc(t('Cancel')) + '</button><div class="center"><b>' + esc(t(W.title)) + '</b><div class="timer" id="wclock">0:00</div></div><button class="btn sm primary" data-act="w-finish">' + esc(t('Finish')) + '</button></div><div class="progress" style="margin:0"><div style="width:' + (all ? done / all * 100 : 0) + '%"></div></div></div><div class="app">' +
+    sc.innerHTML = '<div class="log-head"><div class="app row between"><button class="btn sm ghost" data-act="w-cancel">' + esc(t('Cancel')) + '</button><div class="center"><b>' + esc(t(W.title)) + '</b><div class="timer" id="wclock">0:00</div></div><div class="row" style="gap:6px"><button class="btn sm" data-act="w-pause">⏸ ' + esc(t('Pause')) + '</button><button class="btn sm primary" data-act="w-finish">' + esc(t('Finish')) + '</button></div></div><div class="progress" style="margin:0"><div style="width:' + (all ? done / all * 100 : 0) + '%"></div></div></div><div class="app">' +
       W.items.map(function (it, ii) {
         var ex = D.BY_ID[it.ex] || { name: it.ex, track: 'weight' }, tw = ex.track === 'weight', unit = ex.track === 'time' ? 's' : ex.track === 'min' ? 'min' : t('reps');
         var complete = it.sets.every(function (s) { return s.done; });
@@ -504,10 +504,11 @@
       }).join('') + '<button class="btn block" style="margin-top:14px" data-act="w-addex">' + I.plus + esc(t('Add exercise')) + '</button></div>';
     sc.oninput = function (e) {
       var k = e.target.dataset.w || e.target.dataset.r; if (!k) return; var p = k.split(':'), st = W.items[+p[0]].sets[+p[1]];
-      if (e.target.dataset.w) st.w = e.target.value; else st.r = e.target.value;
+      if (e.target.dataset.w) st.w = e.target.value; else st.r = e.target.value; if (App.wipSave) App.wipSave(true);
     };
+    if (App.wipSave) App.wipSave();
     clearInterval(App._clock);
-    App._clock = setInterval(function () { var c = document.getElementById('wclock'); if (!c || !W) return clearInterval(App._clock); var s = Math.round((Date.now() - W.startedAt) / 1000); c.textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }, 1000);
+    App._clock = setInterval(function () { var c = document.getElementById('wclock'); if (!c || !W) return clearInterval(App._clock); var s = Math.max(0, Math.round((Date.now() - W.startedAt - (W.pausedMs || 0)) / 1000)); c.textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }, 1000);
   };
   A['w-tick'] = function (el) {
     var p = el.dataset.k.split(':'), it = W.items[+p[0]], st = it.sets[+p[1]];
@@ -519,10 +520,10 @@
   A['w-addex'] = function () { App.exercisePicker(function (ex) { W.items.push({ ex: ex.id, target: { sets: 3, reps: '10', rest: 90, rpe: 8 }, sets: [0, 1, 2].map(function () { return { w: '', r: '', ph: '10', done: false }; }) }); App.renderLogger(); }); };
   A['w-info'] = function (el) { var ex = D.BY_ID[el.dataset.ex]; if (ex) App.sheet(App.sheetHead(ex.name, ex.muscle) + '<ol class="plain-list">' + ex.cues.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol><p class="suggest">' + esc(t('Common mistake')) + ': ' + esc(ex.mistake) + '</p>'); };
   A['w-cancel'] = function () { App.confirm(t('Discard workout?'), t('Sets you logged in this session will be lost.'), t('Discard'), true).then(function (ok) { if (ok) App.closeLogger(); }); };
-  App.closeLogger = function () { W = null; clearInterval(App._clock); App.stopRest(); var sc = document.getElementById('logger'); if (sc) sc.remove(); App.rerender(); };
+  App.closeLogger = function () { W = null; if (App.wipClear) App.wipClear(); clearInterval(App._clock); App.stopRest(); var sc = document.getElementById('logger'); if (sc) sc.remove(); App.rerender(); };
   A['w-finish'] = function () {
     var ath = me();
-    var sess = { id: W.id, date: W.date, title: W.title, type: W.type, dur: Math.round((Date.now() - W.startedAt) / 1000), endedAt: Date.now(),
+    var sess = { id: W.id, date: W.date, title: W.title, type: W.type, dur: Math.max(0, Math.round(((W.pausedAt || Date.now()) - W.startedAt - (W.pausedMs || 0)) / 1000)), endedAt: Date.now(), partial: W.items.some(function (it) { return it.sets.some(function (x) { return !x.done; }); }) || undefined,
       items: W.items.filter(function (it) { return it.sets.length; }).map(function (it) { return { ex: it.ex, sets: it.sets.map(function (s) { return { w: App.num(s.w), r: App.num(s.r), done: s.done }; }) }; }) };
     var prs = [];
     sess.items.forEach(function (it) {

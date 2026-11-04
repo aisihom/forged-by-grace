@@ -19,7 +19,9 @@
 
   function weekData(c, wk) {
     var d = (c.live && c.live.d) || {}, end = addD(wk, 6);
-    var ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date >= wk && s.date <= end; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var all = (d.sessions || c.sessions || []).slice(), wp = d.extra && d.extra.wip;
+    if (wp && wp.date && wp.items && !all.some(function (s) { return s.id === wp.id; })) all.push({ id: wp.id, date: wp.date, title: '⏸ Onvoltooid · ' + (wp.title || 'Training'), type: wp.type, wip: true, dur: Math.round(((wp.pausedAt || wp.savedAt || Date.now()) - wp.startedAt - (wp.pausedMs || 0)) / 1000), items: wp.items.map(function (it) { return { ex: it.ex, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
+    var ss = all.filter(function (s) { return s.date >= wk && s.date <= end; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var food = d.food || {}, days = [];
     for (var i = 0; i < 7; i++) { var k = addD(wk, i); if (food[k] && food[k].length) days.push([k, ftot(food[k]), food[k]]); }
     return { wk: wk, end: end, ss: ss, days: days };
@@ -42,7 +44,8 @@
   function hdays(d) { var a = (d.health && d.health.days) || {}, b = (d.health_sync && d.health_sync.days) || {}; return [a, b]; }
   function dayInfo(c, d, k) {
     var food = (d.food || {})[k] || [], H = hdays(d), h = H[0][k] || {}, hs = H[1][k] || {};
-    var ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date === k; });
+    var wp0 = d.extra && d.extra.wip, ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date === k; });
+    if (wp0 && wp0.date === k && wp0.items && !ss.some(function (s) { return s.id === wp0.id; })) ss.push({ id: wp0.id, date: k, title: '⏸ Onvoltooid · ' + (wp0.title || 'Training'), type: wp0.type, wip: true, items: wp0.items.map(function (it) { return { ex: it.ex, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
     var est = 0; ss.forEach(function (s) { if (s.estSteps > 0) est += s.estSteps; });
     var sync = h.steps != null ? h.steps : (hs.steps != null ? hs.steps : null), steps = null;
     if (h.ov != null) steps = h.ov; else if (sync != null || h.man || est) steps = (sync || 0) + (h.man || 0) + est;
