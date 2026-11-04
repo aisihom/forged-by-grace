@@ -3,7 +3,7 @@
   'use strict';
   var App = window.App, S = App.S, F = App.F, esc = App.esc, t = App.t, I = App.I, V = App.views, A = App.acts;
   function me() { return S.me; }
-  var POSES = [['front', 'Voorkant'], ['side', 'Zijkant'], ['back', 'Achterkant']];
+  var POSES = [['front', 'Voorkant'], ['left', 'Linkerkant'], ['right', 'Rechterkant'], ['back', 'Achterkant']];
   // ---------- IndexedDB ----------
   var dbp = null;
   function db() {
