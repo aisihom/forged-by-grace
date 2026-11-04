@@ -20,7 +20,7 @@
   function weekData(c, wk) {
     var d = (c.live && c.live.d) || {}, end = addD(wk, 6);
     var all = (d.sessions || c.sessions || []).slice(), wp = d.extra && d.extra.wip;
-    if (wp && wp.date && wp.items && !all.some(function (s) { return s.id === wp.id; })) all.push({ id: wp.id, date: wp.date, title: '⏸ Onvoltooid · ' + (wp.title || 'Training'), type: wp.type, wip: true, dur: Math.round(((wp.pausedAt || wp.savedAt || Date.now()) - wp.startedAt - (wp.pausedMs || 0)) / 1000), items: wp.items.map(function (it) { return { ex: it.ex, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
+    if (wp && wp.date && wp.items && !all.some(function (s) { return s.id === wp.id; })) all.push({ id: wp.id, date: wp.date, title: '⏸ Onvoltooid · ' + (wp.title || 'Training'), type: wp.type, wip: true, dur: Math.round(((wp.pausedAt || wp.savedAt || Date.now()) - wp.startedAt - (wp.pausedMs || 0)) / 1000), items: wp.items.map(function (it) { return { ex: it.ex, cnote: it.cnote, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
     var ss = all.filter(function (s) { return s.date >= wk && s.date <= end; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var food = d.food || {}, days = [];
     for (var i = 0; i < 7; i++) { var k = addD(wk, i); if (food[k] && food[k].length) days.push([k, ftot(food[k]), food[k]]); }
@@ -45,7 +45,7 @@
   function dayInfo(c, d, k) {
     var food = (d.food || {})[k] || [], H = hdays(d), h = H[0][k] || {}, hs = H[1][k] || {};
     var wp0 = d.extra && d.extra.wip, ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date === k; });
-    if (wp0 && wp0.date === k && wp0.items && !ss.some(function (s) { return s.id === wp0.id; })) ss.push({ id: wp0.id, date: k, title: '⏸ Onvoltooid · ' + (wp0.title || 'Training'), type: wp0.type, wip: true, items: wp0.items.map(function (it) { return { ex: it.ex, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
+    if (wp0 && wp0.date === k && wp0.items && !ss.some(function (s) { return s.id === wp0.id; })) ss.push({ id: wp0.id, date: k, title: '⏸ Onvoltooid · ' + (wp0.title || 'Training'), type: wp0.type, wip: true, items: wp0.items.map(function (it) { return { ex: it.ex, cnote: it.cnote, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
     var est = 0; ss.forEach(function (s) { if (s.estSteps > 0) est += s.estSteps; });
     var sync = h.steps != null ? h.steps : (hs.steps != null ? hs.steps : null), steps = null;
     if (h.ov != null) steps = h.ov; else if (sync != null || h.man || est) steps = (sync || 0) + (h.man || 0) + est;
@@ -124,14 +124,17 @@
     L.push('Weekoverzicht ' + fmt(W.wk) + ' – ' + fmt(W.end) + (first ? ' · ' + first : ''));
     L.push('');
     L.push('🏋️ Training: ' + W.ss.length + (planned ? '/' + planned : '') + ' trainingen · ' + r0(tm) + ' min · ' + ts + ' sets · ' + r0(tv).toLocaleString('nl-NL') + ' kg volume.');
+    var cn = [];
     W.ss.forEach(function (s) {
       var top = [];
       (s.items || []).forEach(function (it) { var b = 0, br = 0; sets(it).forEach(function (x) { if ((+x.w || 0) > b) { b = +x.w; br = x.r; } }); if (b) top.push(exName(it.ex) + ' ' + b + ' kg × ' + br); });
       L.push('• ' + fmt(s.date) + ' – ' + (s.title || 'Training') + ' (' + r0((s.dur || 0) / 60) + ' min): ' + (top.slice(0, 4).join(', ') || nsets(s) + ' sets'));
       (s.prs || []).length && good.push('PR(s) gehaald op ' + fmt(s.date));
+      (s.items || []).forEach(function (it) { if (it.cnote) { cn.push(exName(it.ex) + ' – ' + it.cnote); if (/pijn|pain|blessure/i.test(it.cnote)) better.push('Let op pijn bij ' + exName(it.ex) + ' (' + fmt(s.date) + '): "' + it.cnote + '" — bespreek dit of pas de oefening aan.'); } });
       var miss = (s.items || []).filter(function (it) { return !sets(it).length; }).map(function (it) { return exName(it.ex); });
       if (miss.length) better.push('Niet afgerond op ' + fmt(s.date) + ': ' + miss.join(', ') + '.');
     });
+    if (cn.length) L.push('💬 Opmerkingen klant: ' + cn.join('; ') + '.');
     if (planned) {
       if (W.ss.length >= planned) good.push('Alle ' + planned + ' geplande trainingen gedaan — top consistentie.');
       else if (W.ss.length) better.push('Nog ' + (planned - W.ss.length) + ' training(en) te gaan om je schema van ' + planned + '×/week te halen.');
@@ -187,7 +190,7 @@
     (s.items || []).forEach(function (it) {
       var all = it.sets || [];
       h += '<div style="margin-top:8px"><b class="small">' + esc(exName(it.ex)) + '</b>' + (it.note ? ' <span class="tiny muted">' + esc(it.note) + '</span>' : '') + '<div class="tiny">' +
-        all.map(function (x, i) { return '<span style="display:inline-block;margin:2px 8px 2px 0;' + (x.done === false ? 'opacity:.45' : '') + '">' + (i + 1) + ') ' + (+x.w ? x.w + ' kg × ' : '') + (x.r != null ? x.r : '—') + (x.rpe ? ' @RPE ' + x.rpe : '') + (x.note ? ' · ' + esc(x.note) : '') + (x.done === false ? ' (niet gedaan)' : '') + '</span>'; }).join('') + '</div></div>';
+        all.map(function (x, i) { return '<span style="display:inline-block;margin:2px 8px 2px 0;' + (x.done === false ? 'opacity:.45' : '') + '">' + (i + 1) + ') ' + (+x.w ? x.w + ' kg × ' : '') + (x.r != null ? x.r : '—') + (x.rpe ? ' @RPE ' + x.rpe : '') + (x.note ? ' · ' + esc(x.note) : '') + (x.done === false ? ' (niet gedaan)' : '') + '</span>'; }).join('') + '</div>' + (it.cnote ? '<div class="small" style="margin-top:4px;padding:6px 8px;border-radius:8px;' + (/pijn|pain|blessure|dolor/i.test(it.cnote) ? 'background:rgba(255,140,0,.15);border:1px solid #ff8c00;color:#ffb347">⚠️ ' : 'background:rgba(212,175,55,.10);border:1px solid rgba(212,175,55,.4)">💬 ') + esc(it.cnote) + '</div>' : '') + '</div>';
     });
     var sc = ((fb.sessions || {})[s.id] || {}).text || '';
     h += '<label class="field" style="margin-top:10px"><span class="label">Opmerking bij deze training</span><textarea class="input" rows="2" id="wv-s-' + esc(s.id) + '">' + esc(sc) + '</textarea></label><button class="btn sm" data-act="wv-save-s" data-c="' + esc(c.id) + '" data-s="' + esc(s.id) + '">Opslaan</button></details>';

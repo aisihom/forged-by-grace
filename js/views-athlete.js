@@ -425,7 +425,7 @@
     var prs = App.prList(ath);
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Personal records')) + '</h2></div>' + (prs.length ? '<div class="list">' + prs.slice(0, 8).map(function (p) { return '<div class="list-item"><div class="ex-icon">' + I.trophy + '</div><div class="grow"><b>' + esc(p.name) + '</b><div class="tiny muted">' + esc(F.fmtDay(p.date)) + '</div></div><b>' + p.w + ' kg × ' + p.r + '</b></div>'; }).join('') + '</div>' : '<p class="small muted">' + esc(t('Finish a workout and your best lifts show up here.')) + '</p>') + '</div>';
     h += '<div class="section"><div class="grid2"><button class="btn" data-act="ex-library">' + I.search + esc(t('Exercise library')) + '</button><button class="btn" data-act="change-plan" data-o="me">' + I.plans + esc(t('Change plan')) + '</button></div></div>';
-    if (ath.sessions.length) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('History')) + '</h2></div><div class="list">' + ath.sessions.slice(-6).reverse().map(function (s) { return '<div class="list-item"><div class="grow"><b>' + esc(t(s.title)) + '</b><div class="tiny muted">' + esc(F.fmtDay(s.date)) + ' · ' + Math.round(s.dur / 60) + ' min · ' + (s.ext ? [s.ext.dist ? s.ext.dist + ' km' : '', s.ext.kcal ? s.ext.kcal + ' kcal' : '', s.ext.hr ? s.ext.hr + ' bpm' : '', s.ext.src].filter(Boolean).join(' / ') : App.doneSetsCount(s) + ' ' + esc(t('sets'))) + '</div></div>' + ((s.prs || []).length ? '<span class="pill accent">' + I.trophy + s.prs.length + ' PR</span>' : '') + '</div>'; }).join('') + '</div></div>';
+    if (ath.sessions.length) h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('History')) + '</h2></div><div class="list">' + ath.sessions.slice(-6).reverse().map(function (s) { return '<div class="list-item"><div class="grow"><b>' + esc(t(s.title)) + '</b><div class="tiny muted">' + esc(F.fmtDay(s.date)) + ' · ' + Math.round(s.dur / 60) + ' min · ' + (s.ext ? [s.ext.dist ? s.ext.dist + ' km' : '', s.ext.kcal ? s.ext.kcal + ' kcal' : '', s.ext.hr ? s.ext.hr + ' bpm' : '', s.ext.src].filter(Boolean).join(' / ') : App.doneSetsCount(s) + ' ' + esc(t('sets'))) + '</div>' + (App.sessNotesHtml ? App.sessNotesHtml(s) : '') + '</div>' + ((s.prs || []).length ? '<span class="pill accent">' + I.trophy + s.prs.length + ' PR</span>' : '') + '</div>'; }).join('') + '</div></div>';
     return h;
   };
   App.historyHtml = function (ath) {
@@ -500,9 +500,10 @@
           '<div class="set-head' + (tw ? '' : ' two') + '"><span>' + esc(t('Set')) + '</span>' + (tw ? '<span>kg</span>' : '') + '<span>' + esc(unit) + '</span>' + (tw ? '<span>' + esc(t('Last')) + '</span>' : '') + '<span></span><span></span></div>' +
           it.sets.map(function (s, si) {
             return '<div class="set-row' + (tw ? '' : ' two') + (s.done ? ' done' : '') + '"><span class="n">' + (si + 1) + '</span>' + (tw ? '<input inputmode="decimal" aria-label="kg" data-w="' + ii + ':' + si + '" value="' + esc(s.w) + '">' : '') + '<input inputmode="numeric" aria-label="' + esc(unit) + '" data-r="' + ii + ':' + si + '" value="' + esc(s.r) + '" placeholder="' + esc(s.ph) + '">' + (tw ? '<span class="prev">' + esc(s.ph || '—') + '</span>' : '') + '<button class="tick" data-act="w-tick" data-k="' + ii + ':' + si + '" aria-label="' + esc(t('Done')) + '">' + I.check + '</button><button class="icon-btn set-del" data-act="w-delset" data-k="' + ii + ':' + si + '" aria-label="' + esc(t('Remove set')) + '">' + I.trash + '</button></div>'; }).join('') +
-          '<button class="link-btn" data-act="w-addset" data-i="' + ii + '">+ ' + esc(t('Add set')) + '</button></div>';
+          '<button class="link-btn" data-act="w-addset" data-i="' + ii + '">+ ' + esc(t('Add set')) + '</button>' + (App.exNoteHtml ? App.exNoteHtml(it, ii) : '') + '</div>';
       }).join('') + '<button class="btn block" style="margin-top:14px" data-act="w-addex">' + I.plus + esc(t('Add exercise')) + '</button></div>';
     sc.oninput = function (e) {
+      if (e.target.dataset.cn != null) { W.items[+e.target.dataset.cn].cnote = e.target.value; if (App.wipSave) App.wipSave(true); return; }
       var k = e.target.dataset.w || e.target.dataset.r; if (!k) return; var p = k.split(':'), st = W.items[+p[0]].sets[+p[1]];
       if (e.target.dataset.w) st.w = e.target.value; else st.r = e.target.value; if (App.wipSave) App.wipSave(true);
     };
@@ -524,7 +525,7 @@
   A['w-finish'] = function () {
     var ath = me();
     var sess = { id: W.id, date: W.date, title: W.title, type: W.type, dur: Math.max(0, Math.round(((W.pausedAt || Date.now()) - W.startedAt - (W.pausedMs || 0)) / 1000)), endedAt: Date.now(), partial: W.items.some(function (it) { return it.sets.some(function (x) { return !x.done; }); }) || undefined,
-      items: W.items.filter(function (it) { return it.sets.length; }).map(function (it) { return { ex: it.ex, sets: it.sets.map(function (s) { return { w: App.num(s.w), r: App.num(s.r), done: s.done }; }) }; }) };
+      items: W.items.filter(function (it) { return it.sets.length; }).map(function (it) { var o = { ex: it.ex, sets: it.sets.map(function (s) { return { w: App.num(s.w), r: App.num(s.r), done: s.done }; }) }; if (it.cnote && it.cnote.trim()) o.cnote = it.cnote.trim(); return o; }) };
     var prs = [];
     sess.items.forEach(function (it) {
       var ex = D.BY_ID[it.ex]; if (!ex || ex.track !== 'weight') return;
