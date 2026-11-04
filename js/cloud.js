@@ -82,7 +82,7 @@
     return { profile: me.profile, sessions: me.sessions, food: me.food, body: me.body, habits: me.habits, checkins: { list: me.checkins, summary: ci, photoLog: me.photoLog || [] },
       water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
   }
-  var last = {}, timer = null;
+  var last = {}, timer = null, retryT = null;
   function push(now) {
     if (role !== 'client' || !myClient) return;
     clearTimeout(timer);
@@ -91,11 +91,15 @@
       Object.keys(snap).forEach(function (k) { var j = JSON.stringify(snap[k]); if (snap[k] != null && last[k] !== j) rows.push({ client_id: myClient.id, kind: k, data: snap[k], updated_at: new Date().toISOString(), _j: j }); });
       if (!rows.length) return;
       sb.from('client_data').upsert(rows.map(function (r) { return { client_id: r.client_id, kind: r.kind, data: r.data, updated_at: r.updated_at }; })).then(function (r) {
-        if (r.error) { status = 'error'; return; }
+        if (r.error) {
+          // one bad row must never block the rest: retry each kind on its own
+          status = 'error'; clearTimeout(retryT); retryT = setTimeout(function () { push(true); }, 60000);
+          return Promise.all(rows.map(function (x) { return sb.from('client_data').upsert({ client_id: x.client_id, kind: x.kind, data: x.data, updated_at: x.updated_at }).then(function (q) { if (!q.error) last[x.kind] = x._j; }); }));
+        }
         rows.forEach(function (x) { last[x.kind] = x._j; }); status = 'ok';
       }, function () { status = 'offline'; });
       photos();
-    }, now ? 50 : 2500);
+    }, now ? 50 : 800);
   }
   C.push = push;
   function photos() {
@@ -108,6 +112,9 @@
   var rawSave = App.save;
   App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') planPush(); return r; };
   window.addEventListener('online', function () { push(true); });
+  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client') push(true); else if (role === 'coach' && document.visibilityState === 'visible') coachPull().catch(function () {}); });
+  window.addEventListener('pagehide', function () { if (role === 'client') push(true); });
+  setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull().catch(function () {}); }, 120000);
 
   // ---------- coach side ----------
   var rows = {}, data = {};
