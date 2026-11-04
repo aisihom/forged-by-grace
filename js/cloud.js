@@ -42,6 +42,23 @@
   C.load = load;
 
   function stop() { role = null; myClient = null; if (chan) { sb.removeChannel(chan); chan = null; } rer(); }
+  // coach: never re-render under the reader's eyes — show a gold pill; tap = refresh keeping scroll + open sections
+  function pill() {
+    if (!/^#\/(more|clients|client)/.test(location.hash)) return;
+    if (window.scrollY < 40 && !document.querySelector('.sheet, details[open], input:focus, textarea:focus, select:focus')) return keepRer();
+    if (document.getElementById('fbg-new')) return;
+    var b = document.createElement('button'); b.id = 'fbg-new'; b.textContent = '🔄 Nieuwe data — tik om te verversen';
+    b.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);z-index:9999;background:#d4af37;color:#000;border:0;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.5)';
+    b.onclick = function () { b.remove(); keepRer(); }; document.body.appendChild(b);
+  }
+  function keepRer() {
+    if (document.querySelector('.sheet')) return;
+    var y = window.scrollY, open = [].map.call(document.querySelectorAll('#view details'), function (d) { return d.open; });
+    App.rerender();
+    var fix = function () { [].forEach.call(document.querySelectorAll('#view details'), function (d, i) { if (open[i] != null) d.open = open[i]; }); window.scrollTo(0, y); };
+    fix(); setTimeout(fix, 60); setTimeout(fix, 400); setTimeout(fix, 1200);
+    var p = document.getElementById('fbg-new'); if (p) p.remove();
+  }
   function rer() { var h = location.hash; if (/^#\/(more|clients|client)/.test(h) && !document.querySelector('.sheet')) App.rerender(); }
 
   function start() {
@@ -112,17 +129,21 @@
   var rawSave = App.save;
   App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') planPush(); return r; };
   window.addEventListener('online', function () { push(true); });
-  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client') push(true); else if (role === 'coach' && document.visibilityState === 'visible') coachPull().catch(function () {}); });
+  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client') push(true); else if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); });
   window.addEventListener('pagehide', function () { if (role === 'client') push(true); });
-  setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull().catch(function () {}); }, 120000);
+  setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 
   // ---------- coach side ----------
   var rows = {}, data = {};
-  function coachPull() {
+  var sig = '';
+  function coachPull(silent) {
     return Promise.all([sb.from('clients').select('*'), sb.from('client_data').select('*')]).then(function (r) {
+      var ns = (r[0].data || []).map(function (c) { return c.id + c.updated_at; }).join() + '|' + (r[1].data || []).map(function (d) { return d.client_id + d.kind + d.updated_at; }).sort().join();
+      if (silent && ns === sig) return; // nothing new: do nothing at all
+      sig = ns;
       (r[0].data || []).forEach(function (c) { rows[c.id] = c; });
       (r[1].data || []).forEach(function (d) { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; });
-      Object.keys(rows).forEach(merge); rawSave(); status = 'ok'; rer();
+      Object.keys(rows).forEach(merge); rawSave(); status = 'ok'; if (silent) pill(); else rer();
     });
   }
   function merge(id) {
@@ -147,11 +168,11 @@
     if (chan) return;
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
-      if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(); merge(d.client_id); rawSave(); rer(); }
+      if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); rawSave(); pill(); }
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;
-      if (role === 'coach') { rows[r.id] = r; merge(r.id); rawSave(); rer(); }
+      if (role === 'coach') { rows[r.id] = r; merge(r.id); rawSave(); pill(); }
       else if (myClient && r.id === myClient.id) { myClient = r; applyPlan(r); App.rerender(); }
     }).subscribe();
   }
