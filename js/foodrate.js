@@ -4,93 +4,204 @@
   var App = window.App;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function low(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-  function has(n, list) { for (var i = 0; i < list.length; i++) if (new RegExp('(^|[^a-z])' + list[i]).test(n)) return list[i]; return null; }
+  function norm(s) {
+    return ' ' + low(s).replace(/['’`]/g, '').replace(/(\d+(?:[.,]\d+)?)\s*(g|gr|gram|ml|cl|l|kg|stuks?|st|x|plakjes?|sneetjes?|el|tl|kop|cups?|pcs?)\b/g, ' ')
+      .replace(/\b\d+(?:[.,]\d+)?\b(?!\s*%)/g, ' ').replace(/[^a-z0-9%+ ]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+  }
+  function R(x) { return Math.round(x); }
+  function R1(x) { return Math.round(x * 10) / 10; }
   var LV = [
     { k: 'hg', e: '🟢', l: 'Heel goed' }, { k: 'g', e: '👍', l: 'Goed' }, { k: 'm', e: '🟡', l: 'Matig' }, { k: 's', e: '🔴', l: 'Slecht' }];
-  function lv(s) { return s >= 2 ? LV[0] : s >= 0 ? LV[1] : s >= -1.5 ? LV[2] : LV[3]; }
-  var SUGAR = ['suiker', 'sugar', 'snoep', 'candy', 'cola', 'frisdrank', 'soda', 'fanta', 'sprite', 'red bull', 'energy drink', 'koek', 'cookie', 'biscuit', 'cake', 'taart', 'gebak', 'stroopwafel', 'chocola', 'chocolate', 'hagelslag', 'ijs', 'ice cream', 'donut', 'jam', 'siroop', 'syrup', 'limonade', 'sap', 'juice', 'ontbijtkoek', 'peperkoek', 'nutella', 'pudding', 'vla', 'muffin', 'croissant', 'wafel', 'gummy', 'drop'];
-  var FRIED = ['friet', 'fries', 'patat', 'kroket', 'frikandel', 'bitterbal', 'kaassouffle', 'loempia', 'nugget', 'chips', 'crisps', 'pizza', 'burger', 'hamburger', 'kebab', 'shoarma', 'doner', 'worst', 'sausage', 'bacon', 'salami', 'mayo', 'mayonaise', 'snack', 'gefrituurd', 'fried', 'kfc', 'mcdonald', 'hotdog', 'saucijs'];
-  var WHOLE = ['groente', 'vegetable', 'broccoli', 'spinazie', 'spinach', 'sla', 'salad', 'salade', 'komkommer', 'tomaat', 'tomato', 'paprika', 'wortel', 'carrot', 'bloemkool', 'courgette', 'boontjes', 'sperziebonen', 'appel', 'apple', 'banaan', 'banana', 'bes', 'berr', 'aardbei', 'strawberr', 'sinaasappel', 'orange', 'peer', 'pear', 'kiwi', 'passievrucht', 'passionfruit', 'mango', 'havermout', 'oat', 'volkoren', 'wholegrain', 'whole grain', 'whole wheat', 'quinoa', 'bonen', 'beans', 'linzen', 'lentil', 'kikkererwt', 'chickpea', 'zoete aardappel', 'sweet potato', 'aardappel', 'potato', 'zilvervlies', 'brown rice', 'noten', 'nuts', 'amandel', 'almond', 'walnoot', 'avocado', 'olijfolie', 'olive oil', 'zalm', 'salmon', 'vis', 'fish', 'kabeljauw', 'cod', 'tonijn', 'tuna', 'kip', 'chicken', 'kalkoen', 'turkey', 'ei', 'egg', 'kwark', 'quark', 'skyr', 'yoghurt', 'yogurt', 'tofu', 'tempeh', 'garnalen', 'shrimp'];
-  var GOODFAT = ['noten', 'nuts', 'amandel', 'almond', 'walnoot', 'pinda', 'peanut', 'avocado', 'olijf', 'olive', 'zalm', 'salmon', 'makreel', 'mackerel', 'haring', 'herring', 'ei', 'egg', 'chia', 'lijnzaad', 'flax', 'zaden', 'seeds'];
-  var FAST = ['wit brood', 'witbrood', 'white bread', 'witte rijst', 'white rice', 'rijstwafel', 'rice cake', 'cornflakes', 'casino', 'baguette', 'stokbrood', 'pasta wit', 'sap', 'juice', 'honing', 'honey', 'dadel', 'date', 'krentenbol'];
-  var LOWGI = ['volkoren', 'wholegrain', 'whole grain', 'havermout', 'oat', 'quinoa', 'bonen', 'beans', 'linzen', 'lentil', 'kikkererwt', 'chickpea', 'zilvervlies', 'brown rice', 'groente', 'vegetable', 'broccoli', 'spinazie', 'spinach', 'bes', 'berr', 'appel', 'apple', 'peer', 'pear', 'noten', 'nuts'];
-  // reference per 100 g: keywords, kcal, p, c, f
-  var REF = [
-    [['banaan', 'banana'], 89, 1.1, 23, 0.3], [['appel', 'apple'], 52, 0.3, 14, 0.2], [['passievrucht', 'passionfruit', 'passion fruit', 'maracuja'], 97, 2.2, 23, 0.7],
-    [['sinaasappel', 'orange'], 47, 0.9, 12, 0.1], [['aardbei', 'strawberr'], 32, 0.7, 7.7, 0.3], [['blauwe bes', 'blueberr'], 57, 0.7, 14, 0.3], [['mango'], 60, 0.8, 15, 0.4],
-    [['kiwi'], 61, 1.1, 15, 0.5], [['druif', 'grape'], 69, 0.7, 18, 0.2], [['peer', 'pear'], 57, 0.4, 15, 0.1],
-    [['spinazie', 'spinach'], 23, 2.9, 3.6, 0.4], [['broccoli'], 34, 2.8, 7, 0.4], [['komkommer', 'cucumber'], 15, 0.7, 3.6, 0.1], [['tomaat', 'tomato'], 18, 0.9, 3.9, 0.2], [['wortel', 'carrot'], 41, 0.9, 10, 0.2], [['paprika', 'bell pepper'], 31, 1, 6, 0.3],
-    [['feta'], 264, 14, 4, 21], [['ei', 'egg', 'eieren', 'eggs'], 143, 12.6, 0.7, 9.5], [['kipfilet', 'chicken breast'], 165, 31, 0, 3.6], [['zalm', 'salmon'], 206, 22, 0, 13],
-    [['magere kwark', 'quark'], 57, 10, 3.6, 0.2], [['skyr'], 63, 11, 4, 0.2], [['havermout', 'oats', 'oatmeal'], 379, 13, 60, 7], [['volkoren brood', 'volkorenbrood', 'wholegrain bread', 'whole wheat bread'], 247, 13, 41, 3.4],
-    [['witte rijst', 'white rice', 'rijst', 'rice'], 130, 2.7, 28, 0.3], [['pasta'], 158, 5.8, 31, 0.9], [['aardappel', 'potato'], 87, 1.9, 20, 0.1], [['avocado'], 160, 2, 9, 15],
-    [['pindakaas', 'peanut butter'], 588, 25, 20, 50], [['olijfolie', 'olive oil'], 884, 0, 0, 100], [['melk', 'milk'], 50, 3.4, 4.8, 1.6], [['tonijn', 'tuna'], 116, 26, 0, 1]];
-  var NOREF = ['brood', 'bread', 'cake', 'chips', 'shake', 'smoothie', 'sap', 'juice', 'yoghurt', 'yogurt', 'reep', 'bar', 'taart', 'muffin', 'ijs', 'salade', 'salad', 'pindakaas', 'kaas', 'saus', 'sauce', 'gedroogd', 'dried', 'jam', 'olie', 'oil', 'drank', 'drink', 'wrap', 'pizza', 'soep', 'soup', 'mix', 'muesli', 'granola', 'bowl', 'pannenkoek', 'pancake', 'koek', 'melk'];
-  function findRef(n) {
-    var best = null, bl = 0;
-    REF.forEach(function (r) { r[0].forEach(function (k) { if (new RegExp('(^|[^a-z])' + k + '($|[^a-z])').test(n) && k.length > bl) { best = r; bl = k.length; } }); });
-    if (!best) return null;
-    // compound names (banana bread, appelsap) → skip unless the keyword itself contains the word
-    var kw = best[0].join(' ');
-    for (var i = 0; i < NOREF.length; i++) if (n.indexOf(NOREF[i]) !== -1 && kw.indexOf(NOREF[i]) === -1) return null;
-    return best;
+  function lv(s) { return s >= 2 ? LV[0] : s >= 0.3 ? LV[1] : s >= -1.5 ? LV[2] : LV[3]; }
+  // ---- DB index ----
+  var DB = (window.FBG_NDB || []).map(function (r) {
+    return { names: r[0], kcal: r[1], p: r[2], c: r[3], f: r[4], fib: r[5], sug: r[6], sat: r[7], na: r[8], gi: r[9], nova: r[10], cat: r[11] };
+  });
+  var IDX = [];
+  DB.forEach(function (d) { d.names.forEach(function (n) { var k = norm(n).trim(); if (k) IDX.push({ k: k, w: k.split(' '), d: d }); }); });
+  App.NDB = DB;
+  function lev1(a, b) { // edit distance <= 1 (or 2 for long words)
+    if (a === b) return true; var la = a.length, lb = b.length, max = Math.min(la, lb) >= 8 ? 2 : 1;
+    if (Math.abs(la - lb) > max || Math.min(la, lb) < 5) return false;
+    var d = [], i, j; for (i = 0; i <= la; i++) { d[i] = [i]; } for (j = 0; j <= lb; j++) d[0][j] = j;
+    for (i = 1; i <= la; i++) for (j = 1; j <= lb; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[la][lb] <= max;
   }
+  var HEAD = / (brood|bread|cake|taart|sap|juice|yoghurt|yogurt|shake|reep|bar|saus|sauce|soep|soup|chips|ijs|muffin|pancake|pannenkoek|smoothie|pizza|burger|wrap|salade|salad|curry|stamppot|pasta|thee|tea|melk|milk|drank|drink) /;
+  var CACHE = {};
+  // returns { d, conf (0..1), primary }
+  function match(name) {
+    var n = norm(name); if (CACHE[n] !== undefined) return CACHE[n];
+    var prim = n.split(/ (?:met|with|en|and|op|on|zonder|without) /)[0] + ' ';
+    var toks = prim.trim().split(' '), best = null, bs = -1;
+    IDX.forEach(function (x) {
+      var pos = prim.indexOf(' ' + x.k + ' '), fuzzy = false;
+      if (pos < 0) { // fuzzy token match
+        if (x.w.length > toks.length) return;
+        for (var i = 0; i + x.w.length <= toks.length; i++) {
+          var ok = true; for (var j = 0; j < x.w.length; j++) if (!lev1(toks[i + j], x.w[j])) { ok = false; break; }
+          if (ok) { pos = prim.indexOf(toks[i]); fuzzy = true; break; }
+        }
+        if (pos < 0) return;
+      }
+      // more words > longer > later position (head noun) ; exact whole primary best
+      var sc = x.w.length * 100 + x.k.length * 2 + pos / 10 + (HEAD.test(' ' + x.k + ' ') ? 30 : 0) + (prim.trim() === x.k ? 500 : 0) - (fuzzy ? 60 : 0);
+      if (sc > bs) { bs = sc; best = { d: x.d, k: x.k, fuzzy: fuzzy }; }
+    });
+    if (!best) {
+      // compound Dutch words: 'appelsap', 'kipfiletreepjes' → suffix/prefix match on long keys
+      IDX.forEach(function (x) { if (x.k.length < 4 || x.w.length > 1) return; toks.forEach(function (t) {
+        if (t.length > x.k.length && (t.slice(-x.k.length) === x.k)) { var sc = x.k.length; if (sc > bs) { bs = sc; best = { d: x.d, k: x.k, comp: 1 }; } }
+        else if (t.length > x.k.length + 2 && t.indexOf(x.k) === 0 && x.k.length >= 5) { var sc2 = x.k.length - 3; if (sc2 > bs) { bs = sc2; best = { d: x.d, k: x.k, comp: 2 }; } }
+      }); });
+    }
+    if (best) { var cov = best.k.split(' ').length / toks.length; best.conf = best.comp ? 0.35 : best.fuzzy ? 0.6 * Math.min(1, cov + 0.3) : Math.min(1, cov + 0.4); }
+    CACHE[n] = best; return best;
+  }
+  App.foodMatch = match;
   function per100(e) { var g = +e.g || 0; if (!g) return null; return { kcal: (+e.kcal || 0) * 100 / g, p: (+e.p || 0) * 100 / g, c: (+e.c || 0) * 100 / g, f: (+e.f || 0) * 100 / g }; }
+  function off(a, b, absT, relT) { return Math.abs(a - b) > Math.max(absT, b * relT); }
   App.foodSanity = function (e) {
-    var n = low(e.name), r = findRef(n), x = per100(e); if (!r || !x) return null;
-    var dk = Math.abs(x.kcal - r[1]), df = Math.abs(x.f - r[4]), dc = Math.abs(x.c - r[3]);
-    var bad = (dk > Math.max(60, r[1] * 0.45)) || (df > Math.max(8, r[4] * 2.5)) || (dc > Math.max(12, r[3] * 0.8) && r[3] > 5);
-    if (!bad) return null;
-    return { msg: '⚠️ Klopt dit? De waarden passen niet bij ' + e.name + ' (' + Math.round(x.kcal) + ' kcal · V ' + Math.round(x.f) + ' g · K ' + Math.round(x.c) + ' g per 100 g; normaal ±' + r[1] + ' kcal · V ' + r[4] + ' · K ' + r[3] + '). Kies het juiste product.' };
+    var m = match(e.name), x = per100(e); if (!m || !x || m.conf < 0.75) return null; var r = m.d;
+    if (r.kcal < 5 && x.kcal < 15) return null;
+    var bk = off(x.kcal, r.kcal, 50, 0.4), n = 0, bits = [];
+    if (off(x.p, r.p, 5, 0.6)) { n++; bits.push('E ' + R(x.p) + '≠' + R(r.p)); }
+    if (off(x.c, r.c, 8, 0.6)) { n++; bits.push('K ' + R(x.c) + '≠' + R(r.c)); }
+    if (off(x.f, r.f, 5, 0.8)) { n++; bits.push('V ' + R(x.f) + '≠' + R(r.f)); }
+    if (!(bk && n >= 1) && n < 2) return null;
+    return { msg: '⚠️ Klopt dit? ' + e.name + ' heeft hier ' + R(x.kcal) + ' kcal · E ' + R(x.p) + ' · K ' + R(x.c) + ' · V ' + R(x.f) + ' g per 100 g; normaal ±' + R(r.kcal) + ' kcal · E ' + R(r.p) + ' · K ' + R(r.c) + ' · V ' + R(r.f) + '. Kies het juiste product of pas de waarden aan.', ref: r };
   };
-  // ctx: { diabetes, goal ('lean'|'muscle'|...), T: {kcal,p,c,f} }
   App.foodCtx = function (owner) {
     var o = owner || {}, P = o.profile || {}, m = o.meal || {};
     var txt = low([m.name, m.principle, P.notes, P.health, P.conditions, P.medical, (o.intake && JSON.stringify(o.intake)) || ''].join(' '));
     var T = P.targetsOverride || (App.calcTargets && App.calcTargets(P)) || m.targets || null;
-    return { diabetes: /diabet/.test(txt), goal: P.goal || '', T: T };
+    var g = low(P.goal || ''), goal = /lean|cut|afval|vet|lose|fat/.test(g) ? 'lean' : /muscle|bulk|spier|gain|aankom/.test(g) ? 'muscle' : g;
+    return { diabetes: /diabet/.test(txt), goal: goal, T: T, meals: (m.meals && m.meals.length) || 4, female: /^(f|v|female|vrouw)/.test(low(P.sex || P.gender || '')) };
   };
-  App.rateFood = function (e, ctx) {
-    ctx = ctx || {}; var n = low(e.name + ' ' + (e.fid || '')), kcal = +e.kcal || 0, p = +e.p || 0, c = +e.c || 0, f = +e.f || 0;
-    var s = 0, pro = [], con = [], w;
-    var pd = kcal > 0 ? p * 4 / kcal : 0, fd = kcal > 0 ? f * 9 / kcal : 0;
-    if (kcal < 5) return { lv: LV[1], s: 0, why: ['Nauwelijks calorieën.'], warn: null };
-    if (pd >= 0.4) { s += 2; pro.push('veel eiwit per kcal (' + Math.round(pd * 100) + '% van de kcal)'); }
-    else if (pd >= 0.25) { s += 1; pro.push('goede eiwitbron'); }
-    else if (pd < 0.08 && kcal > 150) { s -= 0.5; con.push('weinig eiwit'); }
-    if ((w = has(n, WHOLE)) && !has(n, FRIED)) { s += 1; pro.push('onbewerkt / natuurlijke voeding met vezels of micronutriënten'); }
-    if ((w = has(n, SUGAR))) { s -= 2; con.push('toegevoegde suiker (' + w + ')'); }
-    if ((w = has(n, FRIED))) { s -= 2; con.push('gefrituurd/bewerkt (' + w + ')'); }
-    if (fd > 0.6 && kcal > 100 && !has(n, GOODFAT)) { s -= 1; con.push('veel (verzadigd) vet: ' + Math.round(fd * 100) + '% van de kcal'); }
-    else if (fd > 0.5 && has(n, GOODFAT)) pro.push('gezonde vetten');
-    if (ctx.diabetes) {
-      if (has(n, SUGAR) || has(n, FAST)) { s -= 1.5; con.push('snelle koolhydraten → bloedsuikerpiek (diabetes)'); }
-      else if (has(n, LOWGI)) { s += 0.5; pro.push('lage GI, goed voor je bloedsuiker'); }
-      if (c > 45) { s -= 1; con.push(Math.round(c) + ' g koolhydraten in één keer — liever max ±40 g per eetmoment'); }
+  var GIV = [0, 40, 60, 80];
+  // full nutrient estimate for a logged entry
+  function nutr(e) {
+    var g = +e.g || 0, kcal = +e.kcal || 0, p = +e.p || 0, c = +e.c || 0, f = +e.f || 0, m = match(e.name), d = m && m.d;
+    var fd = window.FBG_FOODS && e.fid && window.FBG_FOODS.BY_ID[e.fid];
+    var sc = g ? g / 100 : 0, o = { g: g, kcal: kcal, p: p, c: c, f: f, m: m, d: d };
+    if (d) {
+      // scale secondary nutrients by carbs/fat ratio to the logged values (robust when grams differ)
+      var kc = d.c > 0 ? c / d.c : sc, kf = d.f > 0 ? f / d.f : sc;
+      o.fib = e.fib != null ? +e.fib : d.fib * (kc || sc); o.sug = e.sug != null ? +e.sug : Math.min(c, d.sug * (kc || sc));
+      o.sat = Math.min(f, d.sat * (kf || sc)); o.na = d.na * sc; o.gi = d.gi; o.nova = d.nova; o.cat = d.cat;
+    } else {
+      o.fib = e.fib != null ? +e.fib : fd && fd.fib != null ? fd.fib * sc : null; o.sug = null; o.sat = null; o.na = null; o.gi = c > 3 ? 2 : 0; o.nova = null; o.cat = fd && fd.cat;
     }
-    var T = ctx.T;
-    if (T && T.kcal && kcal > T.kcal * 0.4) { s -= 1; con.push('grote portie: ' + Math.round(kcal / T.kcal * 100) + '% van je dagdoel'); }
-    if (ctx.goal === 'lean' && kcal > 0 && e.g && kcal / e.g * 100 > 400 && pd < 0.2) { s -= 0.5; con.push('calorierijk bij afvallen'); }
-    if (ctx.goal === 'muscle' && p >= 25) { s += 0.5; pro.push('helpt spieropbouw (' + Math.round(p) + ' g eiwit)'); }
+    o.gl = c * GIV[o.gi || 0] / 100 - (o.fib || 0) * 0.3; if (o.gl < 0) o.gl = 0;
+    return o;
+  }
+  App.foodNutr = nutr;
+  var ALC = /(^| )(bier|beer|pils|heineken|wijn|wine|rose|wodka|vodka|whisky|rum|gin|sterke drank)( |$)/;
+  var ZERO_OK = /(^| )(water|spa|thee|tea|koffie|coffee|espresso|bruiswater|mineraalwater)( |$)/;
+  App.rateFood = function (e, ctx) {
+    ctx = ctx || {}; var o = nutr(e), kcal = o.kcal, p = o.p, c = o.c, f = o.f, s = 0, pro = [], con = [], d = o.d, T = ctx.T, nm = norm(e.name);
     var warn = App.foodSanity(e);
+    if (kcal < 8) {
+      var zero = ZERO_OK.test(nm) || (d && d.cat === 'drink' && d.nova <= 1);
+      if (zero) return { lv: LV[0], s: 2, why: ['✔ 0 kcal, hydratatie — prima'], warn: null, pro: [], con: [], n: o };
+      if (d && d.nova === 4) return { lv: LV[1], s: 0.5, why: ['✔ ±0 kcal', '✖ zoetstoffen/bewerkt — beter water'], warn: null, pro: [], con: [], n: o };
+      return { lv: LV[1], s: 0.5, why: ['Nauwelijks calorieën.'], warn: null, pro: [], con: [], n: o };
+    }
+    var pd = p * 4 / kcal, satS = o.sat != null ? o.sat * 9 / kcal : null, sugS = o.sug != null ? o.sug * 4 / kcal : null, fib100 = o.fib != null ? o.fib / kcal * 100 : null;
+    var dens = o.g ? kcal / o.g * 100 : null, fatS = f * 9 / kcal;
+    // protein density
+    if (pd >= 0.4) { s += 2; pro.push(R(p) + ' g eiwit = ' + R(pd * 100) + '% van de kcal'); }
+    else if (pd >= 0.25) { s += 1.2; pro.push(R(p) + ' g eiwit (' + R(pd * 100) + '% kcal)'); }
+    else if (pd >= 0.15) { s += 0.4; if (p >= 8) pro.push(R(p) + ' g eiwit'); }
+    else if (pd < 0.08 && kcal > 120 && !(o.cat === 'fruit' || o.cat === 'veg')) { s -= 0.6; con.push('maar ' + R1(p) + ' g eiwit op ' + R(kcal) + ' kcal'); }
+    // fiber
+    if (fib100 != null && o.fib >= 1) {
+      if (fib100 >= 3) { s += 1; pro.push(R1(o.fib) + ' g vezels (veel per kcal)'); }
+      else if (fib100 >= 1.5) { s += 0.5; pro.push(R1(o.fib) + ' g vezels'); }
+    } else if (fib100 != null && c > 25 && o.fib < 1.5) { s -= 0.3; con.push('vrijwel geen vezels bij ' + R(c) + ' g koolhydraten'); }
+    // sugar
+    if (sugS != null && o.sug >= 3) {
+      var added = (o.nova || 0) >= 3 || (d && d.cat === 'sweet');
+      if (added && sugS >= 0.5) { s -= 2.2; con.push(R(o.sug) + ' g (toegevoegde) suiker = ' + R(sugS * 100) + '% van de kcal'); }
+      else if (added && sugS >= 0.2) { s -= 1.1; con.push(R(o.sug) + ' g suiker (' + R(sugS * 100) + '% kcal)'); }
+      else if (added && o.sug >= 10) { s -= 0.5; con.push(R(o.sug) + ' g suiker'); }
+      else if (!added && o.sug >= 25) { s -= 0.5; con.push(R(o.sug) + ' g (vrucht)suiker in één portie'); }
+      if (d && d.cat === 'drink' && added && o.sug >= 10) { s -= 0.8; con.push('vloeibare suiker verzadigt niet'); }
+    }
+    // fat quality
+    if (satS != null) {
+      if (satS >= 0.25 && o.sat >= 3) { s -= 1.5; con.push(R1(o.sat) + ' g verzadigd vet = ' + R(satS * 100) + '% van de kcal (max ±10%)'); }
+      else if (satS >= 0.14 && o.sat >= 2.5) { s -= 0.7; con.push(R1(o.sat) + ' g verzadigd vet (' + R(satS * 100) + '% kcal)'); }
+      else if (fatS >= 0.45 && satS < 0.17 && (o.nova || 4) <= 2) { s += 0.6; pro.push('vooral onverzadigde vetten (' + R(f) + ' g vet, ' + R1(o.sat) + ' g verzadigd)'); }
+    } else if (fatS > 0.6 && kcal > 100) { s -= 0.8; con.push(R(fatS * 100) + '% van de kcal uit vet'); }
+    // sodium
+    if (o.na != null) {
+      if (o.na >= 900) { s -= 1.2; con.push(R(o.na) + ' mg natrium (±' + R1(o.na * 2.5 / 1000) + ' g zout) — ' + R(o.na / 24) + '% van je daglimiet'); }
+      else if (o.na >= 500) { s -= 0.6; con.push(R(o.na) + ' mg natrium (±' + R1(o.na * 2.5 / 1000) + ' g zout)'); }
+    }
+    // processing
+    if (o.nova === 1) { s += 0.6; pro.push('onbewerkt'); }
+    else if (o.nova === 4) { s -= 1; con.push('ultrabewerkt'); }
+    // energy density
+    if (dens != null && dens > 400 && pd < 0.2 && fatS < 0.9) { var dpen = ctx.goal === 'lean' ? 0.8 : 0.3; s -= dpen; con.push(R(dens) + ' kcal per 100 g — calorierijk' + (ctx.goal === 'lean' ? ' bij afvallen' : '')); }
+    if (o.cat === 'fish' && f >= 5 && (o.nova || 2) <= 2) { s += 1; pro.push('vette vis: omega-3 (' + R1(f) + ' g vet)'); }
+    if (ALC.test(nm)) { s -= 1.5; con.push('alcohol: lege kcal, remt herstel en vetverbranding'); }
+    if (o.cat === 'veg') { s += 0.6; pro.push('groente: micronutriënten, weinig kcal'); }
+    else if (o.cat === 'fruit' && (o.nova || 1) <= 2 && !(d && d.sug > 50)) { s += 0.4; pro.push('fruit: vitamines + vezels'); }
+    // glycemic load
+    var gl = o.gl;
+    if (c >= 10) {
+      if (ctx.diabetes) {
+        if (gl >= 20) { s -= 1.8; con.push('GL ~' + R(gl) + ' hoog → bloedsuikerpiek (diabetes)'); }
+        else if (gl >= 11) { s -= 0.6; con.push('GL ~' + R(gl) + ' gemiddeld — combineer met eiwit/vezels'); }
+        else { s += 0.5; pro.push('GL ~' + R(gl) + ' laag, rustig voor je bloedsuiker'); }
+        if (c > 45) { s -= 1; con.push(R(c) + ' g koolhydraten in één keer — liever max ±40 g per eetmoment'); }
+        if (o.gi === 3 && c >= 15) { s -= 0.4; con.push('hoge GI'); }
+      } else if (gl >= 25) { s -= 0.4; con.push('GL ~' + R(gl) + ' hoog (snelle energie)'); }
+    }
+    // portion vs targets
+    if (T && T.kcal) {
+      var mk = T.kcal / (ctx.meals || 4);
+      if (kcal > T.kcal * 0.4) { s -= 1; con.push('grote portie: ' + R(kcal) + ' kcal = ' + R(kcal / T.kcal * 100) + '% van je dagdoel'); }
+      else if (kcal > mk * 1.3 && pd < 0.25) { s -= 0.4; con.push(R(kcal) + ' kcal, meer dan een maaltijd (±' + R(mk) + ')'); }
+      if (T.p && p >= 25) { s += 0.3; pro.push('dekt ' + R(p / T.p * 100) + '% van je eiwitdoel'); }
+    }
+    if (ctx.goal === 'muscle' && p >= 25) { s += 0.4; pro.push('helpt spieropbouw'); }
+    if (ctx.goal === 'muscle' && c >= 30 && (o.gi || 0) <= 2 && (o.nova || 2) <= 2) { s += 0.2; }
     var why = pro.map(function (x) { return '✔ ' + x; }).concat(con.map(function (x) { return '✖ ' + x; }));
+    if (!d) why.push('ℹ️ product niet in de database, oordeel op macro’s');
     if (!why.length) why.push('Neutraal: past prima binnen je dag.');
-    if (warn) { s = Math.min(s, -1); why.unshift('✖ waarden lijken niet te kloppen — oordeel onzeker'); }
-    return { lv: lv(s), s: s, why: why, warn: warn, pro: pro, con: con };
+    if (warn) { s = Math.min(s, -0.5); why.unshift('✖ waarden lijken niet te kloppen — oordeel onzeker'); }
+    return { lv: lv(s), s: s, why: why, warn: warn, pro: pro, con: con, n: o };
   };
   App.rateGroup = function (list, ctx, isDay) {
-    var tk = 0, ws = 0, cnt = { hg: 0, g: 0, m: 0, s: 0 }, why = [];
-    (list || []).forEach(function (e) { var r = App.rateFood(e, ctx), k = Math.max(+e.kcal || 0, 20); tk += k; ws += r.s * k; cnt[r.lv.k]++; });
-    if (!list || !list.length) return null;
-    var s = ws / tk, T = ctx && ctx.T;
-    var sum = { kcal: 0, p: 0, c: 0 }; list.forEach(function (e) { sum.kcal += +e.kcal || 0; sum.p += +e.p || 0; sum.c += +e.c || 0; });
-    if (isDay && T) {
-      if (T.p && sum.p >= T.p * 0.9) { s += 0.5; why.push('✔ eiwitdoel gehaald (' + Math.round(sum.p) + '/' + T.p + ' g)'); }
-      else if (T.p && sum.p < T.p * 0.6) { s -= 0.5; why.push('✖ te weinig eiwit (' + Math.round(sum.p) + '/' + T.p + ' g)'); }
-      if (T.kcal && sum.kcal > T.kcal * 1.15) { s -= 0.5; why.push('✖ ' + Math.round(sum.kcal - T.kcal) + ' kcal boven doel'); }
-      if (ctx.diabetes && T.c && sum.c > T.c * 1.15) { s -= 0.5; why.push('✖ koolhydraten boven je diabetesgrens (' + Math.round(sum.c) + '/' + T.c + ' g)'); }
-    } else if (!isDay && sum.p >= 25) why.push('✔ ' + Math.round(sum.p) + ' g eiwit in deze maaltijd');
+    if (!list || !list.length) return null; ctx = ctx || {};
+    var tk = 0, ws = 0, cnt = { hg: 0, g: 0, m: 0, s: 0 }, why = [], sum = { kcal: 0, p: 0, c: 0, f: 0, fib: 0, sug: 0, gl: 0 }, veg = 0, fruit = 0, meals = {};
+    list.forEach(function (e) { var r = App.rateFood(e, ctx), k = Math.max(+e.kcal || 0, 20), o = r.n; tk += k; ws += r.s * k; cnt[r.lv.k]++;
+      sum.kcal += o.kcal; sum.p += o.p; sum.c += o.c; sum.f += o.f; sum.fib += o.fib || 0; sum.gl += o.gl || 0;
+      if (o.sug != null && ((o.nova || 0) >= 3 || o.cat === 'sweet')) sum.sug += o.sug;
+      if (o.cat === 'veg') veg += o.g || 80; if (o.cat === 'fruit') fruit += o.g || 100;
+      var mk = e.meal || 'x'; meals[mk] = (meals[mk] || 0) + o.p; });
+    var s = ws / tk, T = ctx.T;
+    if (isDay) {
+      if (T && T.p) { if (sum.p >= T.p * 0.9) { s += 0.5; why.push('✔ eiwit ' + R(sum.p) + '/' + T.p + ' g'); } else if (sum.p < T.p * 0.6) { s -= 0.6; why.push('✖ te weinig eiwit: ' + R(sum.p) + '/' + T.p + ' g'); } else why.push('eiwit ' + R(sum.p) + '/' + T.p + ' g'); }
+      var pm = Object.keys(meals).filter(function (k) { return meals[k] >= 20; }).length;
+      if (Object.keys(meals).length >= 3) { if (pm >= 3) { s += 0.3; why.push('✔ eiwit goed verdeeld (' + pm + ' momenten ≥20 g)'); } else if (pm <= 1) { s -= 0.3; why.push('✖ eiwit slecht verdeeld (' + pm + '× ≥20 g)'); } }
+      var fibT = ctx.female ? 25 : 30;
+      if (sum.fib >= fibT) { s += 0.4; why.push('✔ ' + R(sum.fib) + ' g vezels'); } else if (sum.kcal > 1000) { if (sum.fib < fibT * 0.5) s -= 0.4; why.push((sum.fib < fibT * 0.5 ? '✖ ' : '') + 'vezels ' + R(sum.fib) + '/' + fibT + ' g'); }
+      if (veg >= 250) { s += 0.3; why.push('✔ ' + R(veg) + ' g groente'); } else if (sum.kcal > 1000) { s -= 0.3; why.push('✖ groente ' + R(veg) + '/250 g'); }
+      if (fruit >= 150) why.push('✔ ' + R(fruit) + ' g fruit');
+      if (sum.sug >= 50) { s -= 0.6; why.push('✖ ' + R(sum.sug) + ' g toegevoegde suiker (max ±50 g)'); }
+      if (T && T.kcal) { if (sum.kcal > T.kcal * 1.15) { s -= 0.5; why.push('✖ ' + R(sum.kcal - T.kcal) + ' kcal boven doel'); } else if (sum.kcal >= T.kcal * 0.85) why.push('✔ kcal ' + R(sum.kcal) + '/' + T.kcal); }
+      if (ctx.diabetes && T && T.c) { if (sum.c > T.c * 1.15) { s -= 0.5; why.push('✖ koolhydraten ' + R(sum.c) + '/' + T.c + ' g (diabetesgrens)'); } else why.push('✔ koolhydraten ' + R(sum.c) + '/' + T.c + ' g'); }
+    } else {
+      if (sum.p >= 25) { s += 0.3; why.push('✔ ' + R(sum.p) + ' g eiwit'); } else if (sum.kcal > 300 && sum.p < 15) { s -= 0.3; why.push('✖ maar ' + R(sum.p) + ' g eiwit'); }
+      if (sum.fib >= 8) why.push('✔ ' + R(sum.fib) + ' g vezels');
+      if (veg > 0) { s += 0.2; why.push('✔ groente erbij'); }
+      if (ctx.diabetes && sum.gl >= 25) { s -= 0.5; why.push('✖ maaltijd-GL ~' + R(sum.gl)); }
+    }
     why.unshift(cnt.hg + '🟢 ' + cnt.g + '👍 ' + cnt.m + '🟡 ' + cnt.s + '🔴');
-    return { lv: lv(s), s: s, cnt: cnt, why: why };
+    return { lv: lv(s), s: s, cnt: cnt, why: why, sum: sum };
   };
   App.rateBadge = function (r, small) { if (!r) return ''; return '<span class="fr-badge fr-' + r.lv.k + '" title="' + esc(r.lv.l) + '">' + r.lv.e + (small ? '' : ' ' + esc(r.lv.l)) + '</span>'; };
   App.rateWhyHtml = function (r, id) {
