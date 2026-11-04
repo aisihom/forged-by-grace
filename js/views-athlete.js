@@ -265,7 +265,7 @@
     var bars = [], sumP = 0, n = 0;
     for (var i = 6; i >= 0; i--) { var d = App.isoAdd(App.today(), -i), x = App.dayTotals(ath.food[d] || []); bars.push({ l: F.parseISO(d).toLocaleDateString(S.lang, { weekday: 'narrow' }), v: x.kcal, hi: d === iso }); if (x.kcal) { sumP += x.p; n++; } }
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('This week')) + '</h2><span class="small muted">' + esc(t('avg protein')) + ' ' + (n ? Math.round(sumP / n) : 0) + ' g</span></div><div class="card">' + App.barChart(bars, T.kcal) + '<p class="tiny muted" style="margin:6px 0 0">' + esc(t('Green line = your daily calorie target.')) + '</p></div></div>';
-    h += '<div class="section"><div class="grid2"><a class="btn" href="#/meal/me">' + I.plans + esc(t('My meal plan')) + '</a><button class="btn" data-act="custom-food">' + I.plus + esc(t('Custom food')) + '</button></div></div>';
+    h += '<div class="section"><button class="btn primary block" data-act="recipes" style="margin-bottom:8px">🍲 Recepten / Meal prep</button><div class="grid2"><a class="btn" href="#/meal/me">' + I.plans + esc(t('My meal plan')) + '</a><button class="btn" data-act="custom-food">' + I.plus + esc(t('Custom food')) + '</button></div></div>';
     return h;
   };
   App.planMealFor = function (meal, key) {

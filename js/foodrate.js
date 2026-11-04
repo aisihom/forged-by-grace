@@ -62,6 +62,7 @@
   function per100(e) { var g = +e.g || 0; if (!g) return null; return { kcal: (+e.kcal || 0) * 100 / g, p: (+e.p || 0) * 100 / g, c: (+e.c || 0) * 100 / g, f: (+e.f || 0) * 100 / g }; }
   function off(a, b, absT, relT) { return Math.abs(a - b) > Math.max(absT, b * relT); }
   App.foodSanity = function (e) {
+    if (e.rn || e.recipe) return null;
     var m = match(e.name), x = per100(e); if (!m || !x || m.conf < 0.75) return null; var r = m.d;
     if (r.kcal < 5 && x.kcal < 15) return null;
     var bk = off(x.kcal, r.kcal, 50, 0.4), n = 0, bits = [];
@@ -81,6 +82,10 @@
   var GIV = [0, 40, 60, 80];
   // full nutrient estimate for a logged entry
   function nutr(e) {
+    if (e.rn) { // recipe item: ingredient-weighted nutrients, no name matching
+      var rn = e.rn, ro = { g: +e.g || 0, kcal: +e.kcal || 0, p: +e.p || 0, c: +e.c || 0, f: +e.f || 0, m: null, d: null, fib: e.fib != null ? +e.fib : null, sug: e.sug != null ? +e.sug : null, sat: rn.sat != null ? +rn.sat : null, na: rn.na != null ? +rn.na : null, gi: rn.gi || 0, nova: rn.nova || null, cat: 'dish', recipe: true };
+      ro.gl = ro.c * GIV[ro.gi || 0] / 100 - (ro.fib || 0) * 0.3; if (ro.gl < 0) ro.gl = 0; return ro;
+    }
     var g = +e.g || 0, kcal = +e.kcal || 0, p = +e.p || 0, c = +e.c || 0, f = +e.f || 0, m = match(e.name), d = m && m.d;
     var fd = window.FBG_FOODS && e.fid && window.FBG_FOODS.BY_ID[e.fid];
     var sc = g ? g / 100 : 0, o = { g: g, kcal: kcal, p: p, c: c, f: f, m: m, d: d };
@@ -169,7 +174,7 @@
     if (ctx.goal === 'muscle' && p >= 25) { s += 0.4; pro.push('helpt spieropbouw'); }
     if (ctx.goal === 'muscle' && c >= 30 && (o.gi || 0) <= 2 && (o.nova || 2) <= 2) { s += 0.2; }
     var why = pro.map(function (x) { return '✔ ' + x; }).concat(con.map(function (x) { return '✖ ' + x; }));
-    if (!d) why.push('ℹ️ product niet in de database, oordeel op macro’s');
+    if (o.recipe) why.push('🍲 recept: berekend uit de ingrediënten'); else if (!d) why.push('ℹ️ product niet in de database, oordeel op macro’s');
     if (!why.length) why.push('Neutraal: past prima binnen je dag.');
     if (warn) { s = Math.min(s, -0.5); why.unshift('✖ waarden lijken niet te kloppen — oordeel onzeker'); }
     return { lv: lv(s), s: s, why: why, warn: warn, pro: pro, con: con, n: o };

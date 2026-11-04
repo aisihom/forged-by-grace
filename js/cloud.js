@@ -77,10 +77,10 @@
     for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^fbg\.(pet|game|water|steps|sp)/i.test(k)) ls[k] = localStorage.getItem(k); }
     var intakes = F.store.get('intakes', null) || F.store.get('intakeLast', null);
     var ci = null; try { ci = App.buildCheckin(me, '', 0); } catch (e) {}
-    var known = ['profile', 'sessions', 'food', 'body', 'habits', 'checkins', 'water', 'steps', 'health'], extra = {};
+    var known = ['profile', 'sessions', 'food', 'body', 'habits', 'checkins', 'water', 'steps', 'health', 'recipes'], extra = {};
     Object.keys(me).forEach(function (k) { if (known.indexOf(k) === -1 && ['pw', 'plan', 'meal', 'coach', 'cid', 'cloudPlanAt', 'cloudPh'].indexOf(k) === -1) extra[k] = me[k]; });
     return { profile: me.profile, sessions: me.sessions, food: me.food, body: me.body, habits: me.habits, checkins: { list: me.checkins, summary: ci, photoLog: me.photoLog || [] },
-      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
+      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
   }
   var last = {}, timer = null;
   function push(now) {
