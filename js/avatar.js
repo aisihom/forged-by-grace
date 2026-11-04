@@ -29,7 +29,7 @@
   function fill(sel, p) { p.then(function (u) { if (!u) return; document.querySelectorAll(sel).forEach(function (el) { ring(el); el.innerHTML = img(u); }); }); }
 
   // ---------- crop sheet ----------
-  function cropSheet(file) {
+  function cropSheet(file, onSave) {
     var url = URL.createObjectURL(file), im = new Image();
     im.onerror = function () { App.toast('Foto kon niet geladen worden'); };
     im.onload = function () {
@@ -54,19 +54,22 @@
         var o = document.createElement('canvas'); o.width = o.height = 400; draw(o.getContext('2d'), 400);
         o.toBlob(function (b) {
           if (!b) return App.toast('⚠️ Opslaan mislukt');
-          toData(b).then(function (d) {
-            setLocal(d); URL.revokeObjectURL(url); s.close(); App.rerender(); App.toast('Profielfoto opgeslagen ✓');
-            var cid = myCid(), c = sb();
-            if (cid && c) c.storage.from('checkin-photos').upload(cid + '/avatar.jpg', b, { upsert: true, contentType: 'image/jpeg', cacheControl: '60' }).then(function (r) { if (r.error) App.toast('⚠️ Upload: ' + r.error.message); else delete cache[cid]; });
-          });
+          URL.revokeObjectURL(url); s.close(); (onSave || saveMine)(b);
         }, 'image/jpeg', 0.82);
       };
     };
     im.src = url;
   }
-  function pick(capture) {
+  function saveMine(b) {
+    toData(b).then(function (d) {
+      setLocal(d); App.rerender(); App.toast('Profielfoto opgeslagen ✓');
+      var cid = myCid(), c = sb();
+      if (cid && c) c.storage.from('checkin-photos').upload(cid + '/avatar.jpg', b, { upsert: true, contentType: 'image/jpeg', cacheControl: '60' }).then(function (r) { if (r.error) App.toast('⚠️ Upload: ' + r.error.message); else delete cache[cid]; });
+    });
+  }
+  function pick(capture, onSave) {
     var i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (capture) i.setAttribute('capture', 'user');
-    i.onchange = function () { if (i.files[0]) cropSheet(i.files[0]); }; i.click();
+    i.onchange = function () { if (i.files[0]) cropSheet(i.files[0], onSave); }; i.click();
   }
   A['avatar-edit'] = function () {
     var has = !!local();
@@ -111,5 +114,54 @@
     var c = App.client && App.client(id); if (!c || !c.cloudId) return h;
     setTimeout(function () { var av = document.querySelector('.avatar.lg'); if (!av) return; signed(c.cloudId).then(function (u) { if (u) { ring(av); av.innerHTML = img(u); } }); });
     return h;
+  };
+
+  // ---------- coach photo: private bucket coach-photos/<coachUserId>/avatar.jpg (coach writes; only his linked clients read) ----------
+  var CK = 'fbg.coachAvatar', cc = {};
+  function coachSigned(uid) {
+    var c = cc[uid]; if (c && c.at > Date.now() - 3e6) return Promise.resolve(c.url);
+    var s = sb(); if (!s || !uid) return Promise.resolve('');
+    return s.storage.from('coach-photos').list(uid).then(function (r) {
+      var f = (r.data || []).filter(function (x) { return x.name === 'avatar.jpg'; })[0];
+      if (!f) { cc[uid] = { at: Date.now(), url: '' }; return ''; }
+      return s.storage.from('coach-photos').createSignedUrl(uid + '/avatar.jpg', 3600).then(function (u) { var url = (u.data && u.data.signedUrl) || ''; if (url) url += '&t=' + encodeURIComponent(f.updated_at || ''); cc[uid] = { at: Date.now(), url: url }; return url; });
+    }).catch(function () { return ''; });
+  }
+  function myCoachUid() { var C = App.cloud; return C && C.role && C.role() === 'coach' && C.user() && C.user().id; }
+  function coachLocal() { try { return localStorage.getItem(CK) || ''; } catch (e) { return ''; } }
+  function coachSetLocal(v) { try { if (v) localStorage.setItem(CK, v); else localStorage.removeItem(CK); } catch (e) {} }
+  function coachMine() { var l = coachLocal(); if (l) return Promise.resolve(l); return coachSigned(myCoachUid()); }
+  function saveCoach(b) {
+    var uid = myCoachUid(), c = sb();
+    if (!uid || !c) return App.toast('Log eerst in als coach (More → Live koppeling)');
+    toData(b).then(function (d) { coachSetLocal(d); App.rerender(); });
+    c.storage.from('coach-photos').upload(uid + '/avatar.jpg', b, { upsert: true, contentType: 'image/jpeg', cacheControl: '60' }).then(function (r) { if (r.error) App.toast('⚠️ Upload: ' + r.error.message); else { delete cc[uid]; App.toast('Coachfoto opgeslagen ✓'); } });
+  }
+  A['coach-avatar-edit'] = function () {
+    var has = !!coachLocal() || !!(cc[myCoachUid()] && cc[myCoachUid()].url);
+    var s = App.sheet('<b style="color:' + G + '">👤 Coachfoto</b><p class="tiny muted" style="margin:6px 0 12px">🔒 Alleen jouw gekoppelde klanten zien deze foto.</p>' +
+      '<button class="btn primary lg block" id="ca-cam">📷 Foto maken</button><button class="btn lg block" id="ca-lib" style="margin-top:8px">🖼️ Kies uit fotobibliotheek</button>' +
+      (has ? '<button class="btn danger block" id="ca-del" style="margin-top:8px">🗑️ Coachfoto verwijderen</button>' : '') + '<button class="btn ghost block" id="ca-cl" style="margin-top:8px">Annuleren</button>', { label: 'Coachfoto' });
+    s.el.querySelector('#ca-cam').onclick = function () { s.close(); pick(true, saveCoach); };
+    s.el.querySelector('#ca-lib').onclick = function () { s.close(); pick(false, saveCoach); };
+    s.el.querySelector('#ca-cl').onclick = function () { s.close(); };
+    var d = s.el.querySelector('#ca-del'); if (d) d.onclick = function () {
+      if (!confirm('Coachfoto verwijderen?')) return;
+      coachSetLocal(''); var uid = myCoachUid(), c = sb(); if (uid && c) c.storage.from('coach-photos').remove([uid + '/avatar.jpg']).then(function () { delete cc[uid]; });
+      s.close(); App.rerender(); App.toast('Coachfoto verwijderd');
+    };
+  };
+  function circ(size, attr, txt, act) { return '<' + (act ? 'button data-act="' + act + '"' : 'div') + ' class="avatar" ' + attr + ' style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;border:2px ' + (act ? 'dashed' : 'solid') + ' ' + G + ';background:#111;color:' + G + ';font-size:' + Math.round(size / 2.6) + 'px;display:flex;align-items:center;justify-content:center;flex:none">' + esc(txt) + '</' + (act ? 'button' : 'div') + '>'; }
+  var oMore2 = V.more; V.more = function () {
+    var h = oMore2.apply(this, arguments); if (S.role !== 'coach') return h;
+    setTimeout(function () { fill('[data-av-coach]', coachMine()); });
+    return '<div class="card row" style="margin-bottom:12px;gap:12px;align-items:center">' + circ(64, 'data-av-coach', App.initials(S.coach.name) || '👤', 'coach-avatar-edit') + '<div class="grow"><b>👤 Coachfoto</b><div class="tiny muted">Je klanten zien deze foto in hun app</div></div><button class="btn sm" data-act="coach-avatar-edit">' + (coachLocal() ? 'Wijzigen' : 'Instellen') + '</button></div>' + h;
+  };
+  var oToday2 = V.today; V.today = function () {
+    var h = oToday2.apply(this, arguments), C = App.cloud, uid = C && C.coachId && C.coachId(); if (!uid) return h;
+    var nm = (S.me.coach && S.me.coach.name) || 'Je coach';
+    setTimeout(function () { fill('[data-av-mycoach]', coachSigned(uid)); });
+    var m = h.indexOf('data-av-me'), k = m < 0 ? h.indexOf('</h1>') : h.indexOf('</button></div>', m) + 10; if (k < 10) return h;
+    return h.slice(0, k + 5) + '<div class="card row" style="gap:12px;align-items:center;margin:10px 0">' + circ(44, 'data-av-mycoach', App.initials(nm)) + '<div class="grow"><div class="tiny muted">Je coach</div><b>' + esc(nm) + '</b></div></div>' + h.slice(k + 5);
   };
 })();

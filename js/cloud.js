@@ -24,7 +24,7 @@
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
   var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; }, myFeedback: function () { return (myClient && myClient.coach_feedback) || null; } };
   C.restart = function () { role = null; myClient = null; return start(); };
-  C.user = function () { return user; }; C.role = function () { return role; };
+  C.user = function () { return user; }; C.coachId = function () { return myClient && myClient.coach_id; }; C.role = function () { return role; };
 
   function load() {
     if (loading) return loading;
