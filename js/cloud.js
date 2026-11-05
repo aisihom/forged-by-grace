@@ -63,7 +63,7 @@
 
   function start() {
     return sb.from('coaches').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
-      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) { selfTargets(myClient); push(true); } return coachPull().then(subscribe); }); }
+      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) { selfTargets(myClient); push(true); } return coachPull().then(function () { subscribe(); if (myClient && App.healthSyncPull) App.healthSyncPull(); }); }); }
       return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (r2) {
         myClient = r2.data || null; role = myClient ? 'client' : 'none';
         if (myClient) {
@@ -138,7 +138,7 @@
   var rawSave = App.save;
   App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') { planPush(); if (myClient) push(); } return r; };
   window.addEventListener('online', function () { push(true); });
-  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); });
+  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (document.visibilityState === 'visible') { if (role === 'coach') coachPull(true).catch(function () {}); if ((role === 'client' || myClient) && App.healthSyncPull) App.healthSyncPull().catch(function () {}); } });
   window.addEventListener('pagehide', function () { if (role === 'client' || myClient) push(true); });
   setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 

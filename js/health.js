@@ -16,7 +16,7 @@
     Object.keys(days || {}).forEach(function (iso) {
       if (iso < cut || iso > App.today()) return;
       var d = days[iso], cur = h.days[iso] = h.days[iso] || {};
-      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) { if (d[k] != null && isFinite(d[k])) { var nv = Math.round(d[k] * 10) / 10; cur[k] = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv; } });
+      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) { if (d[k] != null && isFinite(d[k])) { var nv = Math.round(d[k] * 10) / 10; if (k === 'steps' && cur.man && (cur.steps == null || cur.steps < nv) && cur.man <= nv) delete cur.man; cur[k] = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv; } });
       cur.src = src; res.days++;
       if (d.weight) {
         var b = ath.body.filter(function (x) { return x.date === iso; })[0];
@@ -295,23 +295,43 @@
   };
 
   // ---------------- Shortcut link / paste sync ----------------
+  // v3.30.3: Shortcuts often percent-encodes &k= as %26k%3D after a Magic Variable, so URLSearchParams misses k.
+  App.normalizeHealthRaw = function (raw) {
+    var s = String(raw == null ? '' : raw);
+    try { s = decodeURIComponent(s.replace(/\+/g, '%20')); } catch (e) {}
+    s = s.replace(/%26/gi, '&').replace(/%3D/gi, '=').replace(/%23/gi, '#').replace(/%3F/gi, '?');
+    s = s.replace(/[\r\n\u00a0]+/g, '').replace(/\s*&\s*/g, '&').replace(/\s*=\s*/g, '=');
+    return s.trim();
+  };
+  App.extractHealthTok = function (raw) {
+    var s = App.normalizeHealthRaw(raw), tok = null, m;
+    try { tok = new URLSearchParams(s.replace(/^.*?#health\??/, '').replace(/^[^?]*\?/, '').replace(/;/g, '&')).get('k'); } catch (e) {}
+    if (!tok && (m = s.match(/[?&#]k=([A-Za-z0-9_-]{20,})/))) tok = m[1];
+    if (!tok && (m = s.match(/(?:^|[?&#]|%26)k(?:=|%3D)(fbgh_[A-Za-z0-9_-]{10,})/i))) tok = m[1];
+    if (!tok && (m = s.match(/(fbgh_[A-Za-z0-9_-]{20,})/))) tok = m[1];
+    if (tok) tok = String(tok).trim().replace(/[^A-Za-z0-9_-]/g, '');
+    return tok && tok.length >= 20 ? tok : null;
+  };
   App.parseHealthQuery = function (q) {
-    q = String(q || '').trim().replace(/^.*?#health\??/, '').replace(/^\?/, '');
+    q = App.normalizeHealthRaw(q).replace(/^.*?#health\??/, '').replace(/^[^?]*\?/, '').replace(/^\?/, '');
+    // If & was eaten into a value (steps=1572&k=… still glued), split glued k/out
+    q = q.replace(/(%26|&)?k(%3D|=)(fbgh_[A-Za-z0-9_-]+)/i, function (_, _a, _b, tok) { return '&k=' + tok; });
     var p = new URLSearchParams(q.replace(/;/g, '&')), d = (p.get('d') || App.today()).slice(0, 10);
     if (!/^\d{4}-\d\d-\d\d$/.test(d)) d = App.today();
     function int(k) { var v = p.get(k); if (v == null || v === '') return null; v = String(v).replace(/[^\d]/g, ''); return v ? +v : null; }
     function dec(k) { var v = p.get(k); if (v == null || v === '') return null; v = String(v).replace(/\s/g, ''); if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, ''); return n(v); }
     var x = {}; var s = int('steps'), w = dec('weight'), r = int('rhr'), k = int('kcal'), f = dec('fat');
     if (s != null) x.steps = s; if (w) x.weight = w > 300 ? w / 1000 : w; if (r) x.rhr = r; if (k != null) x.kcal = k; if (f) x.fat = f <= 1 ? f * 100 : f;
-    var days = {}; days[d] = x; return { days: days, d: d, x: x };
+    var days = {}; days[d] = x; return { days: days, d: d, x: x, tok: App.extractHealthTok(q) };
   };
   App.applyHealthLink = function (hash) {
-    var r = App.parseHealthQuery(hash);
+    // Prefer the live URL (search/hash/href) so a cleared replaceState or encoded Shortcut link still works
+    var raw = [hash, typeof location !== 'undefined' ? (location.search || '') : '', typeof location !== 'undefined' ? (location.hash || '') : '', typeof location !== 'undefined' ? (location.href || '') : ''].join('&');
+    var r = App.parseHealthQuery(raw);
     if (!Object.keys(r.x).length) { App.toast(t('No health values in the link.')); return; }
     if (!S.role) S.role = 'athlete';
     App.mergeHealth(r.days, [], 'Shortcut');
-    // v3.30.2: Safari and the home-screen app have separate storage on iPhone, so also send the numbers straight to the server with the sync key
-    var tok = (new URLSearchParams(String(hash || '').replace(/^.*?#health\??/, '').replace(/^\?/, '').replace(/;/g, '&')).get('k')) || S.me.hTok;
+    var tok = r.tok || App.extractHealthTok(raw) || S.me.hTok;
     if (tok && tok.length >= 20) {
       var q = 'd=' + r.d + Object.keys(r.x).map(function (k) { return '&' + k + '=' + r.x[k]; }).join('');
       if (!S.me.hTok) { S.me.hTok = tok; App.save(); }

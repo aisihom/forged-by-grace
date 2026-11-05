@@ -504,7 +504,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.30.2';
+  App.VERSION = '3.30.3';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
@@ -528,7 +528,12 @@
     if (cm && App.openClientFile) { App.openClientFile(cm[1], /[?&]coach=1/.test(location.search)); return; }
     if (h.indexOf('#health') === 0 && App.applyHealthLink) { App.applyHealthLink(h); return; }
     var qs = location.search || '';
-    if (/[?&](steps|weight|rhr|kcal|fat)=/.test(qs) && App.applyHealthLink) { history.replaceState(null, '', location.pathname + '#/health'); App.applyHealthLink(qs); return; }
+    if ((/[?&](steps|weight|rhr|kcal|fat)=/.test(qs) || /[?&#]k=fbgh_/i.test(qs + (location.hash || '')) || /%26k%3D/i.test(qs)) && App.applyHealthLink) {
+      var healthRaw = (location.href || '') + '&' + qs;
+      history.replaceState(null, '', location.pathname + '#/health');
+      App.applyHealthLink(healthRaw);
+      return;
+    }
     var parts = h.replace(/^#\/?/, '').split('/'), name = parts[0], arg = parts.slice(1).join('/');
     var view = document.getElementById('view');
     if (!S.role) { App.renderTabs(''); view.innerHTML = App.views.welcome(); App.bind(view); return; }

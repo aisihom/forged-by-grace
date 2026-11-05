@@ -15,22 +15,36 @@
 
   // ---------- data in: client side ----------
   App.applyHealthSync = function (row) {
-    if (!row || !row.data || !row.data.days) return;
+    if (!row || !row.data || !row.data.days) return false;
     var last = row.data.last || row.updated_at;
-    if (S.me.hsyncLast === last) return;
-    var days = row.data.days, h;
+    var days = row.data.days, h, before = JSON.stringify((S.me.health && S.me.health.days) || {});
     App.mergeHealth(days, [], 'Shortcut (auto)');
     h = S.me.health;
     Object.keys(days).forEach(function (d) { var x = days[d]; if (h.days[d] && x.sleep != null) h.days[d].sleep = x.sleep; if (h.days[d] && x.wmin != null) h.days[d].wmin = x.wmin; });
+    var changed = before !== JSON.stringify(h.days || {});
+    if (S.me.hsyncLast === last && !changed) return false;
     S.me.hsyncLast = last; App.save();
-    if (/^#\/(hlink|health|today|progress)/.test(location.hash) && !document.querySelector('.sheet')) App.rerender();
+    if (changed && /^#\/(hlink|health|today|progress)?$/.test(location.hash || '#/today') && !document.querySelector('.sheet')) App.rerender();
+    else if (changed && /^#\/(hlink|health|today|progress)/.test(location.hash) && !document.querySelector('.sheet')) App.rerender();
+    return changed;
   };
   App.healthSyncPull = function () {
-    var c = C(); if (!isClient() || !c.sb) return Promise.resolve();
-    var cid = c.state().client;
+    var c = C(); if (!c || !c.sb) return Promise.resolve();
+    // athlete client OR coach's own "Ik" client record
+    var cid = (c.state && c.state().client) || (c.selfClientId && c.selfClientId());
+    if (!cid) return Promise.resolve();
     return c.sb.from('client_data').select('data,updated_at').eq('client_id', cid).eq('kind', 'health_sync').maybeSingle()
       .then(function (r) { if (r.data) App.applyHealthSync(r.data); return r.data; });
   };
+  // Pull server steps on open / focus so Today shows the higher of local vs server
+  if (!window.__fbgHealthFocus) {
+    window.__fbgHealthFocus = 1;
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && App.healthSyncPull) App.healthSyncPull().catch(function () {});
+    });
+    window.addEventListener('focus', function () { if (App.healthSyncPull) App.healthSyncPull().catch(function () {}); });
+    setTimeout(function () { if (App.healthSyncPull) App.healthSyncPull().catch(function () {}); }, 1200);
+  }
   function token(reset) {
     var c = C(); if (!isClient()) return Promise.reject(new Error('login'));
     if (S.me.hTok && !reset) return Promise.resolve(S.me.hTok);
