@@ -10,7 +10,7 @@
     'Same spot & light, neutral background': 'Zelfde plek & licht, neutrale achtergrond', 'Phone at navel height on a stand, or timer at ~2 m': 'Telefoon op navelhoogte op een standaard, of timer op ~2 m', 'Same tight clothing, relaxed natural posture': 'Zelfde strakke kleding, ontspannen natuurlijke houding', 'Ideally in the morning before eating': 'Liefst \u2019s ochtends voor het eten',
     'Your photos may be used for FBG social media / reference:': 'Je foto\u2019s mogen gebruikt worden voor FBG social media / referentie:', 'Private: only you and your coach see these photos.': 'Privé: alleen jij en je coach zien deze foto\u2019s.', 'Change in More → Privacy': 'Wijzigen via More → Privacy',
     'Weight (optional)': 'Gewicht (optioneel)', 'Compare with': 'Vergelijk met', 'No photos yet': 'Nog geen foto\u2019s', 'Photo could not be loaded': 'Foto kon niet geladen worden', 'Check-in saved ✓': 'Check-in opgeslagen ✓', 'Take at least one photo or enter your weight': 'Maak minstens één foto of vul je gewicht in',
-    'Download this photo': 'Download deze foto', 'Download all 4 separately': 'Download alle 4 los', 'Tap a photo to open it full size': 'Tik op een foto om hem groot te zien en los te downloaden', 'Downloading…': 'Downloaden…'
+    'Download this photo': 'Download deze foto', 'Download all 4 separately': 'Download alle 4 los', 'Tap a photo to open it full size': 'Tik op een foto om hem groot te zien en los te downloaden', 'Downloading…': 'Downloaden…', 'Delete this photo': 'Verwijder deze foto', 'Delete this photo?': 'Deze foto verwijderen?', 'This cannot be undone. You can take a new one afterwards.': 'Dit kan niet ongedaan worden. Je kunt daarna een nieuwe maken.', 'Photo deleted': 'Foto verwijderd', 'Delete': 'Verwijderen'
   };
   Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
   var P = [['front', 'Front', 'Face the camera.', 'Arms slightly away from your body.'], ['left', 'Left side', 'Turn so your LEFT side faces the camera.', 'Arms straight forward.'],
@@ -40,17 +40,30 @@
         '<h2 class="h2" id="pg-title">' + esc(t(p[1])) + '</h2><div class="row" style="gap:12px;align-items:center"><div>' + icon(p[0]) + '</div><div class="small"><b>' + esc(t(p[2])) + '</b><br>' + esc(t(p[3])) + '</div></div>' + tips() + (i === 0 ? consentNote() : '') +
         '<div style="margin:10px 0;text-align:center">' + (b ? '<img id="pg-prev" alt="" src="' + URL.createObjectURL(b) + '" style="max-width:100%;max-height:300px;border-radius:12px;border:1px solid #d4af37">' : '') + '</div>' +
         App.photoBtns('pg') +
+        (b ? '<button type="button" class="btn danger block" id="pg-del" style="margin-top:8px">🗑️ ' + esc(t('Delete this photo')) + '</button>' : '') +
         '<div class="grid2" style="margin-top:8px"><button class="btn" id="pg-back">' + (i ? '← ' + esc(t('Back step')) : esc(t('Cancel'))) + '</button><button class="btn ' + (b ? 'primary' : '') + '" id="pg-next">' + esc(t(b ? 'Next' : 'Skip')) + ' →</button></div>';
       function got(f) { App.toast('…'); App.compress(f, 1600, 0.82).then(function (bl) { picked[p[0]] = bl; draw(); }).catch(function (e) { App.toast('⚠️ ' + t('Photo could not be loaded') + (e && e.message ? ': ' + e.message : '')); }); }
       root.querySelector('#pg-cam').onclick = function () { App.pickImage(true, got); };
       root.querySelector('#pg-lib').onclick = function () { App.pickImage(false, got); };
+      var del = root.querySelector('#pg-del');
+      if (del) del.onclick = function () {
+        App.confirm(t('Delete this photo?'), t('This cannot be undone. You can take a new one afterwards.'), t('Delete'), true).then(function (ok) { if (!ok) return; delete picked[p[0]]; draw(); });
+      };
       root.querySelector('#pg-back').onclick = function () { if (i) { i--; draw(); } else s.close(); };
       root.querySelector('#pg-next').onclick = function () { i++; draw(); };
     }
     function final() {
-      root.innerHTML = '<b style="color:#d4af37">📸 ' + esc(t('Progress photos')) + ' ✓</b><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0">' + P.map(function (p) { return '<figure style="margin:0;text-align:center">' + (picked[p[0]] ? '<img alt="" src="' + URL.createObjectURL(picked[p[0]]) + '" style="width:100%;border-radius:8px">' : '<div style="aspect-ratio:3/4;border:1px dashed #555;border-radius:8px"></div>') + '<figcaption class="tiny">' + esc(t(p[1])) + '</figcaption></figure>'; }).join('') + '</div>' +
+      root.innerHTML = '<b style="color:#d4af37">📸 ' + esc(t('Progress photos')) + ' ✓</b><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0">' + P.map(function (p) { return '<figure style="margin:0;text-align:center" data-jump="' + p[0] + '">' + (picked[p[0]] ? '<img alt="" src="' + URL.createObjectURL(picked[p[0]]) + '" style="width:100%;border-radius:8px">' : '<div style="aspect-ratio:3/4;border:1px dashed #555;border-radius:8px"></div>') + '<figcaption class="tiny">' + esc(t(p[1])) + '</figcaption>' + (picked[p[0]] ? '<button type="button" class="btn danger sm" data-del-pose="' + p[0] + '" style="margin-top:4px">🗑️</button>' : '') + '</figure>'; }).join('') + '</div>' +
         '<label class="field"><span class="label">' + esc(t('Weight (optional)')) + ' (kg)</span><input class="input" id="pg-w" inputmode="decimal" value="' + esc(last.weight || '') + '"></label>' +
         '<div class="grid2" style="margin-top:10px"><button class="btn" id="pg-back">← ' + esc(t('Back step')) + '</button><button class="btn primary" id="pg-save">' + esc(t('Save check-in')) + '</button></div>';
+      root.querySelectorAll('[data-del-pose]').forEach(function (btn) {
+        btn.onclick = function (ev) { ev.stopPropagation(); App.confirm(t('Delete this photo?'), t('This cannot be undone. You can take a new one afterwards.'), t('Delete'), true).then(function (ok) { if (!ok) return; delete picked[btn.getAttribute('data-del-pose')]; final(); }); };
+      });
+      root.querySelectorAll('figure[data-jump]').forEach(function (fig) {
+        if (picked[fig.getAttribute('data-jump')]) return;
+        fig.style.cursor = 'pointer';
+        fig.onclick = function () { var k = fig.getAttribute('data-jump'); for (var n = 0; n < P.length; n++) if (P[n][0] === k) { i = n; draw(); } };
+      });
       root.querySelector('#pg-back').onclick = function () { i = P.length - 1; draw(); };
       root.querySelector('#pg-save').onclick = function () {
         var w = App.num(root.querySelector('#pg-w').value), iso = App.today(), ks = Object.keys(picked);
@@ -58,7 +71,13 @@
         var lg = ath.photoLog = ath.photoLog || [], entry = lg.filter(function (x) { return x.date === iso; })[0];
         if (!entry) { entry = { date: iso, poses: {} }; lg.push(entry); lg.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); }
         if (w) entry.weight = w;
-        Promise.all(ks.map(function (k) { var id = 'ph-' + iso + '-' + k + '-' + Date.now().toString(36), old = entry.poses[k]; entry.poses[k] = id; return App.photoPut({ id: id, date: iso, pose: k, blob: picked[k] }).then(function () { if (old && App.photoDel) return App.photoDel(old); }); })).then(function () {
+        Promise.all(ks.map(function (k) { var id = 'ph-' + iso + '-' + k + '-' + Date.now().toString(36), old = entry.poses[k]; entry.poses[k] = id; return App.photoPut({ id: id, date: iso, pose: k, blob: picked[k] }).then(function () {
+          if (!old || old === id) return;
+          if (App.photoDel) App.photoDel(old);
+          if (App.markPhotoGone) App.markPhotoGone(old);
+          var cid = App.ownStorageId && App.ownStorageId();
+          if (cid && App.removeStoredCheckinPhoto) return App.removeStoredCheckinPhoto(cid, old);
+        }); })).then(function () {
           if (w) { ath.body = ath.body || []; var bb = ath.body.filter(function (x) { return x.date === iso; })[0]; if (!bb) { bb = { date: iso }; ath.body.push(bb); ath.body.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); } bb.weight = w; if (ath.profile) ath.profile.weight = w; }
           ath.lastMeasure = iso; App.save(); s.close(); App.rerender(); App.toast(t('Check-in saved ✓'));
         }).catch(function (e) { App.toast('⚠️ ' + (e && e.message || e)); });
@@ -124,6 +143,7 @@
   };
   function poseFile(d, pose) { return (d && (d[pose] || (pose === 'left' && d.side))) || ''; }
   var photoCache = {};
+  App.forgetCheckinPhoto = function (path) { delete photoCache[path]; };
   function getCheckinPhoto(sb, path) {
     if (!photoCache[path]) {
       photoCache[path] = sb.storage.from('checkin-photos').download(path).then(function (r) {
@@ -151,7 +171,8 @@
         return poseFile(g[date], p[0]) ? '<button type="button" data-pose="' + p[0] + '"' + (p[0] === pose ? ' class="on"' : '') + '>' + esc(t(p[1])) + '</button>' : '';
       }).join('') + '</div>' +
       '<button type="button" class="btn primary lg block" id="pg-dl">📥 ' + esc(t('Download this photo')) + '</button>' +
-      '<button type="button" class="btn lg block" id="pg-dla" style="margin-top:8px">📥 ' + esc(t('Download all 4 separately')) + '</button>', { label: t('Progress photos') });
+      '<button type="button" class="btn lg block" id="pg-dla" style="margin-top:8px">📥 ' + esc(t('Download all 4 separately')) + '</button>' +
+      '<button type="button" class="btn danger block" id="pg-rm" style="margin-top:8px">🗑️ ' + esc(t('Delete this photo')) + '</button>', { label: t('Progress photos') });
     var cur = { pose: pose, path: path };
     function show(po, pa) {
       cur.pose = po; cur.path = pa;
@@ -171,6 +192,17 @@
       getCheckinPhoto(sb, cur.path).then(function (x) { return App.saveBlob(x.blob, App.photoFileName(c.name, date, cur.pose)); }).catch(function (e) { App.toast('⚠️ ' + ((e && e.message) || e)); });
     };
     s.el.querySelector('#pg-dla').onclick = function () { downloadDay(c, date, g[date], sb); };
+    s.el.querySelector('#pg-rm').onclick = function () {
+      App.confirm(t('Delete this photo?'), t('This cannot be undone. You can take a new one afterwards.'), t('Delete'), true).then(function (ok) {
+        if (!ok) return;
+        App.deleteCheckinPhoto({ asCoach: true, folderId: c.cloudId, id: App.photoIdFromPath(cur.path), path: cur.path, date: date, pose: cur.pose }).then(function () {
+          var name = String(cur.path || '').split('/').pop(), d = g[date] || {};
+          Object.keys(d).forEach(function (k) { if (d[k] === name) delete d[k]; });
+          if (App.forgetCheckinPhoto) App.forgetCheckinPhoto(cur.path);
+          App.toast(t('Photo deleted')); s.close(); coachPhotos(c);
+        }).catch(function (err) { App.toast('⚠️ ' + (err && err.message || err)); });
+      });
+    };
     s.el.querySelectorAll('#pg-pose-nav button').forEach(function (b) {
       b.onclick = function () { var n = poseFile(g[date], b.dataset.pose); if (n) show(b.dataset.pose, c.cloudId + '/' + n); };
     });

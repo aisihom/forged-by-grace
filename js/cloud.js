@@ -103,10 +103,10 @@
     for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^fbg\.(pet|game|water|steps|sp)/i.test(k)) ls[k] = localStorage.getItem(k); }
     var intakes = F.store.get('intakes', null) || F.store.get('intakeLast', null);
     var ci = null; try { ci = App.buildCheckin(me, '', 0); } catch (e) {}
-    var known = ['profile', 'sessions', 'food', 'body', 'habits', 'checkins', 'water', 'steps', 'health', 'recipes', 'consent'], extra = {};
+    var known = ['profile', 'sessions', 'food', 'body', 'habits', 'checkins', 'water', 'steps', 'health', 'recipes', 'consent', 'photoGone'], extra = {};
     Object.keys(me).forEach(function (k) { if (known.indexOf(k) === -1 && ['pw', 'plan', 'meal', 'coach', 'cid', 'cloudPlanAt', 'cloudPh'].indexOf(k) === -1) extra[k] = me[k]; });
     return { profile: me.profile, sessions: me.sessions, food: me.food, body: me.body, habits: me.habits, checkins: { list: me.checkins, summary: ci, photoLog: me.photoLog || [] },
-      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
+      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, photoGone: me.photoGone || {}, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
   }
   var last = {}, timer = null, retryT = null;
   function push(now) {
@@ -129,16 +129,47 @@
   }
   C.push = push;
   function photos() {
-    if (!App.photoGet) return;
-    var up = S.me.cloudPh = S.me.cloudPh || {};
-    (S.me.photoLog || []).forEach(function (e) { Object.keys(e.poses || {}).forEach(function (p) { var id = e.poses[p]; if (up[id]) return;
+    if (!App.photoGet || !myClient) return;
+    var up = S.me.cloudPh = S.me.cloudPh || {}, gone = S.me.photoGone || {};
+    if (App.applyPhotoGone) App.applyPhotoGone(S.me);
+    Object.keys(gone).forEach(function (id) {
+      var clean = App.photoIdFromPath ? App.photoIdFromPath(id) : id;
+      if (App.isCheckinPhotoName && App.isCheckinPhotoName(clean) && App.removeStoredCheckinPhoto) App.removeStoredCheckinPhoto(myClient.id, clean).catch(function () {});
+    });
+    (S.me.photoLog || []).forEach(function (e) { Object.keys(e.poses || {}).forEach(function (p) { var id = e.poses[p];
+      if (App.shouldUploadPhoto ? !App.shouldUploadPhoto(id, up, gone) : (up[id] || gone[id])) return;
       App.photoGet(id).then(function (rec) { if (!rec || !rec.blob) return; return sb.storage.from('checkin-photos').upload(myClient.id + '/' + id + '.jpg', rec.blob, { upsert: true, contentType: rec.blob.type || 'image/jpeg' }); })
-        .then(function (r) { if (r && !r.error) { up[id] = 1; rawSave(); } }).catch(function () {}); }); });
+        .then(function (r) { if (r && !r.error) { up[id] = Date.now(); rawSave(); } }).catch(function () {}); }); });
+  }
+  function mergeRemoteGone() {
+    if (!sb || !myClient) return Promise.resolve();
+    return sb.from('client_data').select('data').eq('client_id', myClient.id).eq('kind', 'photoGone').maybeSingle().then(function (r) {
+      var remote = (r.data && r.data.data) || {};
+      S.me.photoGone = Object.assign({}, remote, S.me.photoGone || {});
+      if (App.applyPhotoGone && App.applyPhotoGone(S.me)) rawSave();
+    }).catch(function () {});
+  }
+  function reconcilePhotos() {
+    if (!sb || !myClient || !(S.me.photoLog || []).length) return Promise.resolve();
+    return sb.storage.from('checkin-photos').list(myClient.id, { limit: 400 }).then(function (r) {
+      var names = {}, up = S.me.cloudPh || {}, gone = S.me.photoGone = S.me.photoGone || {}, changed = false, now = Date.now();
+      (r.data || []).forEach(function (f) { if (f && f.name) { names[f.name] = 1; names[f.name.replace(/\.jpg$/i, '')] = 1; } });
+      (S.me.photoLog || []).forEach(function (e) {
+        Object.keys(e.poses || {}).forEach(function (p) {
+          var id = e.poses[p], stamped = up[id];
+          if (!id || !stamped) return;
+          if (typeof stamped === 'number' && stamped > 1 && (now - stamped) < 60000) return;
+          if (names[id] || names[id + '.jpg']) return;
+          gone[id] = 1; delete e.poses[p]; if (App.photoDel) App.photoDel(id); changed = true;
+        });
+      });
+      if (changed) { S.me.photoLog = (S.me.photoLog || []).filter(function (e) { return Object.keys(e.poses || {}).length || e.weight; }); rawSave(); }
+    }).catch(function () {});
   }
   var rawSave = App.save;
   App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') { planPush(); if (myClient) push(); } return r; };
   window.addEventListener('online', function () { push(true); });
-  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (document.visibilityState === 'visible') { if (role === 'coach') coachPull(true).catch(function () {}); if ((role === 'client' || myClient) && App.healthSyncPull) App.healthSyncPull().catch(function () {}); } });
+  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (document.visibilityState === 'visible') { if (role === 'coach') coachPull(true).catch(function () {}); if ((role === 'client' || myClient) && App.healthSyncPull) App.healthSyncPull().catch(function () {}); if (myClient) mergeRemoteGone().then(reconcilePhotos); } });
   window.addEventListener('pagehide', function () { if (role === 'client' || myClient) push(true); });
   setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 
@@ -180,6 +211,7 @@
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
       if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); if (myClient && d.client_id === myClient.id) { if (d.kind === 'health_sync') selfHealth(); rawSave(); return; } rawSave(); pill(); }
+      else if (myClient && d.client_id === myClient.id && d.kind === 'photoGone') { S.me.photoGone = Object.assign({}, d.data || {}, S.me.photoGone || {}); if (App.applyPhotoGone) App.applyPhotoGone(S.me); rawSave(); if (App.rerender) App.rerender(); }
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;

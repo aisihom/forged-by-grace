@@ -16,6 +16,68 @@
   App.photoDel = function (id) { return tx('readwrite', function (st) { st.delete(id); }); };
   var urls = {};
   App.photoURL = function (id) { if (urls[id]) return Promise.resolve(urls[id]); return App.photoGet(id).then(function (r) { if (!r) return ''; urls[id] = URL.createObjectURL(r.blob); return urls[id]; }); };
+  App.photoIdFromPath = function (path) { return String(path || '').split('/').pop().replace(/\.jpg$/i, ''); };
+  App.isCheckinPhotoName = function (name) { return /^ph-\d{4}-\d{2}-\d{2}-(front|left|right|back|side)-[A-Za-z0-9]+(\.jpg)?$/i.test(String(name || '').split('/').pop() || ''); };
+  App.safeCheckinPath = function (folderId, idOrPath) {
+    var id = App.photoIdFromPath(idOrPath);
+    if (!folderId || /[\/]/.test(String(folderId)) || !App.isCheckinPhotoName(id)) return '';
+    return folderId + '/' + id + '.jpg';
+  };
+  App.ownStorageId = function () { var st = App.cloud && App.cloud.state && App.cloud.state(); return (st && st.client) || null; };
+  App.shouldUploadPhoto = function (id, cloudPh, photoGone) {
+    if (!id) return false;
+    if (cloudPh && (cloudPh[id] || cloudPh[id + '.jpg'])) return false;
+    if (photoGone && (photoGone[id] || photoGone[id + '.jpg'])) return false;
+    return true;
+  };
+  App.markPhotoGone = function (id) {
+    id = App.photoIdFromPath(id); if (!id) return;
+    var gone = (S.me.photoGone = S.me.photoGone || {}); gone[id] = 1;
+  };
+  App.applyPhotoGone = function (ath) {
+    ath = ath || S.me; var gone = ath.photoGone || {}, changed = false;
+    (ath.photoLog || []).forEach(function (e) {
+      Object.keys(e.poses || {}).forEach(function (p) {
+        var id = e.poses[p];
+        if (id && (gone[id] || gone[id + '.jpg'])) {
+          delete e.poses[p]; if (App.photoDel) App.photoDel(id);
+          if (urls[id]) { try { URL.revokeObjectURL(urls[id]); } catch (err) {} delete urls[id]; }
+          changed = true;
+        }
+      });
+    });
+    if (changed) ath.photoLog = (ath.photoLog || []).filter(function (e) { return Object.keys(e.poses || {}).length || e.weight; });
+    return changed;
+  };
+  App.removeStoredCheckinPhoto = function (folderId, id) {
+    var path = App.safeCheckinPath(folderId, id), store = App.cloud && App.cloud.sb;
+    if (!path) return Promise.reject(new Error('Ongeldige foto'));
+    if (App.forgetCheckinPhoto) App.forgetCheckinPhoto(path);
+    if (!store) return Promise.resolve();
+    return store.storage.from('checkin-photos').remove([path]).then(function (r) { if (r.error) throw r.error; });
+  };
+  App.deleteCheckinPhoto = function (opts) {
+    opts = opts || {};
+    var id = App.photoIdFromPath(opts.id || opts.path);
+    var folderId = opts.folderId;
+    if (!id || !App.isCheckinPhotoName(id)) return Promise.reject(new Error('Ongeldige foto'));
+    if (opts.asCoach) {
+      if (!folderId || !App.safeCheckinPath(folderId, id)) return Promise.reject(new Error('Geen toegang'));
+      return App.removeStoredCheckinPhoto(folderId, id);
+    }
+    var own = App.ownStorageId();
+    if (folderId && own && folderId !== own) return Promise.reject(new Error('Geen toegang'));
+    folderId = folderId || own;
+    App.markPhotoGone(id);
+    (S.me.photoLog || []).forEach(function (e) {
+      Object.keys(e.poses || {}).forEach(function (k) { if (e.poses[k] === id) delete e.poses[k]; });
+    });
+    S.me.photoLog = (S.me.photoLog || []).filter(function (e) { return Object.keys(e.poses || {}).length || e.weight; });
+    if (urls[id]) { try { URL.revokeObjectURL(urls[id]); } catch (err) {} delete urls[id]; }
+    var local = Promise.resolve();
+    try { if (App.photoDel) local = Promise.resolve(App.photoDel(id)).catch(function () {}); } catch (e) { local = Promise.resolve(); }
+    return local.then(function () { return folderId ? App.removeStoredCheckinPhoto(folderId, id) : null; }).then(function () { App.save(); });
+  };
   App.compress = function (file, max, q) {
     max = Math.min(max || 1600, 1600);
     function draw(src, w, h) {
@@ -112,7 +174,14 @@
     hydrate(s.el);
     s.el.querySelector('#ph-sh1').onclick = function () { shareIds([el.dataset.id], 'Check-in ' + el.dataset.d); };
     s.el.querySelector('#ph-sh3').onclick = function () { shareIds(Object.keys(e.poses).map(function (k) { return e.poses[k]; }), 'Check-in ' + el.dataset.d); };
-    s.el.querySelector('#ph-del').onclick = function () { App.confirm('Foto verwijderen?', 'Dit kan niet ongedaan worden.', 'Verwijder', true).then(function (ok) { if (!ok) return; delete e.poses[el.dataset.p]; App.photoDel(el.dataset.id); if (!Object.keys(e.poses).length && !e.weight) me().photoLog = log(me()).filter(function (x) { return x !== e; }); App.save(); App.closeSheets(); App.rerender(); }); };
+    s.el.querySelector('#ph-del').onclick = function () {
+      App.confirm('Foto verwijderen?', 'Dit kan niet ongedaan worden. Je kunt daarna een nieuwe maken.', 'Verwijder', true).then(function (ok) {
+        if (!ok) return;
+        App.deleteCheckinPhoto({ id: el.dataset.id, date: el.dataset.d, pose: el.dataset.p, folderId: App.ownStorageId() }).then(function () {
+          App.closeSheets(); App.rerender(); App.toast('Foto verwijderd');
+        }).catch(function (err) { App.toast('⚠️ ' + (err && err.message || err)); });
+      });
+    };
   };
   A['ph-compare'] = function () {
     var L = log(me()), a = L[0], b = L[L.length - 1], pose = 'front';
