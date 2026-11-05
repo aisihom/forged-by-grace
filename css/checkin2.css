@@ -15,3 +15,6 @@
 .rem-banner { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 12px; border-radius: 14px; background: linear-gradient(90deg, rgba(212,162,76,.22), rgba(212,162,76,.08)); border: 1px solid var(--accent); }
 .rem-banner .icon-btn.sm { width: 28px; height: 28px; min-width: 28px; font-size: 16px; }
 .grid2 > select, .grid2 > * { min-width: 0; } .seg { flex-wrap: wrap; }
+.ph-t.pg-open { cursor: pointer; border: 1px solid #d4af37; background: #111; }
+.ph-t.pg-open:focus, .ph-t.pg-open:hover { outline: 2px solid #d4af37; outline-offset: 1px; }
+.ph-full { width: 100%; max-height: min(70vh, 720px); object-fit: contain; background: #000; border-radius: 14px; border: 1px solid #d4af37; display: block; }

@@ -9,7 +9,8 @@
     'Arms slightly away from your body.': 'Armen iets van je lichaam af.', 'Arms straight forward.': 'Armen recht naar voren.',
     'Same spot & light, neutral background': 'Zelfde plek & licht, neutrale achtergrond', 'Phone at navel height on a stand, or timer at ~2 m': 'Telefoon op navelhoogte op een standaard, of timer op ~2 m', 'Same tight clothing, relaxed natural posture': 'Zelfde strakke kleding, ontspannen natuurlijke houding', 'Ideally in the morning before eating': 'Liefst \u2019s ochtends voor het eten',
     'Your photos may be used for FBG social media / reference:': 'Je foto\u2019s mogen gebruikt worden voor FBG social media / referentie:', 'Private: only you and your coach see these photos.': 'Privé: alleen jij en je coach zien deze foto\u2019s.', 'Change in More → Privacy': 'Wijzigen via More → Privacy',
-    'Weight (optional)': 'Gewicht (optioneel)', 'Compare with': 'Vergelijk met', 'No photos yet': 'Nog geen foto\u2019s', 'Photo could not be loaded': 'Foto kon niet geladen worden', 'Check-in saved ✓': 'Check-in opgeslagen ✓', 'Take at least one photo or enter your weight': 'Maak minstens één foto of vul je gewicht in'
+    'Weight (optional)': 'Gewicht (optioneel)', 'Compare with': 'Vergelijk met', 'No photos yet': 'Nog geen foto\u2019s', 'Photo could not be loaded': 'Foto kon niet geladen worden', 'Check-in saved ✓': 'Check-in opgeslagen ✓', 'Take at least one photo or enter your weight': 'Maak minstens één foto of vul je gewicht in',
+    'Download this photo': 'Download deze foto', 'Download all 4 separately': 'Download alle 4 los', 'Tap a photo to open it full size': 'Tik op een foto om hem groot te zien en los te downloaden', 'Downloading…': 'Downloaden…'
   };
   Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
   var P = [['front', 'Front', 'Face the camera.', 'Arms slightly away from your body.'], ['left', 'Left side', 'Turn so your LEFT side faces the camera.', 'Arms straight forward.'],
@@ -68,21 +69,146 @@
   // ---------- coach: 4 angles side by side per date + compare ----------
   function groups(names) { var g = {}; names.forEach(function (n) { var m = /ph-(\d{4}-\d{2}-\d{2})-(front|left|right|back|side)-/.exec(n); if (!m) return; var d = (g[m[1]] = g[m[1]] || {}); if (!d[m[2]] || n > d[m[2]]) d[m[2]] = n; }); return g; }
   App.photoGroups = groups;
-  function row(cid, date, d, urls) { return '<div style="margin-top:8px"><div class="small"><b>' + esc(F.fmtDay ? F.fmtDay(date) : date) + '</b></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">' + P.map(function (p) { var n = d[p[0]] || (p[0] === 'left' && d.side); return '<figure style="margin:0;text-align:center">' + (n && urls[cid + '/' + n] ? '<img alt="" src="' + esc(urls[cid + '/' + n]) + '" style="width:100%;border-radius:8px">' : '<div style="aspect-ratio:3/4;border:1px dashed #444;border-radius:8px"></div>') + '<figcaption class="tiny">' + esc(t(p[1])) + '</figcaption></figure>'; }).join('') + '</div></div>'; }
+  App.photoFileName = function (clientName, date, pose) {
+    var p = pose === 'side' ? 'left' : String(pose || 'photo');
+    if (!/^(front|left|right|back|photo)$/.test(p)) p = p.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'photo';
+    return F.slug(clientName) + '-' + String(date || '').slice(0, 10) + '-' + p + '.jpg';
+  };
+  App.isAppleTouch = function () {
+    try { return /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+    catch (e) { return false; }
+  };
+  App.saveBlobMode = function (ua, canShareFiles) {
+    var ios = /iP(hone|od|ad)/.test(ua || '');
+    return (ios && canShareFiles) ? 'share' : 'download';
+  };
+  function asFile(blob, filename) {
+    try { return new File([blob], filename, { type: (blob && blob.type) || 'image/jpeg' }); } catch (e) { return null; }
+  }
+  function viaAnchor(blob, filename) {
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; a.rel = 'noopener';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
+  }
+  App.saveBlob = function (blob, filename) {
+    if (!blob) { App.toast('⚠️ Geen foto'); return Promise.resolve(); }
+    filename = filename || 'foto.jpg';
+    var file = asFile(blob, filename), can = false;
+    try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { can = false; }
+    if (App.saveBlobMode(typeof navigator !== 'undefined' ? navigator.userAgent : '', can) === 'share') {
+      return navigator.share({ files: [file], title: filename }).catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        viaAnchor(blob, filename);
+      });
+    }
+    viaAnchor(blob, filename);
+    App.toast('📥 ' + filename);
+    return Promise.resolve();
+  };
+  App.saveBlobs = function (items) {
+    items = (items || []).filter(function (x) { return x && x.blob && x.name; });
+    if (!items.length) { App.toast('⚠️ Geen foto’s'); return Promise.resolve(); }
+    var files = items.map(function (x) { return asFile(x.blob, x.name); }).filter(Boolean);
+    var can = false;
+    try { can = !!(files.length === items.length && navigator.canShare && navigator.canShare({ files: files })); } catch (e) { can = false; }
+    if (App.saveBlobMode(typeof navigator !== 'undefined' ? navigator.userAgent : '', can) === 'share') {
+      return navigator.share({ files: files, title: items.length + ' foto’s' }).catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        items.forEach(function (x, i) { setTimeout(function () { viaAnchor(x.blob, x.name); }, i * 350); });
+      });
+    }
+    items.forEach(function (x, i) { setTimeout(function () { viaAnchor(x.blob, x.name); }, i * 350); });
+    App.toast('📥 ' + items.length + ' foto’s');
+    return Promise.resolve();
+  };
+  function poseFile(d, pose) { return (d && (d[pose] || (pose === 'left' && d.side))) || ''; }
+  var photoCache = {};
+  function getCheckinPhoto(sb, path) {
+    if (!photoCache[path]) {
+      photoCache[path] = sb.storage.from('checkin-photos').download(path).then(function (r) {
+        if (r.error || !r.data) throw (r.error || new Error(t('Photo could not be loaded')));
+        return { blob: r.data, url: URL.createObjectURL(r.data) };
+      });
+    }
+    return photoCache[path];
+  }
+  function row(c, date, d) {
+    return '<div class="pg-date" style="margin-top:10px"><div class="row between" style="gap:8px;align-items:center;margin-bottom:6px"><div class="small"><b>' + esc(F.fmtDay ? F.fmtDay(date) : date) + '</b></div>' +
+      '<button type="button" class="btn sm" data-dl-day="' + esc(date) + '">📥 ' + esc(t('Download all 4 separately')) + '</button></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">' + P.map(function (p) {
+        var n = poseFile(d, p[0]);
+        if (!n) return '<div class="ph-t empty"><span>' + esc(t(p[1])) + '</span></div>';
+        var path = c.cloudId + '/' + n;
+        return '<button type="button" class="ph-t pg-open" data-path="' + esc(path) + '" data-date="' + esc(date) + '" data-pose="' + p[0] + '" aria-label="' + esc(t(p[1])) + '"><img alt="" data-srcpath="' + esc(path) + '"><span>' + esc(t(p[1])) + '</span></button>';
+      }).join('') + '</div></div>';
+  }
+  function openPhoto(c, date, pose, path, g, sb) {
+    var labelOf = function (k) { var x = P.filter(function (p) { return p[0] === k; })[0]; return x ? t(x[1]) : k; };
+    var s = App.sheet(App.sheetHead((c.name || t('Progress photos')) + ' · ' + (F.fmtDay ? F.fmtDay(date) : date), labelOf(pose)) +
+      '<div class="ph-big"><p class="muted small" id="pg-full-wait">…</p></div>' +
+      '<div class="seg" id="pg-pose-nav" style="margin:10px 0">' + P.map(function (p) {
+        return poseFile(g[date], p[0]) ? '<button type="button" data-pose="' + p[0] + '"' + (p[0] === pose ? ' class="on"' : '') + '>' + esc(t(p[1])) + '</button>' : '';
+      }).join('') + '</div>' +
+      '<button type="button" class="btn primary lg block" id="pg-dl">📥 ' + esc(t('Download this photo')) + '</button>' +
+      '<button type="button" class="btn lg block" id="pg-dla" style="margin-top:8px">📥 ' + esc(t('Download all 4 separately')) + '</button>', { label: t('Progress photos') });
+    var cur = { pose: pose, path: path };
+    function show(po, pa) {
+      cur.pose = po; cur.path = pa;
+      var head = s.el.querySelector('.sheet-head p'); if (head) head.textContent = labelOf(po);
+      s.el.querySelectorAll('#pg-pose-nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.pose === po); });
+      var box = s.el.querySelector('.ph-big'); box.innerHTML = '<p class="muted small">…</p>';
+      getCheckinPhoto(sb, pa).then(function (x) {
+        box.innerHTML = '<img class="ph-full" alt="' + esc(labelOf(po)) + '">';
+        box.querySelector('img').src = x.url;
+      }).catch(function (e) {
+        box.innerHTML = '<p class="muted">⚠️ ' + esc(t('Photo could not be loaded')) + '</p>';
+        App.toast('⚠️ ' + ((e && e.message) || t('Photo could not be loaded')));
+      });
+    }
+    s.el.querySelector('#pg-dl').onclick = function () {
+      App.toast(t('Downloading…'));
+      getCheckinPhoto(sb, cur.path).then(function (x) { return App.saveBlob(x.blob, App.photoFileName(c.name, date, cur.pose)); }).catch(function (e) { App.toast('⚠️ ' + ((e && e.message) || e)); });
+    };
+    s.el.querySelector('#pg-dla').onclick = function () { downloadDay(c, date, g[date], sb); };
+    s.el.querySelectorAll('#pg-pose-nav button').forEach(function (b) {
+      b.onclick = function () { var n = poseFile(g[date], b.dataset.pose); if (n) show(b.dataset.pose, c.cloudId + '/' + n); };
+    });
+    show(pose, path);
+  }
+  function downloadDay(c, date, d, sb) {
+    var jobs = P.map(function (p) {
+      var n = poseFile(d, p[0]); if (!n) return null;
+      return getCheckinPhoto(sb, c.cloudId + '/' + n).then(function (x) { return { blob: x.blob, name: App.photoFileName(c.name, date, p[0]) }; });
+    }).filter(Boolean);
+    if (!jobs.length) return App.toast(t('No photos yet'));
+    App.toast(t('Downloading…'));
+    Promise.all(jobs).then(function (items) { return App.saveBlobs(items); }).catch(function (e) { App.toast('⚠️ ' + ((e && e.message) || e)); });
+  }
   function coachPhotos(c) {
     var el = document.getElementById('pg-coach'), sb = App.cloud && App.cloud.sb; if (!el || !sb) return;
     sb.storage.from('checkin-photos').list(c.cloudId, { limit: 400 }).then(function (r) {
       var g = groups((r.data || []).map(function (f) { return f.name; })), dates = Object.keys(g).sort().reverse();
       if (!dates.length) { el.innerHTML = '<p class="small muted">' + esc(t('No photos yet')) + '</p>'; return; }
-      function render(a, b) {
-        var need = []; [a, b].forEach(function (d) { if (d) Object.keys(g[d]).forEach(function (k) { need.push(c.cloudId + '/' + g[d][k]); }); });
-        sb.storage.from('checkin-photos').createSignedUrls(need, 3600).then(function (u) { var urls = {}; (u.data || []).forEach(function (x) { if (x.signedUrl) urls[x.path] = x.signedUrl; });
-          el.innerHTML = row(c.cloudId, a, g[a], urls) + (dates.length > 1 ? '<label class="small" style="display:block;margin-top:10px">' + esc(t('Compare with')) + ': <select class="input" id="pg-cmp">' + dates.filter(function (d) { return d !== a; }).map(function (d) { return '<option' + (d === b ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label>' + (b ? row(c.cloudId, b, g[b], urls) : '') : '');
-          var sel = el.querySelector('#pg-cmp'); if (sel) sel.onchange = function () { render(a, sel.value); };
+      function bind(root) {
+        root.querySelectorAll('img[data-srcpath]').forEach(function (im) {
+          getCheckinPhoto(sb, im.getAttribute('data-srcpath')).then(function (x) { im.src = x.url; }).catch(function () {});
+        });
+        root.querySelectorAll('.pg-open').forEach(function (btn) {
+          btn.onclick = function () { openPhoto(c, btn.getAttribute('data-date'), btn.getAttribute('data-pose'), btn.getAttribute('data-path'), g, sb); };
+        });
+        root.querySelectorAll('[data-dl-day]').forEach(function (btn) {
+          btn.onclick = function () { downloadDay(c, btn.getAttribute('data-dl-day'), g[btn.getAttribute('data-dl-day')], sb); };
         });
       }
+      function render(a, b) {
+        el.innerHTML = '<p class="tiny muted">' + esc(t('Tap a photo to open it full size')) + '</p>' + row(c, a, g[a]) +
+          (dates.length > 1 ? '<label class="small" style="display:block;margin-top:10px">' + esc(t('Compare with')) + ': <select class="input" id="pg-cmp">' + dates.filter(function (d) { return d !== a; }).map(function (d) { return '<option' + (d === b ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label>' + (b ? row(c, b, g[b]) : '') : '');
+        var sel = el.querySelector('#pg-cmp'); if (sel) sel.onchange = function () { render(a, sel.value); };
+        bind(el);
+      }
       render(dates[0], dates[1]);
-    }).catch(function () {});
+    }).catch(function () { el.innerHTML = '<p class="small muted">⚠️ ' + esc(t('Photo could not be loaded')) + '</p>'; });
   }
   App.coachPhotos = coachPhotos;
   var oClient = V.client; V.client = function (id) { var h = oClient.apply(this, arguments); if (id === 'me' || !h || S.role !== 'coach') return h; var c = App.client(id); if (!c || !c.cloudId) return h;

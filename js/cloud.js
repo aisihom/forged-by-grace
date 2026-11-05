@@ -260,11 +260,7 @@
     return h + b + '</div>';
   };
   function showPhotos(c) {
-    var el = document.getElementById('cl-ph'); if (!el || !sb) return;
-    sb.storage.from('checkin-photos').list(c.cloudId, { limit: 6, sortBy: { column: 'created_at', order: 'desc' } }).then(function (r) {
-      var names = (r.data || []).filter(function (f) { return f.name !== 'avatar.jpg' && f.id; }).map(function (f) { return c.cloudId + '/' + f.name; }); if (!names.length) return;
-      return sb.storage.from('checkin-photos').createSignedUrls(names, 3600).then(function (u) { el.innerHTML = (u.data || []).map(function (x) { return x.signedUrl ? '<img src="' + esc(x.signedUrl) + '" alt="" style="width:100%;border-radius:10px">' : ''; }).join(''); });
-    }).catch(function () {});
+    var el = document.getElementById('cl-ph'); if (el) { el.innerHTML = ''; el.style.display = 'none'; }
   }
   var oWel = V.welcome; V.welcome = function () { var h = oWel.apply(this, arguments), i = h.lastIndexOf('</div></div>'); return h.slice(0, i) + '<button class="btn ghost block small" data-act="cloud-in" style="margin-top:4px">☁️ ' + esc(S.lang === 'nl' ? 'Inloggen (live koppeling met coach)' : 'Sign in (live sync with coach)') + '</button>' + h.slice(i); };
   // start in the background if a session exists
