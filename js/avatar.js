@@ -68,13 +68,12 @@
     });
   }
   function pick(capture, onSave) {
-    var i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (capture) i.setAttribute('capture', 'user');
-    i.onchange = function () { if (i.files[0]) cropSheet(i.files[0], onSave); }; i.click();
+    App.pickImage(capture, function (f) { App.compress(f, 1600, 0.9).then(function (b) { cropSheet(b, onSave); }).catch(function (e) { App.toast('⚠️ Foto kon niet geladen worden' + (e && e.message ? ': ' + e.message : '')); }); });
   }
   A['avatar-edit'] = function () {
     var has = !!local();
     var s = App.sheet('<b style="color:' + G + '">👤 Profielfoto</b><p class="tiny muted" style="margin:6px 0 12px">🔒 Privé — alleen jij en je coach zien hem. Wordt niet gebruikt voor social media.</p>' +
-      '<button class="btn primary lg block" id="av-cam">📷 Foto maken</button><button class="btn lg block" id="av-lib" style="margin-top:8px">🖼️ Kies uit fotobibliotheek</button>' +
+      '<button class="btn primary lg block" id="av-cam">📷 Camera</button><button class="btn lg block" id="av-lib" style="margin-top:8px">🖼️ Uit foto\u2019s kiezen</button>' +
       (has ? '<button class="btn danger block" id="av-del" style="margin-top:8px">🗑️ Profielfoto verwijderen</button>' : '') + '<button class="btn ghost block" id="av-cl" style="margin-top:8px">Annuleren</button>', { label: 'Profielfoto' });
     s.el.querySelector('#av-cam').onclick = function () { s.close(); pick(true); };
     s.el.querySelector('#av-lib').onclick = function () { s.close(); pick(false); };
@@ -140,7 +139,7 @@
   A['coach-avatar-edit'] = function () {
     var has = !!coachLocal() || !!(cc[myCoachUid()] && cc[myCoachUid()].url);
     var s = App.sheet('<b style="color:' + G + '">👤 Coachfoto</b><p class="tiny muted" style="margin:6px 0 12px">🔒 Alleen jouw gekoppelde klanten zien deze foto.</p>' +
-      '<button class="btn primary lg block" id="ca-cam">📷 Foto maken</button><button class="btn lg block" id="ca-lib" style="margin-top:8px">🖼️ Kies uit fotobibliotheek</button>' +
+      '<button class="btn primary lg block" id="ca-cam">📷 Camera</button><button class="btn lg block" id="ca-lib" style="margin-top:8px">🖼️ Uit foto\u2019s kiezen</button>' +
       (has ? '<button class="btn danger block" id="ca-del" style="margin-top:8px">🗑️ Coachfoto verwijderen</button>' : '') + '<button class="btn ghost block" id="ca-cl" style="margin-top:8px">Annuleren</button>', { label: 'Coachfoto' });
     s.el.querySelector('#ca-cam').onclick = function () { s.close(); pick(true, saveCoach); };
     s.el.querySelector('#ca-lib').onclick = function () { s.close(); pick(false, saveCoach); };

@@ -250,7 +250,7 @@
   };
   A.photo = function () {
     var s = App.sheet(App.sheetHead(t('AI food photo'), t('Snap your plate. The AI guesses the dish, you pick the portion — always an estimate.')) +
-      '<label class="photo-drop" id="ph-drop"><input type="file" id="ph-file" accept="image/*" capture="environment" hidden><div id="ph-prev">' + I.camera + '<b>' + esc(t('Take or choose a photo')) + '</b></div></label>' +
+      '<label class="photo-drop" id="ph-drop"><input type="file" id="ph-file" accept="image/*" hidden><div id="ph-prev">' + I.camera + '<b>' + esc(t('Take or choose a photo')) + '</b></div></label>' +
       '<div id="ph-out" aria-live="polite"></div>' +
       '<div class="row" style="gap:8px;margin-top:10px"><input class="input grow" id="ph-txt" placeholder="' + esc(t('Or type what is on the plate (e.g. burger met friet)')) + '"><button class="btn primary" id="ph-txt-go">' + esc(t('Describe it & log')) + '</button></div>' +
       '<p class="tiny muted" style="margin-top:10px">' + esc(t('Runs on your phone with a free AI model (Food-101, 101 dishes). First use downloads ~90 MB once — use Wi-Fi. Photos are not uploaded anywhere.')) + '</p>');

@@ -295,7 +295,7 @@
   };
 
   // ---------------- Shortcut link / paste sync ----------------
-  // v3.30.3: Shortcuts often percent-encodes &k= as %26k%3D after a Magic Variable, so URLSearchParams misses k.
+  // v3.30.4: Shortcuts often percent-encodes &k= as %26k%3D after a Magic Variable, so URLSearchParams misses k.
   App.normalizeHealthRaw = function (raw) {
     var s = String(raw == null ? '' : raw);
     try { s = decodeURIComponent(s.replace(/\+/g, '%20')); } catch (e) {}

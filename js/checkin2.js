@@ -17,17 +17,35 @@
   var urls = {};
   App.photoURL = function (id) { if (urls[id]) return Promise.resolve(urls[id]); return App.photoGet(id).then(function (r) { if (!r) return ''; urls[id] = URL.createObjectURL(r.blob); return urls[id]; }); };
   App.compress = function (file, max, q) {
-    return new Promise(function (res, rej) {
-      var u = URL.createObjectURL(file), img = new Image();
-      img.onload = function () {
-        var k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
-        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
-        c.toBlob(function (b) { b ? res(b) : rej(new Error('blob')); }, 'image/jpeg', q || 0.8);
-      };
-      img.onerror = function (e) { URL.revokeObjectURL(u); rej(e); }; img.src = u;
-    });
+    max = Math.min(max || 1600, 1600);
+    function draw(src, w, h) {
+      var k = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      return new Promise(function (res, rej) { c.toBlob(function (b) { c.width = c.height = 0; b ? res(b) : rej(new Error('Foto omzetten mislukt')); }, 'image/jpeg', q || 0.8); });
+    }
+    function viaImg() {
+      return new Promise(function (res, rej) {
+        var u = URL.createObjectURL(file), img = new Image();
+        img.onload = function () { draw(img, img.naturalWidth || img.width, img.naturalHeight || img.height).then(function (b) { URL.revokeObjectURL(u); res(b); }, function (e) { URL.revokeObjectURL(u); rej(e); }); };
+        img.onerror = function () { URL.revokeObjectURL(u); rej(new Error('Dit fotoformaat kan niet geopend worden')); };
+        img.src = u;
+      });
+    }
+    if (!file) return Promise.reject(new Error('Geen foto gekozen'));
+    if (window.createImageBitmap) return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bm) { return draw(bm, bm.width, bm.height).then(function (b) { if (bm.close) bm.close(); return b; }); }).catch(viaImg);
+    return viaImg();
   };
+  // iOS-safe picker: input in DOM (visually hidden), capture only for camera, value cleared after pick
+  App.pickImage = function (camera, cb) {
+    var i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*,image/heic,image/heif';
+    if (camera) i.setAttribute('capture', 'environment');
+    i.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(i);
+    i.onchange = function () { var f = i.files && i.files[0]; i.value = ''; setTimeout(function () { i.remove(); }, 1000); if (f) cb(f); };
+    i.click();
+  };
+  App.photoBtns = function (pfx) { return '<div class="grid2"><button type="button" class="btn primary" id="' + pfx + '-cam">📷 Camera</button><button type="button" class="btn" id="' + pfx + '-lib">🖼️ Uit foto\u2019s kiezen</button></div>'; };
   function log(ath) { return (ath.photoLog = ath.photoLog || []); }
   function hydrate(root) { root.querySelectorAll('img[data-pid]').forEach(function (im) { App.photoURL(im.dataset.pid).then(function (u) { if (u) im.src = u; }); }); }
   App.hydratePhotos = hydrate;
@@ -36,12 +54,12 @@
     var ath = me(), last = ath.body.filter(function (b) { return b.weight; }).pop() || {}, picked = {};
     var s = App.sheet(App.sheetHead('Week check-in: foto\u2019s + gewicht', 'Maak 3 foto\u2019s in hetzelfde licht en dezelfde houding. Ze blijven op deze telefoon.') +
       '<div class="grid2"><label class="field"><span class="label">' + esc(t('Weight (kg)')) + '</span><input class="input" id="cw" inputmode="decimal" value="' + esc(last.weight || '') + '"></label><label class="field"><span class="label">' + esc(t('Waist (cm)')) + ' <span class="opt">' + esc(t('optional')) + '</span></span><input class="input" id="cwa" inputmode="decimal"></label></div>' +
-      '<div class="ci-poses">' + POSES.map(function (p) { return '<label class="ci-pose" data-pose="' + p[0] + '"><div class="ci-ph"><span>📷</span></div><b>' + p[1] + '</b><input type="file" accept="image/*" capture="environment" data-pose="' + p[0] + '" hidden></label>'; }).join('') + '</div>' +
+      '<div class="ci-poses">' + POSES.map(function (p) { return '<label class="ci-pose" data-pose="' + p[0] + '"><div class="ci-ph"><span>📷</span></div><b>' + p[1] + '</b><input type="file" accept="image/*" data-pose="' + p[0] + '" hidden></label>'; }).join('') + '</div>' +
       '<p class="tiny muted">Tip: tik op een vak \u2192 <b>Take Photo</b> of <b>Photo Library</b>.</p><button class="btn primary lg block" id="ci-save">' + esc(t('Save')) + '</button>');
     s.el.querySelectorAll('input[type=file]').forEach(function (inp) {
       inp.onchange = function () {
-        var f = inp.files[0]; if (!f) return; var box = inp.parentNode.querySelector('.ci-ph'); box.innerHTML = '<span>…</span>';
-        App.compress(f, 1080, 0.8).then(function (b) { picked[inp.dataset.pose] = b; box.innerHTML = '<img alt="" src="' + URL.createObjectURL(b) + '">'; }).catch(function () { box.innerHTML = '<span>⚠️</span>'; App.toast('Foto kon niet geladen worden'); });
+        var f = inp.files[0]; inp.value = ''; if (!f) return; var box = inp.parentNode.querySelector('.ci-ph'); box.innerHTML = '<span>…</span>';
+        App.compress(f, 1080, 0.8).then(function (b) { picked[inp.dataset.pose] = b; box.innerHTML = '<img alt="" src="' + URL.createObjectURL(b) + '">'; }).catch(function (e) { box.innerHTML = '<span>⚠️</span>'; App.toast('⚠️ Foto kon niet geladen worden: ' + (e && e.message || '')); });
       };
     });
     s.el.querySelector('#ci-save').onclick = function () {

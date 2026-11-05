@@ -38,9 +38,11 @@
         '<div style="height:6px;background:#222;border-radius:3px;margin:8px 0"><div style="height:6px;width:' + ((i + 1) * 25) + '%;background:#d4af37;border-radius:3px"></div></div>' +
         '<h2 class="h2" id="pg-title">' + esc(t(p[1])) + '</h2><div class="row" style="gap:12px;align-items:center"><div>' + icon(p[0]) + '</div><div class="small"><b>' + esc(t(p[2])) + '</b><br>' + esc(t(p[3])) + '</div></div>' + tips() + (i === 0 ? consentNote() : '') +
         '<div style="margin:10px 0;text-align:center">' + (b ? '<img id="pg-prev" alt="" src="' + URL.createObjectURL(b) + '" style="max-width:100%;max-height:300px;border-radius:12px;border:1px solid #d4af37">' : '') + '</div>' +
-        '<label class="btn ' + (b ? '' : 'primary ') + 'lg block" style="text-align:center">' + (b ? '🔄 ' + esc(t('Retake')) : '📷 ' + esc(t('Take or upload photo'))) + '<input type="file" accept="image/*" capture="environment" id="pg-file" hidden></label>' +
+        App.photoBtns('pg') +
         '<div class="grid2" style="margin-top:8px"><button class="btn" id="pg-back">' + (i ? '← ' + esc(t('Back step')) : esc(t('Cancel'))) + '</button><button class="btn ' + (b ? 'primary' : '') + '" id="pg-next">' + esc(t(b ? 'Next' : 'Skip')) + ' →</button></div>';
-      root.querySelector('#pg-file').onchange = function (e) { var f = e.target.files[0]; if (!f) return; App.compress(f, 1080, 0.8).then(function (bl) { picked[p[0]] = bl; draw(); }).catch(function () { App.toast(t('Photo could not be loaded')); }); };
+      function got(f) { App.toast('…'); App.compress(f, 1600, 0.82).then(function (bl) { picked[p[0]] = bl; draw(); }).catch(function (e) { App.toast('⚠️ ' + t('Photo could not be loaded') + (e && e.message ? ': ' + e.message : '')); }); }
+      root.querySelector('#pg-cam').onclick = function () { App.pickImage(true, got); };
+      root.querySelector('#pg-lib').onclick = function () { App.pickImage(false, got); };
       root.querySelector('#pg-back').onclick = function () { if (i) { i--; draw(); } else s.close(); };
       root.querySelector('#pg-next').onclick = function () { i++; draw(); };
     }
