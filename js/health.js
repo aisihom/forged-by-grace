@@ -310,6 +310,14 @@
     if (!Object.keys(r.x).length) { App.toast(t('No health values in the link.')); return; }
     if (!S.role) S.role = 'athlete';
     App.mergeHealth(r.days, [], 'Shortcut');
+    // v3.30.2: Safari and the home-screen app have separate storage on iPhone, so also send the numbers straight to the server with the sync key
+    var tok = (new URLSearchParams(String(hash || '').replace(/^.*?#health\??/, '').replace(/^\?/, '').replace(/;/g, '&')).get('k')) || S.me.hTok;
+    if (tok && tok.length >= 20) {
+      var q = 'd=' + r.d + Object.keys(r.x).map(function (k) { return '&' + k + '=' + r.x[k]; }).join('');
+      if (!S.me.hTok) { S.me.hTok = tok; App.save(); }
+      fetch('https://hdcpxmctilthjhdhhixw.supabase.co/rest/v1/rpc/health_push?apikey=sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p_token: tok, p_q: q }) })
+        .then(function (res) { App.toast(res.ok ? '☁️ Naar je coach gestuurd ✓' : '⚠️ Server-sync mislukt (sleutel?)'); }).catch(function () { App.toast('⚠️ Offline — server-sync mislukt'); });
+    } else if (!(App.cloud && App.cloud.user && App.cloud.user())) App.toast('⚠️ Alleen lokaal opgeslagen: zet je sync-sleutel (&k=…) in de Opdracht');
     var x = r.x, bits = [];
     if (x.steps != null) bits.push(x.steps.toLocaleString(S.lang) + ' ' + t('steps')); if (x.weight) bits.push(App.r1(x.weight) + ' kg'); if (x.rhr) bits.push(x.rhr + ' bpm'); if (x.kcal != null) bits.push(x.kcal + ' kcal');
     App._healthSynced = t('Synced') + ': ' + bits.join(' · ');
@@ -372,7 +380,7 @@
       ['Gewicht: “Zoek naar gezondheidsmonsters” · Type: Gewicht · Sorteer op: Startdatum, nieuwste eerst · Limiet: 1.'],
       ['Rusthartslag: “Zoek naar gezondheidsmonsters” · Type: Hartslag in rust · Sorteer: nieuwste eerst · Limiet: 1.'],
       ['Voeg actie “Formatteer datum” toe: Huidige datum · Notatie: Aangepast · yyyy-MM-dd.'],
-      ['Voeg actie “Tekst” toe en zet daarin (tik de variabelen in van de stappen hierboven):', 'd=[Geformatteerde datum]&steps=[Som stappen]&weight=[Gewicht]&rhr=[Rusthartslag]&kcal=[Som actieve energie]'],
+      ['Voeg actie “Tekst” toe en zet daarin (tik de variabelen in van de stappen hierboven):', 'd=[Geformatteerde datum]&steps=[Som stappen]&weight=[Gewicht]&rhr=[Rusthartslag]&kcal=[Som actieve energie]&k=' + (S.me.hTok || '[je sync-sleutel uit Garmin / Apple Health → iPhone]')],
       ['Voeg “Kopieer naar klembord” toe (de tekst van stap 8). Zo kun je hem in de app op je beginscherm plakken.'],
       ['Voeg “Codeer URL” toe (URL Encode) met als invoer de Tekst. Zo gaan spaties en komma’s goed.'],
       ['Voeg “Open URL’s” toe met:', url + '[Gecodeerde URL]'],
