@@ -46,7 +46,7 @@
     var food = (d.food || {})[k] || [], H = hdays(d), h = H[0][k] || {}, hs = H[1][k] || {};
     var wp0 = d.extra && d.extra.wip, ss = (d.sessions || c.sessions || []).filter(function (s) { return s.date === k; });
     if (wp0 && wp0.date === k && wp0.items && !ss.some(function (s) { return s.id === wp0.id; })) ss.push({ id: wp0.id, date: k, title: '⏸ Onvoltooid · ' + (wp0.title || 'Training'), type: wp0.type, wip: true, items: wp0.items.map(function (it) { return { ex: it.ex, cnote: it.cnote, sets: it.sets.filter(function (x) { return x.done; }).map(function (x) { return { w: +x.w || 0, r: +x.r || 0, done: true }; }) }; }) });
-    var est = 0; ss.forEach(function (s) { if (s.estSteps > 0) est += s.estSteps; });
+    var est = 0; ss.forEach(function (s) { if (s.estSteps > 0) est += s.estSteps; }); (h.cx || []).forEach(function (x) { est += x.v || 0; });
     var sync = h.steps != null ? h.steps : (hs.steps != null ? hs.steps : null), steps = null;
     if (h.ov != null) steps = h.ov; else if (sync != null || h.man || est) steps = (sync || 0) + (h.man || 0) + est;
     var hab = (d.habits || {})[k] || {};

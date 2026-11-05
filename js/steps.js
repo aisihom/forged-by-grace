@@ -31,6 +31,7 @@
     ath = ath || S.me; d = d || App.today();
     var raw = (ath.health && ath.health.days && ath.health.days[d]) || {}, est = [], estSum = 0;
     (ath.sessions || []).forEach(function (s) { if (s.date === d && s.estSteps > 0) { est.push({ n: s.title, v: s.estSteps }); estSum += s.estSteps; } });
+    (raw.cx || []).forEach(function (x) { est.push({ n: x.n + ' ' + x.min + ' min', v: x.v, cx: 1 }); estSum += x.v; });
     var sync = raw.steps != null ? raw.steps : null, man = raw.man || 0, ov = raw.ov != null ? raw.ov : null;
     var any = sync != null || man || estSum || ov != null;
     return { any: any, sync: sync, man: man, est: est, estSum: estSum, ov: ov, extra: ov != null ? Math.max(0, ov - (sync || 0)) : man + estSum, total: ov != null ? ov : (sync || 0) + man + estSum };
@@ -167,4 +168,45 @@
   };
   var oMoreSG = V.more; V.more = function () { var h = oMoreSG.apply(this, arguments); if (!ownAcct()) return h;
     return '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>👣 Mijn stappendoel</b><div class="tiny muted">' + App.stepGoal(S.me).toLocaleString('nl-NL') + ' per dag · alleen jouw account</div></div><button class="btn sm" data-act="step-goal">Wijzigen</button></div>' + h; };
+
+  // v3.30: prominent steps card on Today + cardio → step-equivalents (stored per day in health.days[d].cx, never touched by Shortcut sync)
+  var CX = { bike: ['🚴', 'Fietsen', [130, 160, 190]], cross: ['🏃', 'Crosstrainer', [160, 180, 200]], row: ['🚣', 'Roeien', [140, 160, 180]] }, LV = ['Rustig', 'Gemiddeld', 'Zwaar'];
+  function stepsCard() {
+    var x = App.stepsOf(), g = App.stepGoal(S.me), tot = Math.round(x.total || 0), pc = Math.min(100, Math.round(tot / g * 100)), left = Math.max(0, g - tot);
+    var cx = x.est.filter(function (e) { return e.cx; }).reduce(function (a, e) { return a + e.v; }, 0), other = x.estSum - cx + (x.man || 0);
+    return '<div class="card" id="steps-card" style="border:1px solid #d4af37;margin:12px 0;cursor:pointer" data-act="go" data-p="health">' +
+      '<div class="row between"><b style="color:#d4af37">👣 Stappen vandaag</b><span class="tiny muted">doel ' + fmt(g) + '</span></div>' +
+      '<div style="font-size:34px;font-weight:800;margin:4px 0">' + fmt(tot) + '</div>' +
+      '<div style="height:10px;background:#222;border-radius:5px;overflow:hidden"><div style="height:10px;width:' + pc + '%;background:linear-gradient(90deg,#b8932e,#f1d27a)"></div></div>' +
+      '<div class="row between" style="margin-top:6px"><span class="small">' + (left ? 'Nog <b style="color:#d4af37">' + fmt(left) + '</b> stappen' : '🏆 Doel gehaald!') + '</span><span class="tiny muted">' + pc + '%</span></div>' +
+      '<div class="tiny muted" style="margin-top:4px">⌚ Horloge/telefoon ' + (x.sync != null ? fmt(x.sync) : '—') + ' · 🚴 Omgerekend cardio ' + fmt(cx) + (other ? ' · ✍️ Overig ' + fmt(other) : '') + (x.ov != null ? ' · (handmatig ingesteld)' : '') + '</div>' +
+      '<button class="btn sm primary" data-act="cx-add" style="margin-top:10px">🚴 Fietsen toevoegen</button></div>';
+  }
+  App.stepsCard = stepsCard;
+  A['cx-add'] = function (el, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    var typ = 'bike', lv = 1;
+    var s = App.sheet('<div id="cxs"></div>', { label: 'Cardio toevoegen' }), root = s.el.querySelector('#cxs');
+    function draw() {
+      var spm = CX[typ][2][lv], mins = App.num((root.querySelector('#cx-m') || {}).value) || 20;
+      root.innerHTML = '<b style="color:#d4af37">' + CX[typ][0] + ' Cardio → stappen</b><div class="row" style="gap:6px;margin:10px 0;flex-wrap:wrap">' + Object.keys(CX).map(function (k) { return '<button class="btn sm ' + (k === typ ? 'primary' : '') + '" data-t="' + k + '">' + CX[k][0] + ' ' + CX[k][1] + '</button>'; }).join('') + '</div>' +
+        '<label class="field"><span class="label">Minuten</span><input class="input" id="cx-m" inputmode="numeric" value="' + mins + '"></label>' +
+        '<div class="row" style="gap:6px;margin:10px 0">' + LV.map(function (n, i) { return '<button class="btn sm ' + (i === lv ? 'primary' : '') + '" data-l="' + i + '">' + n + ' (' + CX[typ][2][i] + '/min)</button>'; }).join('') + '</div>' +
+        '<p class="small" id="cx-r">= <b style="color:#d4af37">' + fmt(mins * spm) + '</b> stappen</p><button class="btn primary block" id="cx-ok">Toevoegen</button>';
+      root.querySelectorAll('[data-t]').forEach(function (b) { b.onclick = function () { typ = b.dataset.t; draw(); }; });
+      root.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { lv = +b.dataset.l; draw(); }; });
+      root.querySelector('#cx-m').oninput = function () { root.querySelector('#cx-r').innerHTML = '= <b style="color:#d4af37">' + fmt((App.num(this.value) || 0) * CX[typ][2][lv]) + '</b> stappen'; };
+      root.querySelector('#cx-ok').onclick = function () {
+        var m = Math.round(App.num(root.querySelector('#cx-m').value)); if (!(m > 0 && m <= 300)) return App.toast('Vul 1–300 minuten in');
+        var h = H(), d = App.today(), cur = h.days[d] = h.days[d] || {}; cur.cx = cur.cx || [];
+        cur.cx.push({ t: typ, n: CX[typ][1], min: m, lvl: lv, v: m * CX[typ][2][lv], at: Date.now() });
+        App.save(); if (App.gameSweep) App.gameSweep(); s.close(); App.rerender(); App.toast('+' + fmt(m * CX[typ][2][lv]) + ' stappen ✓');
+      };
+    }
+    draw();
+  };
+  var oTodayC = V.today; V.today = function () {
+    var h = oTodayC.apply(this, arguments), k = h.indexOf('<div class="hero');
+    return k < 0 ? stepsCard() + h : h.slice(0, k) + stepsCard() + h.slice(k);
+  };
 })();
