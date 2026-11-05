@@ -79,10 +79,11 @@
   // ---------- client side ----------
   // coach's own record: apply coach-set targets + step goal to his own athlete data (once per change)
   function selfTargets(row) {
-    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null]);
+    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null, P.bodyToday || null]);
     if (me.selfTgtSig === k) return; me.selfTgtSig = k; me.profile = me.profile || {};
     if (P.targetsOverride && P.targetsOverride.kcal) { me.profile.targetsOverride = P.targetsOverride; if (me.meal) me.meal.targets = Object.assign({}, me.meal.targets || {}, P.targetsOverride); }
     if (P.stepGoal) me.stepGoal = P.stepGoal;
+    var bt = P.bodyToday; if (bt && bt.date && bt.weight) { me.body = me.body || []; var bb = me.body.filter(function (x) { return x.date === bt.date; })[0]; if (!bb) { bb = { date: bt.date }; me.body.push(bb); me.body.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); } bb.weight = bt.weight; me.profile.weight = bt.weight; }
     rawSave(); setTimeout(function () { if (!document.querySelector('.sheet')) App.rerender(); }, 0);
   }
   function applyPlan(row) {
