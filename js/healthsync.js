@@ -10,7 +10,7 @@
   function nl() { return S.lang === 'nl'; }
   function L(a, b) { return nl() ? a : b; }
   function C() { return App.cloud; }
-  function isClient() { return C() && C().role && C().role() === 'client'; }
+  function isClient() { return C() && C().role && (C().role() === 'client' || !!(C().selfClientId && C().selfClientId())); }
   function fmtAt(iso) { return iso ? F.fmtDate(iso, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
 
   // ---------- data in: client side ----------

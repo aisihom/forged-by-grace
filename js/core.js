@@ -332,6 +332,7 @@
 
   // ---------------- owners (me or a client) ----------------
   App.client = function (id) { return S.clients.filter(function (c) { return c.id === id; })[0] || null; };
+  App.stepGoal = function (ath) { var g = ath && +ath.stepGoal; return g >= 1000 && g <= 50000 ? g : 8000; };
   App.owner = function (oid) { return oid === 'me' ? S.me : App.client(oid); };
   App.ownerName = function (oid) { var o = App.owner(oid); return oid === 'me' ? ((S.me.profile && S.me.profile.name) || S.coach.name) + ' (' + t('me') + ')' : (o ? o.name : '?'); };
 
@@ -503,7 +504,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.28.2';
+  App.VERSION = '3.29.0';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));

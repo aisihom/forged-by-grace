@@ -175,7 +175,7 @@
       L.push('😴 Slaap: ' + (a.l != null ? 'gem. ' + a.l + ' uur (' + A.ld + ' nachten).' : A.sh ? A.sh + '× 7u+ afgevinkt.' : 'niet gelogd.'));
       if (a.l != null) { if (a.l >= 7) good.push('Slaap op orde (gem. ' + a.l + ' u).'); else better.push('Meer slaap: gem. ' + a.l + ' u — mik op 7–9 uur.'); }
       L.push('👣 Stappen: ' + (a.s != null ? 'gem. ' + a.s.toLocaleString('nl-NL') + ' per dag (' + A.sd + ' dagen).' : 'niet gelogd/gesynct.'));
-      if (a.s != null) { if (a.s >= 8000) good.push('Lekker actief: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen.'); else better.push('Meer bewegen: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen — doel 8.000+.'); }
+      if (a.s != null) { if (a.s >= ((c.live && c.live.d && c.live.d.extra && c.live.d.extra.stepGoal) || c.stepGoal || 8000)) good.push('Lekker actief: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen.'); else better.push('Meer bewegen: gem. ' + a.s.toLocaleString('nl-NL') + ' stappen — doel 8.000+.'); }
       var sp = W.ss.filter(function (s) { return s.type && s.type !== 'strength'; }); if (sp.length) L.push('🥊 Sport/cardio: ' + sp.map(function (s) { return (s.title || s.type) + ' ' + r0((s.dur || 0) / 60) + ' min'; }).join(', ') + '.');
       L.push(''); })();
     L.push('✅ Wat ging goed:'); (good.length ? good : ['Je bent bezig — dat is de eerste stap.']).forEach(function (x) { L.push('• ' + x); });

@@ -189,7 +189,7 @@
     h += '<div class="section"><a class="card tap row health-today" href="#/health"><div class="ex-icon">' + I.heart + '</div><div class="grow"><b>' + (hd0 && hd0.steps != null ? Math.round(hd0.steps).toLocaleString(S.lang) + ' ' + esc(t('steps')) : esc(t('Garmin / Apple Health'))) + '</b><div class="tiny muted">' + (hd0 ? [hd0.rhr ? hd0.rhr + ' bpm ' + esc(t('resting HR')) : '', hd0.kcal != null ? hd0.kcal + ' kcal ' + esc(t('active')) : ''].filter(Boolean).join(' · ') || esc(t('Synced')) : esc(t('Connect')) + ' →') + '</div>' + (hd0 && hd0.steps != null ? '<div class="bar-track" style="margin-top:6px"><div class="bar-fill" style="width:' + Math.min(100, hd0.steps / 80) + '%"></div></div>' : '') + '</div><span class="chev">›</span></a></div>';
     // habits
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Daily habits')) + '</h2><span class="pill accent">' + I.fire + streak + ' ' + esc(t('day streak')) + '</span></div><div class="habits">' + App.habitList(ath).map(function (x) {
-      var hd = App.healthDay && App.healthDay(), on = (ath.habits[App.today()] || {})[x[0]] || (x[0] === 'steps' && hd && hd.steps >= 8000);
+      var hd = App.healthDay && App.healthDay(), on = (ath.habits[App.today()] || {})[x[0]] || (x[0] === 'steps' && hd && hd.steps >= App.stepGoal(ath));
       return '<button class="habit' + (on ? ' on' : '') + '" data-act="habit" data-k="' + x[0] + '" aria-pressed="' + !!on + '"><span class="hc">' + (on ? I.check : '') + '</span>' + esc(t(x[1])) + '</button>'; }).join('') + '</div></div>';
     // check-in
     h += '<div class="section"><div class="card row"><div class="grow"><b>' + esc(t('Weekly check-in')) + '</b><div class="small muted">' + esc(ath.checkins.length ? t('Last sent') + ': ' + App.ago(ath.checkins[ath.checkins.length - 1]) : t('Send your progress to your coach')) + '</div></div><button class="btn primary sm" data-act="checkin">' + I.share + esc(t('Send')) + '</button></div></div>';
@@ -197,7 +197,7 @@
   };
   App.habitList = function (ath) {
     var T = App.athTargets(ath);
-    var L = [['water', 'Water 2 L+'], ['steps', '8,000+ steps'], ['sleep', '7h+ sleep'], ['protein', 'Protein {p} g', T.p], ['veg', '2 portions of veg']];
+    var L = [['water', 'Water 2 L+'], ['steps', App.stepGoal(ath) === 8000 ? '8,000+ steps' : App.stepGoal(ath).toLocaleString(S.lang) + '+ ' + (S.lang === 'nl' ? 'stappen' : 'steps')], ['sleep', '7h+ sleep'], ['protein', 'Protein {p} g', T.p], ['veg', '2 portions of veg']];
     if (S.faithHabit) L.push(['quiet', 'Quiet time / prayer']);
     return L.map(function (x) { return [x[0], x[2] ? t(x[1]).replace('{p}', x[2]) : x[1]]; });
   };

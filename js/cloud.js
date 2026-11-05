@@ -63,7 +63,7 @@
 
   function start() {
     return sb.from('coaches').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
-      if (r.data) { role = 'coach'; return coachPull().then(subscribe); }
+      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) push(true); return coachPull().then(subscribe); }); }
       return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (r2) {
         myClient = r2.data || null; role = myClient ? 'client' : 'none';
         if (myClient) {
@@ -101,7 +101,7 @@
   }
   var last = {}, timer = null, retryT = null;
   function push(now) {
-    if (role !== 'client' || !myClient) return;
+    if ((role !== 'client' && role !== 'coach') || !myClient) return;
     clearTimeout(timer);
     timer = setTimeout(function () {
       var snap = strip(snapshot()), rows = [];
@@ -127,15 +127,17 @@
         .then(function (r) { if (r && !r.error) { up[id] = 1; rawSave(); } }).catch(function () {}); }); });
   }
   var rawSave = App.save;
-  App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') planPush(); return r; };
+  App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') { planPush(); if (myClient) push(); } return r; };
   window.addEventListener('online', function () { push(true); });
-  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client') push(true); else if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); });
-  window.addEventListener('pagehide', function () { if (role === 'client') push(true); });
+  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); });
+  window.addEventListener('pagehide', function () { if (role === 'client' || myClient) push(true); });
   setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 
   // ---------- coach side ----------
   var rows = {}, data = {};
   var sig = '';
+  function selfHealth() { var d = myClient && data[myClient.id]; if (d && d.health_sync && App.applyHealthSync) App.applyHealthSync(d.health_sync); }
+  C.selfClientId = function () { return role === 'coach' && myClient ? myClient.id : null; };
   function coachPull(silent) {
     return Promise.all([sb.from('clients').select('*'), sb.from('client_data').select('*')]).then(function (r) {
       var ns = (r[0].data || []).map(function (c) { return c.id + c.updated_at; }).join() + '|' + (r[1].data || []).map(function (d) { return d.client_id + d.kind + d.updated_at; }).sort().join();
@@ -143,7 +145,7 @@
       sig = ns;
       (r[0].data || []).forEach(function (c) { rows[c.id] = c; });
       (r[1].data || []).forEach(function (d) { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; });
-      Object.keys(rows).forEach(merge); rawSave(); status = 'ok'; if (silent) pill(); else rer();
+      Object.keys(rows).forEach(merge); selfHealth(); rawSave(); status = 'ok'; if (silent) pill(); else rer();
     });
   }
   function merge(id) {
@@ -168,7 +170,7 @@
     if (chan) return;
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
-      if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); rawSave(); pill(); }
+      if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); if (myClient && d.client_id === myClient.id) { if (d.kind === 'health_sync') selfHealth(); rawSave(); return; } rawSave(); pill(); }
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;

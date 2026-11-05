@@ -156,4 +156,15 @@
     upd();
     return r;
   };
+
+  // v3.29: own step goal — only for the coach's own account (clients' goals stay coach-set)
+  function ownAcct() { var C = App.cloud; return S.role === 'coach' || S.me.isCoach || (C && C.role && C.role() === 'coach'); }
+  A['step-goal'] = function () {
+    if (!ownAcct()) return;
+    var s = App.sheet('<b style="color:#d4af37">👣 Mijn stappendoel</b><p class="tiny muted">Alleen voor jouw eigen account.</p><input class="input" id="sg-v" inputmode="numeric" value="' + App.stepGoal(S.me) + '"><div class="row" style="gap:6px;margin:8px 0;flex-wrap:wrap">' + [5000, 6000, 7000, 8000, 10000, 12000].map(function (n) { return '<button class="btn sm" data-sg="' + n + '">' + n.toLocaleString('nl-NL') + '</button>'; }).join('') + '</div><button class="btn primary block" id="sg-ok">Opslaan</button>', { label: 'Stappendoel' });
+    s.el.querySelectorAll('[data-sg]').forEach(function (b) { b.onclick = function () { s.el.querySelector('#sg-v').value = b.dataset.sg; }; });
+    s.el.querySelector('#sg-ok').onclick = function () { var v = Math.round(App.num(s.el.querySelector('#sg-v').value)); if (!(v >= 1000 && v <= 50000)) return App.toast('Kies tussen 1.000 en 50.000'); S.me.stepGoal = v; App.save(); s.close(); App.rerender(); App.toast('Stappendoel: ' + v.toLocaleString('nl-NL') + ' ✓'); };
+  };
+  var oMoreSG = V.more; V.more = function () { var h = oMoreSG.apply(this, arguments); if (!ownAcct()) return h;
+    return '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>👣 Mijn stappendoel</b><div class="tiny muted">' + App.stepGoal(S.me).toLocaleString('nl-NL') + ' per dag · alleen jouw account</div></div><button class="btn sm" data-act="step-goal">Wijzigen</button></div>' + h; };
 })();
