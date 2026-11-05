@@ -112,30 +112,22 @@
       o += status();
       if (!login) return o + needLogin();
       o += step(1, L('Kopieer je 2 codes', 'Copy your 2 codes'), esc(L('Je hebt ze zo nodig in stap 3. Kopieer ze één voor één wanneer je ze plakt.', 'You need them in step 3. Copy them one at a time when you paste.')) + '<br>' + copyBtn('url-ios', L('Kopieer adres (URL)', 'Copy address (URL)')) + copyBtn('tok', L('Kopieer sleutel', 'Copy key')) + keyCard());
-      o += step(2, L('Maak de Opdracht (Shortcut)', 'Build the Shortcut'), '<ol class="plain-list small">' + (nl() ? [
-          'Open de app <b>Shortcuts</b> (Opdrachten) → tik op <b>+</b>. Naam: <b>FBG Sync</b>.',
-          'Voeg <b>Find Health Samples</b> toe (Zoek naar gezondheidsmonsters): <b>Steps</b>, Start Date <b>is today</b>. Daaronder <b>Calculate Statistics</b> → <b>Sum</b>.',
-          'Nog eens <b>Find Health Samples</b>: <b>Active Energy</b>, is today → <b>Calculate Statistics</b> → <b>Sum</b>.',
-          'Optioneel: <b>Find Health Samples</b> → <b>Weight</b> (en/of <b>Resting Heart Rate</b>), Sort by <b>Start Date</b>, <b>Latest First</b>, Limit <b>1</b>.'
-        ] : [
-          'Open the <b>Shortcuts</b> app → tap <b>+</b>. Name: <b>FBG Sync</b>.',
-          'Add <b>Find Health Samples</b>: <b>Steps</b>, Start Date <b>is today</b>. Below it <b>Calculate Statistics</b> → <b>Sum</b>.',
-          'Again <b>Find Health Samples</b>: <b>Active Energy</b>, is today → <b>Calculate Statistics</b> → <b>Sum</b>.',
-          'Optional: <b>Find Health Samples</b> → <b>Weight</b> (and/or <b>Resting Heart Rate</b>), Sort by <b>Start Date</b>, <b>Latest First</b>, Limit <b>1</b>.'
-        ]).map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
-      o += step(3, L('Laat hem versturen', 'Make it send'), '<ol class="plain-list small">' + (nl() ? [
-          'Voeg <b>Get Contents of URL</b> toe (Haal inhoud van URL op) en plak het <b>adres</b> uit stap 1.',
-          'Tik op <b>›</b> (Show More): Method <b>POST</b>, Request Body <b>JSON</b>.',
-          'Tik <b>Add new field → Text</b>: sleutel <code>p_token</code>, waarde = plak je <b>sleutel</b>.',
-          'Nog een Text-veld: <code>steps</code> = kies de variabele <b>Statistics</b> (de som van Steps).',
-          'Text-veld <code>kcal</code> = de som van Active Energy. Optioneel: <code>weight</code> en <code>rhr</code>.'
-        ] : [
-          'Add <b>Get Contents of URL</b> and paste the <b>address</b> from step 1.',
-          'Tap <b>›</b> (Show More): Method <b>POST</b>, Request Body <b>JSON</b>.',
-          'Tap <b>Add new field → Text</b>: key <code>p_token</code>, value = paste your <b>key</b>.',
-          'Another Text field: <code>steps</code> = pick the variable <b>Statistics</b> (the Steps sum).',
-          'Text field <code>kcal</code> = the Active Energy sum. Optional: <code>weight</code> and <code>rhr</code>.'
-        ]).map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><p class="tiny muted">' + esc(L('Heb je al een stappen-Opdracht? Zet alleen deze actie onderaan erbij.', 'Already have a steps Shortcut? Just add this action at the bottom.')) + '</p>');
+      o += step(2, L('Maak de Opdracht (Shortcut)', 'Build the Shortcut'), '<ol class="plain-list small">' + [
+          'Open <b>Shortcuts</b> → tap <b>+</b>. ' + L('Naam', 'Name') + ': <b>FBG Sync</b>.',
+          'Tap <b>Add Action</b> → search <b>Find Health Samples</b>. ' + L('Zet', 'Set') + ': <b>Type: Steps</b>. Tap <b>Add Filter</b> → <b>Start Date</b> <b>is today</b>. <b style="color:#d4af37">' + L('GEEN Source-filter, Limit UIT, Sort by: niets.', 'NO Source filter, Limit OFF, no Sort.') + '</b>',
+          L('Daaronder', 'Below it') + ': <b>Calculate Statistics</b> → <b>Sum</b> of <b>Health Samples</b>. ' + L('(Telt álle kleine Garmin/iPhone-stukjes op.)', '(Adds up all the small Garmin/iPhone samples.)'),
+          L('Nog eens', 'Again') + ' <b>Find Health Samples</b>: <b>Steps</b>, <b>Start Date</b> <b>is yesterday</b>, Limit OFF → <b>Calculate Statistics</b> → <b>Sum</b>. ' + L('(Gisteren, als back-up.)', '(Yesterday, as a backfill.)'),
+          L('Optioneel', 'Optional') + ': <b>Find Health Samples</b> → <b>Active Energy</b>, is today → <b>Calculate Statistics</b> → <b>Sum</b>.'
+        ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
+      o += step(3, L('Laat hem versturen', 'Make it send'), '<ol class="plain-list small">' + [
+          L('Voeg', 'Add') + ' <b>Get Contents of URL</b> ' + L('toe en plak het <b>adres</b> uit stap 1.', 'and paste the <b>address</b> from step 1.'),
+          L('Tik op', 'Tap') + ' <b>›</b> (Show More): Method <b>POST</b>, Request Body <b>JSON</b>.',
+          'Tap <b>Add new field → Text</b>: key <code>p_token</code>, value = ' + L('plak je <b>sleutel</b>', 'paste your <b>key</b>') + '.',
+          'Tap <b>Add new field → Number</b>: key <code>steps</code>, value = ' + L('de <b>1e Statistics</b> (vandaag)', 'the <b>1st Statistics</b> (today)') + '.',
+          'Tap <b>Add new field → Number</b>: key <code>ysteps</code>, value = ' + L('de <b>2e Statistics</b> (gisteren)', 'the <b>2nd Statistics</b> (yesterday)') + '.',
+          L('Optioneel', 'Optional') + ': <b>Number</b> <code>kcal</code> = Active Energy Sum.',
+          L('Voeg als laatste', 'Last, add') + ' <b>Show Result</b> → <b>Contents of URL</b>. ' + L('Bij ▶ moet je zien', 'When you tap ▶ you should see') + ' <code>"ok": true</code> ' + L('met je echte stappen.', 'with your real steps.')
+        ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><p class="tiny muted">' + esc(L('Zie je maar een paar stappen (bijv. 20)? Dan pakt de actie één monster: zet Limit uit en verwijder elke Source-filter. Zie je niets met "ok"? Dan ontbreekt Get Contents of URL of is de sleutel fout.', 'Only a few steps (e.g. 20)? The action is taking one sample: turn Limit off and remove any Source filter. No "ok"? Get Contents of URL is missing or the key is wrong.')) + '</p>');
       o += step(4, L('Test en zet automatisch aan', 'Test and automate'), '<ol class="plain-list small">' + (nl() ? [
           'Tik op <b>▶</b>. Sta Health toe (<b>Allow</b>). Je ziet <code>"ok": true</code>.',
           'Kom terug hier en tik op <b>Vernieuwen</b>: status = Laatst gesynchroniseerd.',
