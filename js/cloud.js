@@ -63,7 +63,7 @@
 
   function start() {
     return sb.from('coaches').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
-      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) push(true); return coachPull().then(subscribe); }); }
+      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) { selfTargets(myClient); push(true); } return coachPull().then(subscribe); }); }
       return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (r2) {
         myClient = r2.data || null; role = myClient ? 'client' : 'none';
         if (myClient) {
@@ -77,6 +77,14 @@
   }
 
   // ---------- client side ----------
+  // coach's own record: apply coach-set targets + step goal to his own athlete data (once per change)
+  function selfTargets(row) {
+    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null]);
+    if (me.selfTgtSig === k) return; me.selfTgtSig = k; me.profile = me.profile || {};
+    if (P.targetsOverride && P.targetsOverride.kcal) { me.profile.targetsOverride = P.targetsOverride; if (me.meal) me.meal.targets = Object.assign({}, me.meal.targets || {}, P.targetsOverride); }
+    if (P.stepGoal) me.stepGoal = P.stepGoal;
+    rawSave(); setTimeout(function () { if (!document.querySelector('.sheet')) App.rerender(); }, 0);
+  }
   function applyPlan(row) {
     var me = S.me, stamp = row.updated_at || '';
     if (me.cloudPlanAt === stamp) return;
@@ -174,7 +182,7 @@
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;
-      if (role === 'coach') { rows[r.id] = r; merge(r.id); rawSave(); pill(); }
+      if (role === 'coach') { rows[r.id] = r; if (myClient && r.id === myClient.id) { myClient = r; selfTargets(r); } merge(r.id); rawSave(); pill(); }
       else if (myClient && r.id === myClient.id) { myClient = r; applyPlan(r); App.rerender(); }
     }).subscribe();
   }
