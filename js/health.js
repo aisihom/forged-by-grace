@@ -16,7 +16,7 @@
     Object.keys(days || {}).forEach(function (iso) {
       if (iso < cut || iso > App.today()) return;
       var d = days[iso], cur = h.days[iso] = h.days[iso] || {};
-      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) { if (d[k] != null && isFinite(d[k])) { var nv = Math.round(d[k] * 10) / 10; if (k === 'steps' && cur.man && (cur.steps == null || cur.steps < nv) && cur.man <= nv) delete cur.man; cur[k] = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv; } });
+      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) { if (d[k] != null && isFinite(d[k])) { var nv = Math.round(d[k] * 10) / 10; if (k === 'steps' && cur.man && cur.steps == null && cur.man <= nv) delete cur.man; cur[k] = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv; } });
       cur.src = src; res.days++;
       if (d.weight) {
         var b = ath.body.filter(function (x) { return x.date === iso; })[0];
