@@ -65,6 +65,7 @@
     var h = '<div class="row" style="margin-bottom:10px"><a class="icon-btn" href="#/clients" aria-label="' + esc(t('Back')) + '">' + I.back + '</a><div class="grow"></div>' + (self ? '<button class="btn sm" id="role-switch">' + I.swaprole + esc(t('My training')) + '</button>' : '<button class="btn sm danger" data-act="client-del" data-id="' + c.id + '">' + I.trash + '</button>') + '</div>';
     h += '<div class="row"><div class="avatar lg">' + esc(App.initials(name)) + '</div><div class="grow"><h1 class="h1" style="margin:0">' + esc(name) + '</h1><div class="small muted">' + esc(t(App.GOALS[p.goal] || '')) + (p.weight ? ' · ' + p.weight + ' kg' : '') + (p.age ? ' · ' + p.age + ' ' + t('yrs') : '') + '</div></div><button class="btn sm" data-act="edit-profile" data-o="' + id + '">' + I.edit + '</button></div>';
     if (T) h += '<div class="card targets" style="margin-top:14px"><div class="row between"><b>' + esc(t('Daily targets')) + '</b><span class="tiny muted">BMR ' + (T.bmr || '—') + ' · TDEE ' + (T.tdee || '—') + '</span></div><div class="grid4"><div><b>' + T.kcal + '</b><span>kcal</span></div><div><b>' + T.p + '</b><span>' + esc(t('protein')) + '</span></div><div><b>' + T.c + '</b><span>' + esc(t('carbs')) + '</span></div><div><b>' + T.f + '</b><span>' + esc(t('fat')) + '</span></div></div></div>';
+    if (!self) h += '<button class="btn sm" style="margin-top:10px" data-act="sp-gift" data-o="' + id + '">🎁 ' + esc(t('Give Sweatpoints')) + '</button>';
     // plans
     h += '<div class="section"><div class="section-head"><h2 class="h2">' + esc(t('Program')) + '</h2></div>' +
       '<div class="card row"><div class="ex-icon">' + I.train + '</div><div class="grow"><b>' + esc(c.plan ? t(c.plan.name) : t('No training plan')) + '</b><div class="tiny muted">' + (c.plan ? App.trainDays(c.plan) + ' ' + esc(t('days/week')) + ' · ' + c.plan.weeks + ' ' + esc(t('weeks')) : esc(t('Choose a template'))) + '</div></div>' + (c.plan ? '<a class="btn sm" href="#/plan/' + id + '">' + esc(t('Edit')) + '</a>' : '<button class="btn sm primary" data-act="change-plan" data-o="' + id + '">' + esc(t('Choose')) + '</button>') + '</div>' +
@@ -103,6 +104,28 @@
   function last7(ci) { var end = F.isoDate(new Date(ci.at)), by = {}; ci.food.forEach(function (d) { by[d[0]] = d[1]; }); var out = []; for (var i = 6; i >= 0; i--) { var iso = App.isoAdd(end, -i); out.push([iso, by[iso] || 0]); } return out; }
   function avg(rows, i) { return rows.length ? rows.reduce(function (a, r) { return a + r[i]; }, 0) / rows.length : 0; }
   A['edit-profile'] = function (el) { App.profileSheet(el.dataset.o); };
+  A['sp-gift'] = function (el) {
+    var c = App.owner(el.dataset.o); if (!c) return;
+    var s = App.sheet(App.sheetHead(t('Give Sweatpoints'), t('Added to the client\'s balance. It is applied once and sync will not overwrite it.')) +
+      '<label class="field"><span class="label">Sweatpoints</span><input class="input" id="sg-pts" inputmode="numeric" value="1000"></label>' +
+      '<label class="field"><span class="label">' + esc(t('Label')) + '</span><input class="input" id="sg-l" value="' + esc(t('Gift from coach')) + '"></label>' +
+      '<button class="btn primary lg block" id="sg-go">' + esc(t('Give Sweatpoints')) + '</button>');
+    s.el.querySelector('#sg-go').onclick = function () {
+      var pts = Math.round(App.num(s.el.querySelector('#sg-pts').value)), label = (s.el.querySelector('#sg-l').value || '').trim() || t('Gift from coach');
+      if (!(pts > 0)) return;
+      var gift = { id: 'g' + Date.now().toString(36), pts: pts, label: label, d: App.today(), at: new Date().toISOString() };
+      c.profile = c.profile || {};
+      c.profile.spGifts = (c.profile.spGifts || []).concat([gift]);
+      App.save();
+      var cid = c.cloudId || null;
+      var done = function () { s.close(); App.rerender(); App.toast(t('{n} Sweatpoints given', { n: pts })); };
+      if (cid && App.cloud && App.cloud.patchClientProfile) {
+        App.cloud.patchClientProfile(cid, { spGifts: c.profile.spGifts, targetsOverride: c.profile.targetsOverride }).then(function (r) {
+          if (r && r.error) App.toast(r.error.message); else done();
+        }).catch(function (e) { App.toast((e && e.message) || t('Offline — will sync later')); });
+      } else done();
+    };
+  };
   A['client-del'] = function (el) { App.confirm(t('Delete client?'), t('This removes the client and their check-ins from this device.'), t('Delete'), true).then(function (ok) { if (!ok) return; S.clients = App.S.clients = S.clients.filter(function (c) { return c.id !== el.dataset.id; }); App.S.clients = S.clients; App.save(); App.go('clients'); }); };
   A['meal-gen'] = function (el) { var o = App.owner(el.dataset.o); o.meal = App.generateMeal(o.profile || {}, 4); App.save(); App.go('meal/' + el.dataset.o); };
   A['share-client'] = function (el) {

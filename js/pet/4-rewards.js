@@ -23,7 +23,7 @@
   };
   window.FBG_I18N = window.FBG_I18N || {}; window.FBG_I18N.nl = window.FBG_I18N.nl || {};
   Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
-  var CAP = 150, NOCAP = { welcome: 1, streak: 1 }, MAXONE = { in: 5, st6: 10, st8: 10, st10: 15, wk: 30, sp: 20, fl: 10, ft: 20, wa: 5, wg: 10, welcome: 50, streak: 50 };
+  var CAP = 150, NOCAP = { welcome: 1, streak: 1, gift: 1 }, MAXONE = { in: 5, st6: 10, st8: 10, st10: 15, wk: 30, sp: 20, fl: 10, ft: 20, wa: 5, wg: 10, welcome: 50, streak: 50, gift: 100000 };
   var DEF = [
     { id: 'r1', n: 'FBG shaker bottle', p: 1500, d: 'Example — edit name & price' },
     { id: 'r2', n: 'Protein bar box', p: 2500, d: 'Example' },
@@ -79,7 +79,8 @@
     if (r.total < earned) w.push('Total earned (' + r.total + ') is lower than the history (' + earned + ')');
     if (r.bal > r.total) w.push('Balance (' + r.bal + ') is higher than everything ever earned (' + r.total + ')');
     var days = Math.max(1, Math.round((Date.parse(r.at.slice(0, 10)) - Date.parse(r.start || r.at.slice(0, 10))) / 864e5) + 1);
-    if (r.total > days * CAP + 50 + Math.floor(days / 7) * 50) w.push('Too many points for ' + days + ' days in the app (' + r.total + ' SP)');
+    var giftPts = (r.ledger || []).reduce(function (n, x) { return n + (x[1] === 'gift' ? x[2] : 0); }, 0);
+    if (r.total > days * CAP + 50 + Math.floor(days / 7) * 50 + giftPts) w.push('Too many points for ' + days + ' days in the app (' + r.total + ' SP)');
     if (r.amt <= 0) w.push('Invalid amount');
     (S.redemptions || []).forEach(function (x) { if (x.status === 'approved' && x.name === r.name) { var h = (r.hist || []).filter(function (y) { return y[0] === x.id; })[0]; if (h && h[1] === 'cancelled') w.push('Earlier approved request ' + x.code + ' was cancelled on the phone (points taken back)'); } });
     var dup = (S.redemptions || []).filter(function (x) { return x.id === r.id; })[0];

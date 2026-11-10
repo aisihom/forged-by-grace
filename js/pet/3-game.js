@@ -21,12 +21,24 @@
     g.sp += give; g.total = (g.total || 0) + give; logIt(g, day, key.split(':')[0], give, label);
     return give;
   }
+  // Coach gifts live on clients.profile.spGifts and are applied once (got['gift:<id>']), uncapped, so a later client push cannot wipe them.
+  App.applySpGifts = function () {
+    var g, gifts, n = 0;
+    try { g = G(); } catch (err) { return 0; }
+    gifts = (S.me && S.me.profile && S.me.profile.spGifts) || [];
+    gifts.forEach(function (gift) {
+      if (!gift || !gift.id || !(+gift.pts > 0)) return;
+      n += award(g, 'gift:' + String(gift.id), gift.d || App.today(), +gift.pts, gift.label || 'Gift from coach', true);
+    });
+    return n;
+  };
   // Award once per real event, from game start (max 7 days back), with a daily cap.
   App.gameSweep = function () {
     if (S.role !== 'athlete') return 0;
     var g = G(), ath = S.me, today = App.today(), e = 0, R = App.SP_RULES, from = App.isoAdd(today, -7);
     if (g.start > from) from = g.start;
     e += award(g, 'welcome', today, R.welcome, 'Welcome bonus', true);
+    e += App.applySpGifts();
     e += award(g, 'in:' + today, today, R.checkin, 'Check-in');
     var st = 0; for (var i = 0; i < 400; i++) { if (g.got['in:' + App.isoAdd(today, -i)]) st++; else break; }
     g.streak = st; if (st && st % 7 === 0) e += award(g, 'streak:' + today, today, R.streak7, 'Streak bonus', true);

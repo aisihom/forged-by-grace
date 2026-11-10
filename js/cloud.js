@@ -79,23 +79,28 @@
   // ---------- client side ----------
   // coach's own record: apply coach-set targets + step goal to his own athlete data (once per change)
   function selfTargets(row) {
-    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null, P.bodyToday || null]);
+    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null, P.bodyToday || null, P.spGifts || null]);
     if (me.selfTgtSig === k) return; me.selfTgtSig = k; me.profile = me.profile || {};
     if (P.targetsOverride && P.targetsOverride.kcal) { me.profile.targetsOverride = P.targetsOverride; if (me.meal) me.meal.targets = Object.assign({}, me.meal.targets || {}, P.targetsOverride); }
+    if (P.spGifts && P.spGifts.length) me.profile.spGifts = P.spGifts;
     if (P.stepGoal) me.stepGoal = P.stepGoal;
     var bt = P.bodyToday; if (bt && bt.date && bt.weight) { me.body = me.body || []; var bb = me.body.filter(function (x) { return x.date === bt.date; })[0]; if (!bb) { bb = { date: bt.date }; me.body.push(bb); me.body.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); } bb.weight = bt.weight; me.profile.weight = bt.weight; }
-    rawSave(); setTimeout(function () { if (!document.querySelector('.sheet')) App.rerender(); }, 0);
+    var gN = App.applySpGifts ? App.applySpGifts() : 0;
+    rawSave(); if (gN > 0) setTimeout(function () { App.toast('💪 +' + gN + ' Sweatpoints'); }, 350);
+    setTimeout(function () { if (!document.querySelector('.sheet')) App.rerender(); }, 0);
   }
   function applyPlan(row) {
     var me = S.me, stamp = row.updated_at || '';
     if (me.cloudPlanAt === stamp) return;
     if (row.plan && true) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); if (!me.plan.start || me.plan.start > App.today()) me.plan.start = App.today(); }
     if (row.meal && true) me.meal = row.meal;
-    if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride) });
+    if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride), spGifts: (row.profile.spGifts || (me.profile || {}).spGifts) });
     if (!me.coach) me.coach = { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };
     me.cid = row.id; me.cloudPlanAt = stamp;
+    var gN = App.applySpGifts ? App.applySpGifts() : 0;
     var was = S.role; if (S.role !== 'coach') S.role = 'athlete';
-    rawSave(); if (!was) { location.hash = '#/today'; App.route(); }
+    rawSave(); if (gN > 0) setTimeout(function () { App.toast('💪 +' + gN + ' Sweatpoints'); }, 350);
+    if (!was) { location.hash = '#/today'; App.route(); }
   }
   function strip(o) { return JSON.parse(JSON.stringify(o == null ? null : o, function (k, v) { return typeof v === 'string' && /^data:/.test(v) && v.length > 200 ? undefined : v; })); }
   function snapshot() {
@@ -128,6 +133,16 @@
     }, now ? 50 : 800);
   }
   C.push = push;
+  C.patchClientProfile = function (id, patch) {
+    if (!sb || !id || !patch) return Promise.reject(new Error('offline'));
+    return sb.from('clients').select('profile').eq('id', id).maybeSingle().then(function (r) {
+      if (r.error) throw r.error;
+      var P = Object.assign({}, (r.data && r.data.profile) || {});
+      if (patch.spGifts) P.spGifts = patch.spGifts;
+      if (patch.targetsOverride) P.targetsOverride = patch.targetsOverride;
+      return sb.from('clients').update({ profile: P, updated_at: new Date().toISOString() }).eq('id', id);
+    });
+  };
   function photos() {
     if (!App.photoGet || !myClient) return;
     var up = S.me.cloudPh = S.me.cloudPh || {}, gone = S.me.photoGone || {};
@@ -201,7 +216,7 @@
     var live = {}; Object.keys(d).forEach(function (k) { live[k] = d[k].data; });
     c.live = { at: Object.keys(d).reduce(function (a, k) { return d[k].updated_at > a ? d[k].updated_at : a; }, ''), d: live };
     if (live.profile) c.profile = Object.assign({}, c.profile || {}, live.profile);
-    if (row.profile && row.profile.targetsOverride) c.profile = Object.assign({}, c.profile || {}, { targetsOverride: row.profile.targetsOverride });
+    if (row.profile && (row.profile.targetsOverride || row.profile.spGifts)) c.profile = Object.assign({}, c.profile || {}, { targetsOverride: row.profile.targetsOverride || (c.profile || {}).targetsOverride, spGifts: row.profile.spGifts || (c.profile || {}).spGifts });
     var sum = live.checkins && live.checkins.summary;
     if (App.overlayHealthSync) App.overlayHealthSync(c, live, sum);
     if (sum) { sum.live = true; sum.at = c.live.at || sum.at; c.checkins = (c.checkins || []).filter(function (x) { return !x.live; }); c.checkins.push(sum); c.checkins.sort(function (a, b) { return a.at < b.at ? -1 : 1; }); if (c.lastCheckin !== sum.at) { c.lastCheckin = sum.at; c.unread = true; } }
