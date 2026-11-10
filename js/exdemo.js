@@ -101,7 +101,9 @@
       '</svg>';
   }
   var FR3 = { 'prone-ytw': ['Y-positie', 'T-positie', 'W-positie'] };
+  var EM = window.FBG_EXMEDIA || {};
   var NOPH = { 'pike-push-up': 1, 'prone-lat-pull': 1, 'hollow-hold': 1, 'burpee': 1, 'shadow-boxing': 1, 'prone-ytw': 1 };
+  if (EM.art) Object.keys(EM.art).forEach(function (k) { NOPH[k] = 1; });
   var IMPERFECT = {}; 'burpee prone-lat-pull pike-push-up hollow-hold shadow-boxing'.split(' ').forEach(function (k) { IMPERFECT[k] = 1; });
   function subLine(ex) {
     var parts = [t(ex.muscle)];
@@ -119,25 +121,42 @@
   }
   App.exDemo = function (ex) {
     if (!ex) return;
-    var x = XI.X[ex.id];
+    var x = XI && XI.X ? XI.X[ex.id] : null;
+    var approx = (EM.approx && EM.approx[ex.id]) || '';
+    var isArt = !!NOPH[ex.id];
     var meta = (ex.cue ? '<p class="suggest">' + esc(ex.cue) + '</p>' : '') + (ex.mistake ? '<p class="tiny muted">' + esc(t('Common mistake')) + ': ' + esc(ex.mistake) + '</p>' : '');
-    if (!x) return App.sheet(App.sheetHead(ex.name, subLine(ex)) + meta + '<ol class="plain-list">' + (ex.cues || []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' + altsBlock(ex));
     var src = 'assets/ex/' + ex.id;
-    var h = App.sheetHead(ex.name, subLine(ex)) +
-      '<div class="exd-fig' + (FR3[ex.id] ? ' exd-3' : '') + (NOPH[ex.id] ? '' : ' exd-ph') + '" data-exd>' + (ex.id === 'prone-ytw' ? [ytwSvg()] : []).concat(ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k) { return k.length > 1 ? k : null; }).filter(Boolean).join('') + (ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k, i) { var lb = FR3[ex.id] ? FR3[ex.id][i] : (k === 'a' ? 'startpositie' : 'eindpositie'); return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=3.4.0"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=3.4.0" width="' + (NOPH[ex.id] ? 448 : 640) + '" height="' + (NOPH[ex.id] ? 504 : 480) + '" loading="eager" decoding="sync" alt="' + esc(ex.name) + ' — ' + lb + '"></picture>'; }).join('') +
-      (FR3[ex.id] ? '<div class="exd-lbl"><span class="exd-l1">Y · 135°</span><span class="exd-l2">T · 90°</span><span class="exd-l3">W · knijpen</span></div>' : '<div class="exd-lbl"><span class="exd-la">Start</span><span class="exd-lb">Eind</span></div>') + '<button class="exd-pp" type="button" aria-label="Pauze/afspelen">❚❚</button></div>' +
-      '<div class="exd-map">' + App.muscleMap(x.p, x.s, x.a) + '<div class="exd-leg"><span><i class="lg-p"></i>Agonist</span><span><i class="lg-s"></i>Ondersteunend</span>' + (x.a && x.a.length ? '<span><i class="lg-x"></i>Antagonist</span>' : '') + '</div></div>' +
-      '<h3 class="h3 exd-h">Agonisten — deze spieren train je</h3><ul class="plain-list exd-m">' + names(x.p) + '</ul>' +
-      (x.s.length ? '<h3 class="h3 exd-h">Ondersteunende spieren (synergisten/stabilisatoren)</h3><ul class="plain-list exd-m small">' + names(x.s) + '</ul>' : '') +
-      (x.a && x.a.length ? '<h3 class="h3 exd-h">Antagonisten — tegenspelers (rekken/remmen)</h3><ul class="plain-list exd-m small">' + names(x.a) + '</ul>' : '') +
-      '<h3 class="h3 exd-h">Stappenplan — hier let je op</h3><ol class="exd-steps">' + x.steps.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' +
-      (!IMPERFECT[ex.id] ? '' : '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>') +
-      (NOPH[ex.id] ? '' : '<p class="tiny muted">Foto’s: free-exercise-db (publiek domein) · spieren gecontroleerd met free-exercise-db, wger en ExRx.</p>');
-    h += meta + altsBlock(ex);
-    var s = App.sheet(h, { label: ex.name });
+    var ver = encodeURIComponent(App.VERSION || '3.30.13');
+    var iw = isArt ? 448 : 640, ih = isArt ? 504 : 480;
+    var fig = '<div class="exd-fig' + (FR3[ex.id] ? ' exd-3' : '') + (isArt ? '' : ' exd-ph') + '" data-exd>' +
+      (ex.id === 'prone-ytw' ? ytwSvg() : '') +
+      (ex.id === 'prone-ytw' ? '' : ['a', 'b'].map(function (k, i) {
+        var lb = FR3[ex.id] ? FR3[ex.id][i] : (k === 'a' ? 'startpositie' : 'eindpositie');
+        return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=' + ver + '"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=' + ver + '" width="' + iw + '" height="' + ih + '" loading="eager" decoding="sync" alt="' + esc(ex.name) + ' — ' + lb + '"></picture>';
+      }).join('')) +
+      (FR3[ex.id] ? '<div class="exd-lbl"><span class="exd-l1">Y · 135°</span><span class="exd-l2">T · 90°</span><span class="exd-l3">W · knijpen</span></div>' : '<div class="exd-lbl"><span class="exd-la">Start</span><span class="exd-lb">Eind</span></div>') +
+      '<button class="exd-pp" type="button" aria-label="Pauze/afspelen">❚❚</button></div>';
+    var body = '';
+    if (x) {
+      body =
+        '<div class="exd-map">' + App.muscleMap(x.p, x.s, x.a) + '<div class="exd-leg"><span><i class="lg-p"></i>Agonist</span><span><i class="lg-s"></i>Ondersteunend</span>' + (x.a && x.a.length ? '<span><i class="lg-x"></i>Antagonist</span>' : '') + '</div></div>' +
+        '<h3 class="h3 exd-h">Agonisten — deze spieren train je</h3><ul class="plain-list exd-m">' + names(x.p) + '</ul>' +
+        (x.s.length ? '<h3 class="h3 exd-h">Ondersteunende spieren (synergisten/stabilisatoren)</h3><ul class="plain-list exd-m small">' + names(x.s) + '</ul>' : '') +
+        (x.a && x.a.length ? '<h3 class="h3 exd-h">Antagonisten — tegenspelers (rekken/remmen)</h3><ul class="plain-list exd-m small">' + names(x.a) + '</ul>' : '') +
+        '<h3 class="h3 exd-h">Stappenplan — hier let je op</h3><ol class="exd-steps">' + x.steps.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' +
+        (!IMPERFECT[ex.id] ? '' : '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>');
+    } else {
+      body = '<ol class="plain-list">' + (ex.cues || []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>';
+    }
+    var credit = isArt
+      ? '<p class="tiny muted">Illustratie van de beweging, van start- naar eindpositie.</p>'
+      : '<p class="tiny muted">Foto’s: free-exercise-db (publiek domein) · spieren gecontroleerd met free-exercise-db, wger en ExRx.</p>';
+    var approxHtml = approx ? '<p class="suggest">' + esc(approx) + '</p>' : '';
+    var html = App.sheetHead(ex.name, subLine(ex)) + fig + body + credit + approxHtml + meta + altsBlock(ex);
+    var s = App.sheet(html, { label: ex.name });
     s.el.querySelectorAll('.exd-fig img').forEach(function (im) { im.onerror = function () { if (!im.dataset.retry) { im.dataset.retry = 1; im.src = im.src.split('?')[0] + '?r=' + Date.now(); } }; });
-    var fig = s.el.querySelector('[data-exd]'), pp = s.el.querySelector('.exd-pp');
-    pp.onclick = function (e) { e.stopPropagation(); var p = fig.classList.toggle('paused'); pp.textContent = p ? '▶' : '❚❚'; };
+    var figEl = s.el.querySelector('[data-exd]'), pp = s.el.querySelector('.exd-pp');
+    pp.onclick = function (e) { e.stopPropagation(); var p = figEl.classList.toggle('paused'); pp.textContent = p ? '▶' : '❚❚'; };
     return s;
   };
   A['w-info'] = function (elx) { App.exDemo(D.BY_ID[elx.dataset.ex]); };
