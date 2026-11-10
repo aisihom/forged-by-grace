@@ -120,7 +120,7 @@
   });
   var FOOD_BY_ID = {};
   FOODS.forEach(function (f) { FOOD_BY_ID[f.id] = f; });
-  var CATS = { protein: 'Protein', dairy: 'Dairy', carb: 'Carbs & grains', fruit: 'Fruit', veg: 'Vegetables', fat: 'Fats & nuts', snack: 'Snacks', drink: 'Drinks', meal: 'Meals', custom: 'My foods', scan: 'Scanned' };
+  var CATS = { protein: 'Protein', dairy: 'Dairy', carb: 'Carbs & grains', fruit: 'Fruit', veg: 'Vegetables', fat: 'Fats & nuts', snack: 'Snacks', drink: 'Drinks', soup: 'Soups', meal: 'Meals', custom: 'My foods', scan: 'Scanned' };
 
   // Food-101 classes → rough macros per 100 g + typical portion (g). Used for photo estimates only.
   // [label, kcal, p, c, f, portion g]

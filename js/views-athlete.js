@@ -318,19 +318,31 @@
     var s = App.sheet(App.sheetHead(title || t('Add food')) +
       '<input class="input" id="fq" type="search" enterkeyhint="search" placeholder="' + esc(t('Search millions of foods & brands, e.g. kwark, AH pindakaas')) + '" autocomplete="off">' +
       '<div class="chips" id="fcats" style="margin:10px 0">' + Object.keys(FD.CATS).map(function (k) { return '<button class="chip sm" data-c="' + k + '">' + esc(t(FD.CATS[k])) + '</button>'; }).join('') + '</div>' +
+      (FD.REGION_FILTERS ? '<label class="field" style="margin:0 0 8px"><span class="label">' + esc(t('Region')) + '</span><select class="input" id="freg"><option value="">' + esc(t('All regions')) + '</option>' + FD.REGION_FILTERS.map(function (r) { return '<option value="' + esc(r[0]) + '">' + esc(t(r[1])) + '</option>'; }).join('') + '</select></label><p class="tiny muted" style="margin:0 0 8px">' + esc(t('Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.')) + '</p>' : '') +
       '<div id="fonl"></div><div class="list" id="fres"></div>');
-    var cat = '', timer = null, searcher = null, onlineItems = [], onlineState = '', lastQ = '';
+    var cat = '', reg = '', timer = null, searcher = null, onlineItems = [], onlineState = '', lastQ = '';
     function norm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-    function hay(f) { return f._h || (f._h = norm(f.en + ' ' + f.nl + ' ' + (f.al || '') + ' ' + (f.brand || ''))); }
+    function hay(f) { return f._h || (f._h = norm(f.en + ' ' + f.nl + ' ' + (f.al || '') + ' ' + (f.brand || '') + ' ' + (f.rgName || '') + ' ' + (f.rg || '') + ' ' + ((FD.REGIONS && FD.REGIONS[f.rg]) || ''))); }
+    function matchReg(f) {
+      if (!reg) return true;
+      if (reg === 'latam') return !!f.rg;
+      var row = (FD.REGION_FILTERS || []).filter(function (r) { return r[0] === reg; })[0];
+      var codes = row ? row[2] : reg;
+      if (codes === 'CAR') return (FD.CARIBBEAN_RG || []).indexOf(f.rg) !== -1;
+      if (codes === '*') return !!f.rg;
+      if (Object.prototype.toString.call(codes) === '[object Array]') return codes.indexOf(f.rg) !== -1;
+      return f.rg === codes || f.rg === reg;
+    }
+    App.matchFoodRegion = matchReg;
     function row(f, online) {
-      return '<button class="list-item" data-fid="' + esc(f.id) + '"' + (online ? ' data-on="1"' : '') + '>' + (online && f.img ? '<img src="' + esc(f.img) + '" alt="" loading="lazy" class="offimg">' : '') + '<div class="grow"><div class="ell"><b>' + esc(App.foodName(f)) + '</b></div><div class="tiny muted ell">' + (f.brand ? esc(f.brand) + ' · ' : '') + (f.qty ? esc(f.qty) + ' · ' : '') + f.kcal + ' kcal · P ' + f.p + ' · C ' + f.c + ' · F ' + f.f + ' /100 g</div></div><span class="chev">›</span></button>';
+      return '<button class="list-item" data-fid="' + esc(f.id) + '"' + (online ? ' data-on="1"' : '') + '>' + (online && f.img ? '<img src="' + esc(f.img) + '" alt="" loading="lazy" class="offimg">' : '') + '<div class="grow"><div class="ell"><b>' + esc(App.foodName(f)) + '</b></div><div class="tiny muted ell">' + (f.rgName ? esc(f.rgName) + ' · ' : '') + (f.brand ? esc(f.brand) + ' · ' : '') + (f.qty ? esc(f.qty) + ' · ' : '') + f.kcal + ' kcal · P ' + f.p + ' · C ' + f.c + ' · F ' + f.f + ' /100 g</div></div><span class="chev">›</span></button>';
     }
     function local(q) {
       var all = App.allFoods();
-      if (!q && !cat) { var r = S.recentFoods.map(App.findFood).filter(Boolean); return r.length < 8 ? r.concat(all.slice(0, 12).filter(function (f) { return r.indexOf(f) === -1; })) : r; }
+      if (!q && !cat && !reg) { var r = S.recentFoods.map(App.findFood).filter(Boolean); return r.length < 8 ? r.concat(all.slice(0, 12).filter(function (f) { return r.indexOf(f) === -1; })) : r; }
       var toks = q.split(/\s+/).filter(Boolean), out = [];
       all.forEach(function (f) {
-        if (cat && f.cat !== cat) return; if (!toks.length) { out.push([0, f]); return; }
+        if (cat && f.cat !== cat) return; if (!matchReg(f)) return; if (!toks.length) { out.push([0, f]); return; }
         var h = hay(f); for (var i = 0; i < toks.length; i++) if (h.indexOf(toks[i]) === -1) return;
         var nm = norm(App.foodName(f)), sc = (nm.indexOf(q) === 0 ? 0 : (' ' + nm).indexOf(' ' + toks[0]) !== -1 ? 10 : 20) + (f.x ? 5 : 0) + nm.length / 40;
         out.push([sc, f]);
@@ -367,7 +379,7 @@
     }
     function render() {
       var q = norm(s.el.querySelector('#fq').value.trim()), res = local(q);
-      s.el.querySelector('#fres').innerHTML = (q ? '<h3 class="h3 tiny muted" style="margin:10px 0 4px">' + esc(t('In the app')) + ' · ' + res.length + '</h3>' : '') + (res.slice(0, q ? 25 : 40).map(function (f) { return row(f); }).join('') || '<p class="small muted" style="padding:14px">' + esc(t('No match in the app — see the online results above, or add a custom food.')) + '</p>');
+      s.el.querySelector('#fres').innerHTML = (q || cat || reg ? '<h3 class="h3 tiny muted" style="margin:10px 0 4px">' + esc(t('In the app')) + ' · ' + res.length + '</h3>' : '') + (res.slice(0, q ? 25 : (reg || cat ? 80 : 40)).map(function (f) { return row(f); }).join('') || '<p class="small muted" style="padding:14px">' + esc(t('No match in the app — see the online results above, or add a custom food.')) + '</p>');
       clearTimeout(timer);
       if (q.length >= 3) { onlineState = onlineState === 'loading' ? 'loading' : (s.el.querySelector('#fq').value.trim() === lastQ ? onlineState : 'idle'); timer = setTimeout(function () { startOnline(false); }, 900); }
       else { searcher = null; onlineItems = []; onlineState = q.length >= 2 ? 'idle' : ''; lastQ = ''; }
@@ -377,6 +389,8 @@
     fq.oninput = render;
     fq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); startOnline(true); fq.blur(); } };
     s.el.querySelectorAll('#fcats .chip').forEach(function (b) { b.onclick = function () { cat = cat === b.dataset.c ? '' : b.dataset.c; s.el.querySelectorAll('#fcats .chip').forEach(function (x) { x.classList.toggle('on', x.dataset.c === cat); }); render(); }; });
+    var freg = s.el.querySelector('#freg');
+    if (freg) freg.onchange = function () { reg = freg.value || ''; render(); };
     s.el.onclick = function (e) {
       var b = e.target.closest('[data-fid]'); if (!b) return;
       var fd = b.dataset.on ? App.rememberOff(onlineItems.filter(function (f) { return f.id === b.dataset.fid; })[0]) : App.findFood(b.dataset.fid);

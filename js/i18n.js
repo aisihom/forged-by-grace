@@ -456,6 +456,7 @@ window.FBG_I18N = {
 "Vegetables": "Groente",
 "Fats & nuts": "Vetten & noten",
 "Drinks": "Dranken",
+"Soups": "Soepen",
 "Meals": "Maaltijden",
 "My foods": "Mijn producten",
 "Scanned": "Gescand"
@@ -529,7 +530,27 @@ window.FBG_I18N = {
 /* v2.3 food search */
 (function (L) {
   Object.assign(L.nl = L.nl || {}, {
-    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Zoek in miljoenen producten & merken, bv. kwark, AH pindakaas',
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Zoek in miljoenen producten & merken, bv. sopi di piska, keshi yena, kwark',
+    'Region': 'Regio',
+    'All regions': 'Alle regio\'s',
+    'Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.': 'Tip: zoek op de lokale naam, zoals sopi di piska of karni stoba ku aros, of kies een regio.',
+    'Soups': 'Soepen',
+    'Caribisch & Latijns-Amerika': 'Caribisch & Latijns-Amerika',
+    'Heel het Caribisch gebied': 'Heel het Caribisch gebied',
+    'Curaçao': 'Curaçao',
+    'ABC-eilanden': 'ABC-eilanden',
+    'Bovenwindse eilanden': 'Bovenwindse eilanden',
+    'Dominicaanse Republiek': 'Dominicaanse Republiek',
+    'Trinidad en Tobago': 'Trinidad en Tobago',
+    'Barbados & Oost-Caribisch': 'Barbados & Oost-Caribisch',
+    'Franse Antillen': 'Franse Antillen',
+    "Bahama's, Cayman & Turks": "Bahama's, Cayman & Turks",
+    'Guyana & Belize': 'Guyana & Belize',
+    'Peru & Andes': 'Peru & Andes',
+    'Argentinië, Chili & Zuidkegel': 'Argentinië, Chili & Zuidkegel',
+    'Centraal-Amerika': 'Centraal-Amerika',
+    'Brazilië': 'Brazilië',
+    'Haïti': 'Haïti',
     'Open Food Facts — millions of products': 'Open Food Facts — miljoenen producten',
     'Search online for “{q}”': 'Online zoeken naar “{q}”', 'Load more': 'Meer laden', 'Try again': 'Opnieuw proberen',
     'Nothing online either. Try a shorter word or the brand name.': 'Online ook niets gevonden. Probeer een korter woord of de merknaam.',
@@ -541,7 +562,19 @@ window.FBG_I18N = {
     'Meat & poultry': 'Vlees & gevogelte', 'Fish, eggs & plant protein': 'Vis, eieren & plantaardig eiwit', 'built-in foods': 'ingebouwde producten'
   });
   Object.assign(L.es = L.es || {}, {
-    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Busca entre millones de alimentos y marcas',
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Busca alimentos, p. ej. sopi di piska, keshi yena',
+    'Region': 'Región',
+    'All regions': 'Todas las regiones',
+    'Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.': 'Consejo: busca el nombre local, como sopi di piska o karni stoba ku aros, o elige una región.',
+    'Soups': 'Sopas',
+    'Caribisch & Latijns-Amerika': 'Caribe y Latinoamérica',
+    'Heel het Caribisch gebied': 'Todo el Caribe',
+    'Bovenwindse eilanden': 'Islas de Barlovento',
+    'Dominicaanse Republiek': 'República Dominicana',
+    'Franse Antillen': 'Antillas Francesas',
+    'Centraal-Amerika': 'Centroamérica',
+    'Brazilië': 'Brasil',
+    'Haïti': 'Haití',
     'Open Food Facts — millions of products': 'Open Food Facts — millones de productos',
     'Search online for “{q}”': 'Buscar en línea “{q}”', 'Load more': 'Cargar más', 'Try again': 'Reintentar', 'In the app': 'En la app', 'Search by name': 'Buscar por nombre',
     'Netherlands first, then Belgium, Germany, France and the rest of the world.': 'Primero Países Bajos, luego Bélgica, Alemania, Francia y el resto del mundo.'

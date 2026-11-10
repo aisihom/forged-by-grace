@@ -79,8 +79,36 @@
     ['meat', 'Vlees (portie)', 'Meat (portion)', 150, 330, 38, 0, 20, 'vlees|gehakt|gehaktbal|slavink|speklap|karbonade|schnitzel|worst|rookworst|meat|steak|biefstuk'],
     ['fish', 'Vis (portie)', 'Fish (portion)', 150, 260, 33, 0, 14, 'vis|zalm|kibbeling|lekkerbek|fish|salmon|tonijn|kabeljauw|fish and chips'],
     ['veg', 'Groente (portie)', 'Vegetables (portion)', 200, 60, 3, 9, 0.5, 'groente|groenten|broccoli|sperziebonen|salade groen|sla|veggies|vegetables|wokgroente'],
-    ['egg', 'Ei', 'Egg', 55, 80, 7, 0.4, 5.5, 'ei|egg|gekookt ei']
+    ['egg', 'Ei', 'Egg', 55, 80, 7, 0.4, 5.5, 'ei|egg|gekookt ei'],
+    ['karni-stoba-aros', 'Karni stoba ku aros', 'Beef stew with rice', 380, 540, 33, 62, 17, 'karni stoba ku aros|karni stoba|carni stoba|stoofvlees met rijst'],
+    ['galina-stoba-funchi', 'Galiña stoba ku funchi', 'Chicken stew with funchi', 430, 499, 37, 45, 19, 'galina stoba ku funchi|galiña stoba ku funchi|galina stoba|galiña stoba'],
+    ['kabritu-stoba-moro', 'Kabritu stoba ku aros moro', 'Goat stew with rice and beans', 430, 542, 43, 63, 12, 'kabritu stoba ku aros moro|kabritu stoba|cabrito stoba|geitenstoofpot'],
+    ['piska-kora-funchi', 'Piska kora hasá ku funchi', 'Fried red snapper with funchi', 360, 486, 45, 31, 19, 'piska kora hasa ku funchi|piska kora hasi ku funchi|piska kora|piska hasa|gebakken vis funchi'],
+    ['keshi-yena', 'Keshi yena', 'Keshi yena', 200, 502, 38, 10, 35, 'keshi yena|keshi yená|gevulde kaas'],
+    ['keshi-yena-aros', 'Keshi yena ku aros', 'Keshi yena with rice', 380, 737, 43, 60, 36, 'keshi yena ku aros|keshi yena met rijst'],
+    ['funchi-yambo', 'Funchi ku yambo', 'Funchi with okra soup', 430, 310, 19, 40, 9, 'funchi ku yambo|funchi ku giambo|funchi ku guiambo|funchi yambo'],
+    ['sopi-mondongo', 'Sopi mondongo ku pan', 'Tripe soup with bread', 410, 373, 19, 46, 11, 'sopi mondongo|sòpi mondongo|penssoep'],
+    ['sopi-piska', 'Sopi di piska', 'Fish soup', 350, 245, 25, 21, 8, 'sopi di piska|sòpi di piska|vissoep curacao|vissoep curaçao'],
+    ['funchi', 'Funchi', 'Funchi', 180, 148, 3, 31, 1.4, 'funchi'],
+    ['pastechi', 'Pastechi di karni', 'Beef pastechi', 85, 269, 8, 21, 17, 'pastechi|pastechi karni|pastechi keshi'],
+    ['pan-bati', 'Pan bati', 'Pan bati', 70, 217, 5, 28, 9, 'pan bati|pambati'],
+    ['la-bandera', 'La bandera dominicana', 'La bandera dominicana', 500, 760, 47, 101, 19, 'la bandera|la bandera dominicana'],
+    ['jerk-plate', 'Jerk chicken with rice and peas', 'Jerk chicken with rice and peas', 450, 819, 54, 83, 30, 'jerk chicken|jerk kip|rice and peas|jerk chicken rice'],
+    ['ackee-saltfish', 'Ackee and saltfish', 'Ackee and saltfish', 250, 388, 26, 8, 28, 'ackee and saltfish|ackee saltfish'],
+    ['doubles', 'Doubles', 'Doubles', 200, 608, 12, 55, 38, 'doubles'],
+    ['pelau', 'Pelau', 'Pelau', 400, 648, 32, 68, 28, 'pelau'],
+    ['griot-diri', 'Griot ak diri ak pwa', 'Griot with rice and beans', 450, 864, 44, 77, 42, 'griot|diri ak pwa|griot ak diri'],
+    ['johnny-saltfish', 'Johnny cakes and saltfish', 'Johnny cakes and saltfish', 320, 717, 32, 64, 37, 'johnny cakes and saltfish|johnny cake saltfish|johnnycakes'],
+    ['moksi-alesi', 'Moksi alesi', 'Moksi alesi', 400, 652, 33, 64, 29, 'moksi alesi'],
+    ['pom', 'Pom', 'Pom', 250, 528, 18, 55, 27, 'pom suriname|pomtayer'],
+    ['roti-kip', 'Roti kip', 'Chicken roti', 450, 887, 48, 91, 36, 'roti kip|roti chicken|roti'],
+    ['sancocho', 'Sancocho', 'Sancocho', 400, 324, 21, 32, 12, 'sancocho'],
+    ['ropa-vieja-plato', 'Ropa vieja con arroz y frijoles negros', 'Ropa vieja with rice and beans', 500, 800, 58, 80, 28, 'ropa vieja'],
+    ['arroz-gandules-pernil', 'Arroz con gandules con pernil', 'Arroz con gandules with pernil', 450, 824, 44, 73, 39, 'arroz con gandules|pernil'],
+    ['soup-joumou', 'Soup joumou', 'Soup joumou', 400, 292, 20, 26, 13, 'soup joumou|soupe joumou'],
+    ['arepa', 'Arepa ku keshi', 'Arepa with cheese', 150, 369, 12, 39, 17, 'arepa|arepa keshi|arepa queso']
   ];
+
   var GENERIC = ['meal-generic', 'Maaltijd (onbekend, schatting)', 'Meal (unknown, estimate)', 350, 600, 25, 60, 25, ''];
 
   function norm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9.,\/ ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
