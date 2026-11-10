@@ -77,13 +77,14 @@
   }
 
   // ---------- client side ----------
-  // coach's own record: apply coach-set targets + step goal to his own athlete data (once per change)
+  // coach's own record: apply coach-set targets, step goal and plan to his own athlete data (once per change)
   function selfTargets(row) {
-    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null, P.bodyToday || null, P.spGifts || null]);
+    var P = row.profile || {}, me = S.me, k = JSON.stringify([P.targetsOverride || null, P.stepGoal || null, P.bodyToday || null, P.spGifts || null, row.plan && (row.plan.id || row.updated_at) || null]);
     if (me.selfTgtSig === k) return; me.selfTgtSig = k; me.profile = me.profile || {};
     if (P.targetsOverride && P.targetsOverride.kcal) { me.profile.targetsOverride = P.targetsOverride; if (me.meal) me.meal.targets = Object.assign({}, me.meal.targets || {}, P.targetsOverride); }
     if (P.spGifts && P.spGifts.length) me.profile.spGifts = P.spGifts;
     if (P.stepGoal) me.stepGoal = P.stepGoal;
+    if (row.plan) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); if (!me.plan.start || me.plan.start > App.today()) me.plan.start = App.today(); }
     var bt = P.bodyToday; if (bt && bt.date && bt.weight) { me.body = me.body || []; var bb = me.body.filter(function (x) { return x.date === bt.date; })[0]; if (!bb) { bb = { date: bt.date }; me.body.push(bb); me.body.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); } bb.weight = bt.weight; me.profile.weight = bt.weight; }
     var gN = App.applySpGifts ? App.applySpGifts() : 0;
     rawSave(); if (gN > 0) setTimeout(function () { App.toast('💪 +' + gN + ' Sweatpoints'); }, 350);
