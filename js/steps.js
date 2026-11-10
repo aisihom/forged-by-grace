@@ -1,6 +1,6 @@
 /* Forged by Grace v2.9 — manual step editing + step estimates for combat sports without a watch.
    Synced steps (Shortcut / Garmin / Apple Health) stay in days[d].steps. Extras are stored apart:
-   days[d].man = manual extra steps, days[d].ov = manual total override, session.estSteps = estimate for a session without watch.
+   days[d].man = manual extra steps, days[d].ov = manual total override, session.estSteps = estimate from a logged sport session (toggle in Log sport session).
    Total = ov (if set) else synced + man + sum(estSteps). A new sync only rewrites .steps, so extras survive. */
 (function () {
   'use strict';
@@ -11,18 +11,33 @@
     'Watch not worn — add estimated steps': 'Horloge niet gedragen — geschatte stappen toevoegen', 'Estimated steps': 'Geschatte stappen', 'Date': 'Datum',
     'Estimate: {r} steps/min × minutes, adjusted for intensity. You can change it.': 'Schatting: {r} stappen/min × minuten, aangepast aan intensiteit. Je kunt het aanpassen.',
     'Steps added by hand / estimated': 'Stappen handmatig / geschat', 'Today': 'Vandaag', 'Yesterday': 'Gisteren', 'A sync never removes your extra steps.': 'Een sync wist je extra stappen nooit.',
-    'Combat sessions without a watch can add estimated steps when you log them (Train → Log session).': 'Vechtsport zonder horloge? Bij het loggen (Train → Sessie loggen) kun je geschatte stappen toevoegen.' };
+    'Combat sessions without a watch can add estimated steps when you log them (Train → Log session).': 'Vechtsport zonder horloge? Bij het loggen (Train → Sessie loggen) kun je geschatte stappen toevoegen.',
+    'Add to my steps': 'Tel op bij mijn stappen', '≈ {n} steps': '≈ {n} stappen', 'Intense': 'Intensief',
+    'Delete session': 'Sessie verwijderen', 'This also removes the estimated steps from that day.': 'De geschatte stappen van die dag gaan er ook af.',
+    'Session removed': 'Sessie verwijderd' };
   window.FBG_I18N = window.FBG_I18N || {}; window.FBG_I18N.nl = window.FBG_I18N.nl || {};
   Object.keys(NL).forEach(function (k) { if (!window.FBG_I18N.nl[k]) window.FBG_I18N.nl[k] = NL[k]; });
 
-  // Real footwork steps per minute (what a wrist tracker would roughly have counted), at RPE 7.
-  // Not the "step-equivalent" charts (130–290/min, based on calories) — those would inflate the daily total.
-  // BJJ: ~2,000–2,500 tracker steps per 2 h class (practitioner Fitbit data) ≈ 20/min.
-  App.STEP_RATES = { boxing: 60, kickboxing: 55, mma: 45, bjj: 20 };
-  App.estSteps = function (type, min, rpe) {
-    var r = App.STEP_RATES[type]; if (!r) return 0;
-    var f = Math.max(0.7, Math.min(1.3, (rpe || 7) / 7));
-    return Math.round(r * f * (min || 0) / 50) * 50;
+  // Step-equivalents per minute at Licht / Medium / Intensief.
+  // Combat and similar sports use ~90 / 120 / 140 (90 min MMA medium ≈ 10.800).
+  // Cycling uses the same table as the cardio converter. Running follows cadence (~150 / 165 / 175).
+  App.STEP_SPM = {
+    mma: [90, 120, 140], bjj: [90, 120, 140], kickboxing: [90, 120, 140], boxing: [90, 120, 140],
+    cycling: [130, 160, 175], bike: [130, 160, 175],
+    running: [150, 165, 175], walking: [100, 115, 130],
+    swimming: [90, 120, 150], team: [90, 120, 140], match: [100, 130, 150], other: [80, 110, 130],
+    cross: [160, 180, 200], row: [140, 160, 180]
+  };
+  App.STEP_RATES = App.STEP_SPM; // alias so older calls still resolve a sport
+  App.stepLevel = function (rpe) { var r = +rpe || 7; return r <= 4 ? 0 : r <= 7 ? 1 : 2; };
+  App.stepSpm = function (type, rpe, level) {
+    var rates = App.STEP_SPM[type]; if (!rates) return 0;
+    var lv = level == null ? App.stepLevel(rpe) : Math.max(0, Math.min(2, +level));
+    return rates[lv];
+  };
+  App.estSteps = function (type, min, rpe, level) {
+    var spm = App.stepSpm(type, rpe, level); if (!spm) return 0;
+    return Math.round(spm * (min || 0) / 50) * 50;
   };
   function H() { var m = S.me; if (!m.health) m.health = { days: {}, last: null, sources: {} }; if (!m.health.days) m.health.days = {}; return m.health; }
   function fmt(n) { return Math.round(n || 0).toLocaleString(S.lang); }
@@ -30,8 +45,8 @@
   App.stepsOf = function (d, ath) {
     ath = ath || S.me; d = d || App.today();
     var raw = (ath.health && ath.health.days && ath.health.days[d]) || {}, est = [], estSum = 0;
-    (ath.sessions || []).forEach(function (s) { if (s.date === d && s.estSteps > 0) { est.push({ n: s.title, v: s.estSteps }); estSum += s.estSteps; } });
-    (raw.cx || []).forEach(function (x) { est.push({ n: x.n + ' ' + x.min + ' min', v: x.v, cx: 1 }); estSum += x.v; });
+    (ath.sessions || []).forEach(function (s) { if (s.date === d && s.estSteps > 0) { est.push({ n: s.title, v: s.estSteps, sid: s.id }); estSum += s.estSteps; } });
+    (raw.cx || []).forEach(function (x, i) { est.push({ n: x.n + ' ' + x.min + ' min', v: x.v, cx: 1, i: i }); estSum += x.v; });
     var sync = raw.steps != null ? raw.steps : null, man = raw.man || 0, ov = raw.ov != null ? raw.ov : null;
     var any = sync != null || man || estSum || ov != null;
     return { any: any, sync: sync, man: man, est: est, estSum: estSum, ov: ov, extra: ov != null ? Math.max(0, ov - (sync || 0)) : man + estSum, total: ov != null ? ov : (sync || 0) + man + estSum };
@@ -75,7 +90,7 @@
       var d = di.value || App.today(), x = App.stepsOf(d), man = App.num(mi.value), ov = oi.value.trim() === '' ? null : App.num(oi.value);
       var tot = ov != null ? ov : (x.sync || 0) + man + x.estSum;
       el.querySelector('#se-info').innerHTML = '<div class="row between"><span class="small muted">' + esc(t('Synced (watch / phone)')) + '</span><b>' + (x.sync != null ? fmt(x.sync) : '—') + '</b></div>' +
-        x.est.map(function (e) { return '<div class="row between"><span class="small muted">' + esc(e.n) + ' (' + esc(t('est.')) + ')</span><b>+' + fmt(e.v) + '</b></div>'; }).join('') +
+        x.est.map(function (e) { return '<div class="row between"><span class="small muted">' + esc(e.n) + ' (' + esc(t('est.')) + ')</span><span><b>+' + fmt(e.v) + '</b> <button class="icon-btn sm" data-act="est-del" data-d="' + d + '"' + (e.sid ? ' data-sid="' + esc(e.sid) + '"' : ' data-cx="' + e.i + '"') + ' aria-label="' + esc(t('Delete')) + '">' + I.trash + '</button></span></div>'; }).join('') +
         '<div class="row between"><span class="small muted">' + esc(t('manual')) + '</span><b>+' + fmt(man) + '</b></div>' +
         '<div class="row between" style="margin-top:6px;border-top:1px solid var(--line,#333);padding-top:6px"><span>' + esc(t('Total')) + (ov != null ? ' (' + esc(t('set by hand')) + ')' : '') + '</span><b id="se-tot">' + fmt(tot) + '</b></div>';
     }
@@ -121,30 +136,79 @@
   if (oHealth) V.health = function () { var h = oHealth.apply(this, arguments); return h.replace('<div class="grid3">', block() + '<div class="grid3">'); };
   if (V.progress) { var oProg = V.progress; V.progress = function () { var h = oProg.apply(this, arguments); var mk = '<a class="btn sm" href="#/health">' + I.heart + esc(t('Garmin / Apple Health')) + '</a>'; return h.replace(mk, btn() + mk); }; }
 
-  // ---------- sport logger: date + watch-not-worn estimate ----------
+  // ---------- sport logger: date, intensity, live step estimate, add-to-total toggle ----------
+  function lvlName(i) { return [t('Light'), 'Medium', t('Intense')][i]; }
+  App.removeSession = function (id) {
+    var ath = S.me, i = -1;
+    (ath.sessions || []).forEach(function (s, k) { if (s.id === id) i = k; });
+    if (i < 0) return false;
+    ath.sessions.splice(i, 1);
+    App.save(); if (App.gameSweep) App.gameSweep(); App.rerender();
+    return true;
+  };
+  App.sessExtra = function (s) { return s && s.estSteps > 0 ? ' · +' + fmt(s.estSteps) + ' ' + t('steps') : ''; };
+  App.sessActions = function (s) {
+    if (!s || (s.type !== 'sport' && !(s.estSteps > 0))) return '';
+    return '<button class="icon-btn sm" data-act="sess-del" data-id="' + esc(s.id) + '" aria-label="' + esc(t('Delete session')) + '">' + I.trash + '</button>';
+  };
+  A['sess-del'] = function (el) {
+    var id = el && el.dataset && el.dataset.id;
+    App.confirm(t('Delete session'), t('This also removes the estimated steps from that day.'), t('Delete'), true).then(function (ok) {
+      if (ok && App.removeSession(id)) App.toast(t('Session removed'));
+    });
+  };
+  A['est-del'] = function (el) {
+    var d = el.dataset.d, sid = el.dataset.sid, cxi = el.dataset.cx;
+    App.confirm(t('Delete session'), t('This also removes the estimated steps from that day.'), t('Delete'), true).then(function (ok) {
+      if (!ok) return;
+      if (sid) {
+        if (App.removeSession(sid)) App.toast(t('Session removed'));
+        return;
+      }
+      var h = H(), cur = h.days[d]; if (!cur || !cur.cx) return;
+      cur.cx.splice(+cxi, 1); if (!cur.cx.length) delete cur.cx;
+      if (!Object.keys(cur).length) delete h.days[d];
+      App.save(); if (App.gameSweep) App.gameSweep(); App.rerender(); App.toast(t('Session removed'));
+    });
+  };
   var oLog = App.sportLogger;
   App.sportLogger = function (pre) {
     var r = oLog.apply(this, arguments), sh = document.querySelector('.overlay:last-of-type .sheet'); if (!sh) return r;
     var save = sh.querySelector('#sl-save'), sub = sh.querySelector('.sheet-head p');
     var box = document.createElement('div');
     box.innerHTML = '<label class="field"><span class="label">' + esc(t('Date')) + '</span><input class="input" type="date" id="sl-date" min="' + App.isoAdd(App.today(), -30) + '" max="' + App.today() + '" value="' + App.today() + '"></label>' +
-      '<div id="sl-wbox" style="display:none"><label class="row" style="gap:10px;margin:4px 0 8px"><input type="checkbox" id="sl-nowatch" style="width:22px;height:22px;accent-color:var(--accent)"><span>' + esc(t('Watch not worn — add estimated steps')) + '</span></label>' +
-      '<label class="field" id="sl-estf" style="display:none"><span class="label">' + esc(t('Estimated steps')) + '</span><input class="input" id="sl-est" inputmode="numeric"><span class="tiny muted" id="sl-esth"></span></label></div>';
+      '<div class="row" id="sl-lv" style="gap:6px;margin:8px 0;flex-wrap:wrap"></div>' +
+      '<p class="small" id="sl-estline" style="margin:4px 0 8px"></p>' +
+      '<label class="row" id="sl-addrow" style="gap:10px;margin:4px 0 12px;align-items:center"><input type="checkbox" id="sl-addsteps" checked style="width:22px;height:22px;accent-color:var(--accent)"><span>' + esc(t('Add to my steps')) + '</span></label>';
     save.parentNode.insertBefore(box, save);
-    var typ = (pre && pre.type) || 'mma', touched = false, nw = sh.querySelector('#sl-nowatch'), est = sh.querySelector('#sl-est'), dt = sh.querySelector('#sl-date');
+    var typ = (pre && pre.type) || 'mma', dt = sh.querySelector('#sl-date'), addEl = sh.querySelector('#sl-addsteps'), rpeEl = sh.querySelector('#sl-rpe'), durEl = sh.querySelector('#sl-dur');
+    function mins() { return App.num(durEl.value); }
+    function rpe() { return +rpeEl.value || 7; }
+    function drawLv() {
+      var lv = App.stepLevel(rpe());
+      sh.querySelector('#sl-lv').innerHTML = [0, 1, 2].map(function (i) {
+        var spm = App.stepSpm(typ, null, i);
+        return '<button type="button" class="btn sm' + (i === lv ? ' primary' : '') + '" data-lv="' + i + '">' + esc(lvlName(i)) + (spm ? ' (' + spm + '/min)' : '') + '</button>';
+      }).join('');
+      sh.querySelectorAll('#sl-lv [data-lv]').forEach(function (b) {
+        b.onclick = function () { rpeEl.value = [3, 6, 9][ +b.dataset.lv ]; rpeEl.dispatchEvent(new Event('input', { bubbles: true })); upd(); };
+      });
+    }
     function upd() {
-      var on = !!App.STEP_RATES[typ]; sh.querySelector('#sl-wbox').style.display = on ? '' : 'none';
-      sh.querySelector('#sl-estf').style.display = on && nw.checked ? '' : 'none';
-      if (on) sh.querySelector('#sl-esth').textContent = t('Estimate: {r} steps/min × minutes, adjusted for intensity. You can change it.', { r: App.STEP_RATES[typ] });
-      if (on && !touched) est.value = App.estSteps(typ, App.num(sh.querySelector('#sl-dur').value), +sh.querySelector('#sl-rpe').value);
+      var on = !!App.stepSpm(typ, 7), n = App.estSteps(typ, mins(), rpe());
+      sh.querySelector('#sl-addrow').style.display = on ? '' : 'none';
+      sh.querySelector('#sl-estline').style.display = on ? '' : 'none';
+      if (on) sh.querySelector('#sl-estline').innerHTML = t('≈ {n} steps', { n: fmt(n) }).replace(fmt(n), '<b style="color:#d4af37">' + fmt(n) + '</b>') +
+        '<span class="tiny muted"> · ' + App.stepSpm(typ, rpe()) + '/min</span>';
+      drawLv();
     }
     sh.querySelectorAll('#sl-type button').forEach(function (b) { b.addEventListener('click', function () { typ = b.dataset.k; setTimeout(upd); }); });
-    sh.querySelector('#sl-dur').addEventListener('input', upd); sh.querySelector('#sl-rpe').addEventListener('input', upd);
-    nw.onchange = upd; est.oninput = function () { touched = true; };
+    durEl.addEventListener('input', upd); rpeEl.addEventListener('input', upd);
     dt.onchange = function () { if (sub) sub.textContent = F.fmtDay(dt.value || App.today()); };
     var oSave = save.onclick;
     save.onclick = function () {
-      var ath = S.me, n0 = ath.sessions.length, d = dt.value && dt.value <= App.today() ? dt.value : App.today(), add = App.STEP_RATES[typ] && nw.checked ? Math.min(30000, Math.round(App.num(est.value))) : 0;
+      var ath = S.me, n0 = ath.sessions.length, d = dt.value && dt.value <= App.today() ? dt.value : App.today();
+      var add = App.stepSpm(typ, rpe()) && addEl.checked ? Math.min(30000, App.estSteps(typ, mins(), rpe())) : 0;
       oSave.apply(this, arguments);
       if (ath.sessions.length > n0) {
         var s = ath.sessions[ath.sessions.length - 1];
@@ -170,7 +234,7 @@
     return '<div class="card row" style="margin-bottom:12px"><div class="grow"><b>👣 Mijn stappendoel</b><div class="tiny muted">' + App.stepGoal(S.me).toLocaleString('nl-NL') + ' per dag · alleen jouw account</div></div><button class="btn sm" data-act="step-goal">Wijzigen</button></div>' + h; };
 
   // v3.30: prominent steps card on Today + cardio → step-equivalents (stored per day in health.days[d].cx, never touched by Shortcut sync)
-  var CX = { bike: ['🚴', 'Fietsen', [130, 160, 190]], cross: ['🏃', 'Crosstrainer', [160, 180, 200]], row: ['🚣', 'Roeien', [140, 160, 180]] }, LV = ['Rustig', 'Gemiddeld', 'Zwaar'];
+  var CX = { bike: ['🚴', 'Fietsen', App.STEP_SPM.cycling], cross: ['🏃', 'Crosstrainer', App.STEP_SPM.cross], row: ['🚣', 'Roeien', App.STEP_SPM.row] }, LV = [t('Light'), 'Medium', t('Intense')];
   function stepsCard() {
     var x = App.stepsOf(), g = App.stepGoal(S.me), tot = Math.round(x.total || 0), pc = Math.min(100, Math.round(tot / g * 100)), left = Math.max(0, g - tot);
     var cx = x.est.filter(function (e) { return e.cx; }).reduce(function (a, e) { return a + e.v; }, 0), other = x.estSum - cx + (x.man || 0);
