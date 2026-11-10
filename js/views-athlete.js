@@ -453,19 +453,39 @@
   A['change-plan'] = function (el) { App.sheet(App.sheetHead(t('Choose a plan')) + App.templatePicker(el.dataset.o)); };
   A['day-sheet'] = function (el) {
     var i = +el.dataset.i, d = App.dayOf(me().plan, i);
-    App.sheet(App.sheetHead(t(d.title), t(d.focus || '')) + (d.items.length ? '<div class="list">' + d.items.map(function (it) { var ex = D.BY_ID[it.ex]; return '<div class="list-item"><div class="grow"><b>' + esc(ex ? ex.name : it.ex) + '</b><div class="tiny muted">' + it.sets + ' × ' + esc(it.reps) + (ex && ex.track === 'time' ? ' s' : ex && ex.track === 'min' ? ' min' : '') + ' · ' + esc(t('rest')) + ' ' + it.rest + 's · RPE ' + it.rpe + (it.note ? '<br>📝 ' + esc(it.note) : '') + '</div></div><button class="icon-btn" data-act="ex-demo" data-ex="' + it.ex + '" aria-label="Uitleg">?</button></div>'; }).join('') + '</div><button class="btn primary lg block" style="margin-top:14px" data-act="start-workout" data-day="' + i + '">' + I.play + esc(t('Start workout')) + '</button>' : '<p class="muted">' + esc(t('Rest, walk, sleep, eat your protein.')) + '</p>'));
+    App.sheet(App.sheetHead(t(d.title), t(d.focus || '')) + (d.items.length ? '<div class="list">' + d.items.map(function (it, ii) { var ex = D.BY_ID[it.ex]; return '<div class="list-item"><div class="grow"><b>' + esc(ex ? ex.name : it.ex) + '</b><div class="tiny muted">' + it.sets + ' × ' + esc(it.reps) + (ex && ex.track === 'time' ? ' s' : ex && ex.track === 'min' ? ' min' : '') + ' · ' + esc(t('rest')) + ' ' + it.rest + 's · RPE ' + it.rpe + (it.note ? '<br>📝 ' + esc(it.note) : '') + (ex && ex.cue ? '<br>' + esc(ex.cue) : '') + '</div></div><div class="row" style="gap:6px"><button class="btn sm" data-act="day-swap" data-day="' + i + '" data-i="' + ii + '">🔄 ' + esc(t('Swap exercise')) + '</button><button class="icon-btn" data-act="ex-demo" data-ex="' + it.ex + '" aria-label="Uitleg">?</button></div></div>'; }).join('') + '</div><button class="btn primary lg block" style="margin-top:14px" data-act="start-workout" data-day="' + i + '">' + I.play + esc(t('Start workout')) + '</button>' : '<p class="muted">' + esc(t('Rest, walk, sleep, eat your protein.')) + '</p>'));
+  };
+  A['day-swap'] = function (el) {
+    var i = +el.dataset.day, ii = +el.dataset.i, plan = me().plan;
+    if (!plan || !plan.days[i] || !plan.days[i].items[ii]) return;
+    var item = plan.days[i].items[ii];
+    App.openExSwap(item.ex, { planOnly: true, onPlan: function (nx) {
+      item.ex = nx.id; App.save(); App.toast(t('Plan updated')); App.closeSheets();
+      A['day-sheet']({ dataset: { i: String(i) } });
+    } });
   };
   A['ex-library'] = function () { App.exercisePicker(null); };
   App.exercisePicker = function (onPick) {
-    var s = App.sheet(App.sheetHead(t('Exercise library'), D.EXERCISES.length + ' ' + t('exercises with coaching cues')) + '<input class="input" id="exq" type="search" placeholder="' + esc(t('Search exercise or muscle')) + '"><div class="list" id="exres" style="margin-top:10px"></div>');
+    var DD = D || window.FBG_DATA, chips = (DD.GROUP_CHIPS || []);
+    var s = App.sheet(App.sheetHead(t('Exercise library'), DD.EXERCISES.length + ' ' + t('exercises with coaching cues')) +
+      '<input class="input" id="exq" type="search" placeholder="' + esc(t('Search exercise or muscle')) + '">' +
+      '<div class="chips" id="exm" style="margin:10px 0"><button class="chip sm on" data-m="">' + esc(t('All')) + '</button>' + chips.map(function (c) { return '<button class="chip sm" data-m="' + esc(c[0]) + '">' + esc(t(c[1])) + '</button>'; }).join('') + '</div>' +
+      '<div class="list" id="exres"></div>');
+    var m = '';
+    function blob(e) { return ((DD.searchBlob ? DD.searchBlob(e) : (e.name + ' ' + e.muscle + ' ' + (e.equip || []).join(' '))) + ' ' + t(e.muscle)).toLowerCase(); }
     function render() {
       var q = s.el.querySelector('#exq').value.toLowerCase();
-      s.el.querySelector('#exres').innerHTML = D.EXERCISES.filter(function (e) { return !q || (e.name + ' ' + e.muscle + ' ' + e.equip.join(' ')).toLowerCase().indexOf(q) !== -1; }).map(function (e) {
-        return '<button class="list-item" data-id="' + e.id + '"><div class="grow"><b>' + esc(e.name) + '</b><div class="tiny muted">' + esc(e.muscle) + ' · ' + esc(e.equip.join(', ')) + '</div></div><span class="chev">' + (onPick ? '+' : '›') + '</span></button>'; }).join('');
+      var list = DD.EXERCISES.filter(function (e) { return (!m || (DD.groupOf && DD.groupOf(e) === m)) && (!q || blob(e).indexOf(q) !== -1); });
+      var item = App.exItemHtml || function (e) { return '<div class="grow"><b>' + esc(e.name) + '</b><div class="tiny muted">' + esc(t(e.muscle)) + ' · ' + esc((e.equip || []).join(', ')) + '</div></div>'; };
+      s.el.querySelector('#exres').innerHTML = list.map(function (e) {
+        return '<button class="list-item" data-id="' + e.id + '">' + item(e) + '<span class="chev">' + (onPick ? '+' : '›') + '</span></button>';
+      }).join('') || '<p class="small muted">' + esc(t('No exercises found.')) + '</p>';
     }
-    s.el.querySelector('#exq').oninput = render; render();
+    s.el.querySelector('#exq').oninput = render;
+    s.el.querySelector('#exm').onclick = function (e) { var b = e.target.closest('[data-m]'); if (!b) return; m = b.dataset.m; s.el.querySelectorAll('#exm .chip').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
+    render();
     s.el.querySelector('#exres').onclick = function (e) {
-      var b = e.target.closest('[data-id]'); if (!b) return; var ex = D.BY_ID[b.dataset.id];
+      var b = e.target.closest('[data-id]'); if (!b) return; var ex = DD.BY_ID[b.dataset.id];
       if (onPick) { s.close(); onPick(ex); return; }
       App.exDemo(ex);
     };

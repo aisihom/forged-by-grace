@@ -5,14 +5,21 @@
 
   // Equipment available per training setup
   var MODES = {
-    gym:  { label: 'Full gym', equip: ['barbell', 'dumbbell', 'machine', 'cable', 'kettlebell', 'band', 'bodyweight', 'bar', 'cardio', 'rope'] },
+    gym:  { label: 'Full gym', equip: ['barbell', 'dumbbell', 'machine', 'cable', 'kettlebell', 'band', 'bodyweight', 'bar', 'cardio', 'rope', 'smith'] },
     home: { label: 'Home (dumbbells / bands)', equip: ['dumbbell', 'kettlebell', 'band', 'bodyweight', 'rope'] },
     bw:   { label: 'Bodyweight only', equip: ['bodyweight'] }
   };
 
   // track: weight = kg + reps · reps = reps only · time = seconds · min = minutes
-  function ex(id, name, muscle, pattern, equip, kind, track, cues, mistake) {
-    return { id: id, name: name, muscle: muscle, pattern: pattern, equip: equip, kind: kind, track: track, cues: cues, mistake: mistake };
+  function ex(id, name, muscle, pattern, equip, kind, track, cues, mistake, extra) {
+    var o = { id: id, name: name, muscle: muscle, pattern: pattern, equip: equip, kind: kind, track: track, cues: cues, mistake: mistake };
+    if (extra) {
+      if (extra.nameNl) o.nameNl = extra.nameNl;
+      if (extra.secondary) o.secondary = extra.secondary;
+      if (extra.level) o.level = extra.level;
+      if (extra.cue) o.cue = extra.cue;
+    }
+    return o;
   }
 
   var EXERCISES = [
@@ -468,5 +475,56 @@
     5: ['upA', 'loA', 'cond', 'upB', 'loB', 'active', 'rest']
   };
 
-  root.FBG_DATA = { MODES: MODES, EXERCISES: EXERCISES, BY_ID: BY_ID, SLOTS: SLOTS, DAYS: DAYS, WEEKS: WEEKS };
+  // Canonical body-part groups so alternatives and chips stay consistent
+  // even when the display muscle is more specific (e.g. Upper chest → chest).
+  var GROUP_OF = {
+    'Legs': 'quads', 'Quads': 'quads',
+    'Hamstrings': 'hamstrings', 'Hamstrings & glutes': 'hamstrings',
+    'Glutes': 'glutes',
+    'Adductors': 'adductors',
+    'Calves': 'calves',
+    'Chest': 'chest', 'Upper chest': 'chest',
+    'Back': 'back', 'Upper back': 'back', 'Lats': 'back',
+    'Shoulders': 'shoulders', 'Front delts': 'shoulders', 'Side delts': 'shoulders',
+    'Rear delts': 'rear-delts',
+    'Biceps': 'biceps', 'Biceps & forearms': 'biceps',
+    'Triceps': 'triceps',
+    'Forearms': 'forearms',
+    'Core': 'core', 'Obliques': 'core', 'Grip & core': 'core', 'Abs': 'core',
+    'Lower back': 'lower-back',
+    'Full body': 'full-body',
+    'Conditioning': 'conditioning', 'Cardio (low intensity)': 'conditioning', 'Mobility': 'conditioning'
+  };
+  var GROUP_CHIPS = [
+    ['chest', 'Chest'], ['back', 'Back'], ['shoulders', 'Shoulders'], ['rear-delts', 'Rear delts'],
+    ['biceps', 'Biceps'], ['triceps', 'Triceps'], ['forearms', 'Forearms'],
+    ['quads', 'Quads'], ['hamstrings', 'Hamstrings'], ['glutes', 'Glutes'],
+    ['calves', 'Calves'], ['adductors', 'Adductors'],
+    ['core', 'Core'], ['lower-back', 'Lower back'], ['full-body', 'Full body'], ['conditioning', 'Conditioning']
+  ];
+  function groupOf(e) { return (e && GROUP_OF[e.muscle]) || (e && e.muscle) || ''; }
+  function searchBlob(e) {
+    return [e.id, e.name, e.nameNl || '', e.muscle, e.secondary || '', e.cue || '', (e.cues || []).join(' '), (e.equip || []).join(' '), e.level || '', e.pattern || '', e.mistake || ''].join(' ').toLowerCase();
+  }
+
+  root.FBG_DATA = {
+    MODES: MODES, EXERCISES: EXERCISES, BY_ID: BY_ID, SLOTS: SLOTS, DAYS: DAYS, WEEKS: WEEKS,
+    GROUP_OF: GROUP_OF, GROUP_CHIPS: GROUP_CHIPS, groupOf: groupOf, searchBlob: searchBlob,
+    addExercises: function (arr) {
+      (arr || []).forEach(function (e) {
+        if (!e || !e.id || BY_ID[e.id]) return;
+        EXERCISES.push(e);
+        BY_ID[e.id] = e;
+      });
+    },
+    applyMeta: function (map) {
+      Object.keys(map || {}).forEach(function (id) {
+        var e = BY_ID[id], m = map[id]; if (!e || !m) return;
+        if (m.nameNl && !e.nameNl) e.nameNl = m.nameNl;
+        if (m.secondary && !e.secondary) e.secondary = m.secondary;
+        if (m.level && !e.level) e.level = m.level;
+        if (m.cue && !e.cue) e.cue = m.cue;
+      });
+    }
+  };
 })(typeof window !== 'undefined' ? window : this);

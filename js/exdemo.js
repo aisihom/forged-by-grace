@@ -103,12 +103,27 @@
   var FR3 = { 'prone-ytw': ['Y-positie', 'T-positie', 'W-positie'] };
   var NOPH = { 'pike-push-up': 1, 'prone-lat-pull': 1, 'hollow-hold': 1, 'burpee': 1, 'shadow-boxing': 1, 'prone-ytw': 1 };
   var IMPERFECT = {}; 'burpee prone-lat-pull pike-push-up hollow-hold shadow-boxing'.split(' ').forEach(function (k) { IMPERFECT[k] = 1; });
+  function subLine(ex) {
+    var parts = [t(ex.muscle)];
+    if (ex.secondary) parts.push(ex.secondary);
+    if (App.exLevel) { var lv = App.exLevel(ex); if (lv) parts.push(lv); }
+    if (ex.nameNl && ex.nameNl.toLowerCase() !== ex.name.toLowerCase()) parts.unshift(ex.nameNl);
+    return parts.join(' · ');
+  }
+  function altsBlock(ex) {
+    var alts = App.altsFor ? App.altsFor(ex).slice(0, 8) : [];
+    if (!alts.length) return '';
+    return '<h3 class="h3 exd-h">' + esc(t('Alternatives')) + '</h3><div class="list">' + alts.map(function (e) {
+      return '<button class="list-item" data-act="ex-demo" data-ex="' + e.id + '"><div class="grow"><b>' + esc(e.name) + '</b><div class="tiny muted">' + esc(t(e.muscle)) + (e.equip && e.equip.length ? ' · ' + esc((App.exEquip ? App.exEquip(e) : e.equip.join(', '))) : '') + '</div></div><span class="chev">›</span></button>';
+    }).join('') + '</div>';
+  }
   App.exDemo = function (ex) {
     if (!ex) return;
     var x = XI.X[ex.id];
-    if (!x) return App.sheet(App.sheetHead(ex.name, ex.muscle) + '<ol class="plain-list">' + ex.cues.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>');
+    var meta = (ex.cue ? '<p class="suggest">' + esc(ex.cue) + '</p>' : '') + (ex.mistake ? '<p class="tiny muted">' + esc(t('Common mistake')) + ': ' + esc(ex.mistake) + '</p>' : '');
+    if (!x) return App.sheet(App.sheetHead(ex.name, subLine(ex)) + meta + '<ol class="plain-list">' + (ex.cues || []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' + altsBlock(ex));
     var src = 'assets/ex/' + ex.id;
-    var h = App.sheetHead(ex.name, ex.muscle) +
+    var h = App.sheetHead(ex.name, subLine(ex)) +
       '<div class="exd-fig' + (FR3[ex.id] ? ' exd-3' : '') + (NOPH[ex.id] ? '' : ' exd-ph') + '" data-exd>' + (ex.id === 'prone-ytw' ? [ytwSvg()] : []).concat(ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k) { return k.length > 1 ? k : null; }).filter(Boolean).join('') + (ex.id === 'prone-ytw' ? [] : ['a', 'b']).map(function (k, i) { var lb = FR3[ex.id] ? FR3[ex.id][i] : (k === 'a' ? 'startpositie' : 'eindpositie'); return '<picture><source type="image/webp" srcset="' + src + '-' + k + '.webp?v=3.4.0"><img class="exd-' + k + '" src="' + src + '-' + k + '.jpg?v=3.4.0" width="' + (NOPH[ex.id] ? 448 : 640) + '" height="' + (NOPH[ex.id] ? 504 : 480) + '" loading="eager" decoding="sync" alt="' + esc(ex.name) + ' — ' + lb + '"></picture>'; }).join('') +
       (FR3[ex.id] ? '<div class="exd-lbl"><span class="exd-l1">Y · 135°</span><span class="exd-l2">T · 90°</span><span class="exd-l3">W · knijpen</span></div>' : '<div class="exd-lbl"><span class="exd-la">Start</span><span class="exd-lb">Eind</span></div>') + '<button class="exd-pp" type="button" aria-label="Pauze/afspelen">❚❚</button></div>' +
       '<div class="exd-map">' + App.muscleMap(x.p, x.s, x.a) + '<div class="exd-leg"><span><i class="lg-p"></i>Agonist</span><span><i class="lg-s"></i>Ondersteunend</span>' + (x.a && x.a.length ? '<span><i class="lg-x"></i>Antagonist</span>' : '') + '</div></div>' +
@@ -118,6 +133,7 @@
       '<h3 class="h3 exd-h">Stappenplan — hier let je op</h3><ol class="exd-steps">' + x.steps.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ol>' +
       (!IMPERFECT[ex.id] ? '' : '<p class="tiny muted">De gekleurde spierkaart is leidend; de illustratie toont de beweging van start- naar eindpositie.</p>') +
       (NOPH[ex.id] ? '' : '<p class="tiny muted">Foto’s: free-exercise-db (publiek domein) · spieren gecontroleerd met free-exercise-db, wger en ExRx.</p>');
+    h += meta + altsBlock(ex);
     var s = App.sheet(h, { label: ex.name });
     s.el.querySelectorAll('.exd-fig img').forEach(function (im) { im.onerror = function () { if (!im.dataset.retry) { im.dataset.retry = 1; im.src = im.src.split('?')[0] + '?r=' + Date.now(); } }; });
     var fig = s.el.querySelector('[data-exd]'), pp = s.el.querySelector('.exd-pp');
