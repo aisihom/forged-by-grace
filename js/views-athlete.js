@@ -318,18 +318,18 @@
     var s = App.sheet(App.sheetHead(title || t('Add food')) +
       '<input class="input" id="fq" type="search" enterkeyhint="search" placeholder="' + esc(t('Search millions of foods & brands, e.g. kwark, AH pindakaas')) + '" autocomplete="off">' +
       '<div class="chips" id="fcats" style="margin:10px 0">' + Object.keys(FD.CATS).map(function (k) { return '<button class="chip sm" data-c="' + k + '">' + esc(t(FD.CATS[k])) + '</button>'; }).join('') + '</div>' +
-      (FD.REGION_FILTERS ? '<label class="field" style="margin:0 0 8px"><span class="label">' + esc(t('Region')) + '</span><select class="input" id="freg"><option value="">' + esc(t('All regions')) + '</option>' + FD.REGION_FILTERS.map(function (r) { return '<option value="' + esc(r[0]) + '">' + esc(t(r[1])) + '</option>'; }).join('') + '</select></label><p class="tiny muted" style="margin:0 0 8px">' + esc(t('Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.')) + '</p>' : '') +
+      (FD.REGION_FILTERS ? '<label class="field" style="margin:0 0 8px"><span class="label">' + esc(t('Region')) + '</span><select class="input" id="freg"><option value="">' + esc(t('All regions')) + '</option>' + FD.REGION_FILTERS.map(function (r) { return '<option value="' + esc(r[0]) + '">' + esc(t(r[1])) + '</option>'; }).join('') + '</select></label><p class="tiny muted" style="margin:0 0 8px">' + esc(t('Tip: search a local name, type Kippie, or pick a region or filter.')) + '</p>' : '') +
       '<div id="fonl"></div><div class="list" id="fres"></div>');
     var cat = '', reg = '', timer = null, searcher = null, onlineItems = [], onlineState = '', lastQ = '';
     function norm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
     function hay(f) { return f._h || (f._h = norm(f.en + ' ' + f.nl + ' ' + (f.al || '') + ' ' + (f.brand || '') + ' ' + (f.rgName || '') + ' ' + (f.rg || '') + ' ' + ((FD.REGIONS && FD.REGIONS[f.rg]) || ''))); }
     function matchReg(f) {
       if (!reg) return true;
-      if (reg === 'latam') return !!f.rg;
+      if (reg === 'latam') return !!f.rg && f.rg !== 'kippie';
       var row = (FD.REGION_FILTERS || []).filter(function (r) { return r[0] === reg; })[0];
       var codes = row ? row[2] : reg;
       if (codes === 'CAR') return (FD.CARIBBEAN_RG || []).indexOf(f.rg) !== -1;
-      if (codes === '*') return !!f.rg;
+      if (codes === '*') return !!f.rg && f.rg !== 'kippie';
       if (Object.prototype.toString.call(codes) === '[object Array]') return codes.indexOf(f.rg) !== -1;
       return f.rg === codes || f.rg === reg;
     }

@@ -530,10 +530,10 @@ window.FBG_I18N = {
 /* v2.3 food search */
 (function (L) {
   Object.assign(L.nl = L.nl || {}, {
-    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Zoek in miljoenen producten & merken, bv. sopi di piska, keshi yena, kwark',
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Zoek in miljoenen producten & merken, bv. Kippie, sopi di piska, kwark',
     'Region': 'Regio',
     'All regions': 'Alle regio\'s',
-    'Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.': 'Tip: zoek op de lokale naam, zoals sopi di piska of karni stoba ku aros, of kies een regio.',
+    'Tip: search a local name, type Kippie, or pick a region or filter.': 'Tip: zoek op de lokale naam, typ Kippie, of kies een regio of filter.',
     'Soups': 'Soepen',
     'Caribisch & Latijns-Amerika': 'Caribisch & Latijns-Amerika',
     'Heel het Caribisch gebied': 'Heel het Caribisch gebied',
@@ -562,10 +562,10 @@ window.FBG_I18N = {
     'Meat & poultry': 'Vlees & gevogelte', 'Fish, eggs & plant protein': 'Vis, eieren & plantaardig eiwit', 'built-in foods': 'ingebouwde producten'
   });
   Object.assign(L.es = L.es || {}, {
-    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Busca alimentos, p. ej. sopi di piska, keshi yena',
+    'Search millions of foods & brands, e.g. kwark, AH pindakaas': 'Busca alimentos, p. ej. Kippie, sopi di piska, keshi yena',
     'Region': 'Región',
     'All regions': 'Todas las regiones',
-    'Tip: search a local name such as sopi di piska or karni stoba ku aros, or pick a region.': 'Consejo: busca el nombre local, como sopi di piska o karni stoba ku aros, o elige una región.',
+    'Tip: search a local name, type Kippie, or pick a region or filter.': 'Consejo: busca el nombre local, escribe Kippie, o elige una región.',
     'Soups': 'Sopas',
     'Caribisch & Latijns-Amerika': 'Caribe y Latinoamérica',
     'Heel het Caribisch gebied': 'Todo el Caribe',
