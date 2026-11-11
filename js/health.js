@@ -12,12 +12,20 @@
   // ---------------- merge ----------------
   // days: { iso: {steps, weight, fat, rhr, kcal} }, workouts: [{start(ms), date, sport, dur(s), dist(km), kcal, hr, src}]
   App.mergeHealth = function (days, workouts, src) {
-    var h = H(), ath = S.me, res = { days: 0, weights: 0, workouts: 0 }, cut = cutoff();
+    var h = H(), ath = S.me, res = { days: 0, weights: 0, workouts: 0 }, cut = cutoff(), changed = false;
     Object.keys(days || {}).forEach(function (iso) {
       if (iso < cut || iso > App.today()) return;
-      var d = days[iso], cur = h.days[iso] = h.days[iso] || {};
-      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) { if (d[k] != null && isFinite(d[k])) { var nv = Math.round(d[k] * 10) / 10; if (k === 'steps' && cur.man && cur.steps == null && cur.man <= nv) delete cur.man; cur[k] = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv; } });
-      cur.src = src; res.days++;
+      var d = days[iso], cur = h.days[iso] = h.days[iso] || {}, dayHit = false, dayChanged = false;
+      ['steps', 'rhr', 'kcal', 'fat', 'weight'].forEach(function (k) {
+        if (d[k] == null || !isFinite(d[k])) return;
+        var nv = Math.round(d[k] * 10) / 10;
+        if (k === 'steps' && cur.man && cur.steps == null && cur.man <= nv) { delete cur.man; dayChanged = true; }
+        var next = (k === 'steps' || k === 'kcal') && cur[k] != null ? Math.max(cur[k], nv) : nv;
+        if (cur[k] !== next) { cur[k] = next; dayChanged = true; }
+        dayHit = true;
+      });
+      if (dayChanged) { cur.src = src; changed = true; }
+      if (dayHit) res.days++;
       if (d.weight) {
         var b = ath.body.filter(function (x) { return x.date === iso; })[0];
         if (!b) { ath.body.push({ date: iso, weight: Math.round(d.weight * 10) / 10, src: src }); res.weights++; }
@@ -36,6 +44,8 @@
       res.workouts++;
     });
     ath.sessions.sort(function (a, b) { return (a.endedAt || 0) - (b.endedAt || 0); });
+    if (res.workouts || res.weights) changed = true;
+    if (!changed) return res;
     h.last = new Date().toISOString(); h.sources[src] = h.last;
     var lw = ath.body.filter(function (b) { return b.weight; }).pop(); if (lw && ath.profile) ath.profile.weight = lw.weight;
     App.save(); return res;
@@ -324,6 +334,19 @@
     if (s != null) x.steps = s; if (w) x.weight = w > 300 ? w / 1000 : w; if (r) x.rhr = r; if (k != null) x.kcal = k; if (f) x.fat = f <= 1 ? f * 100 : f;
     var days = {}; days[d] = x; return { days: days, d: d, x: x, tok: App.extractHealthTok(q) };
   };
+  App.HEALTH_PUSH_URL = 'https://hdcpxmctilthjhdhhixw.supabase.co/rest/v1/rpc/health_push?apikey=sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg';
+  App.postHealthPush = function (tok, q) {
+    if (!tok || !q) return Promise.resolve(false);
+    var url = App.HEALTH_PUSH_URL, body = JSON.stringify({ p_token: tok, p_q: q });
+    try { if (typeof navigator !== 'undefined' && navigator.sendBeacon) navigator.sendBeacon(url, new Blob([body], { type: 'application/json' })); } catch (e) {}
+    function once() { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: body, keepalive: true, mode: 'cors', cache: 'no-store' }); }
+    return once().then(function (res) {
+      if (res && res.ok) return true;
+      return once().then(function (r2) { return !!(r2 && r2.ok); });
+    }).catch(function () {
+      return once().then(function (r3) { return !!(r3 && r3.ok); }).catch(function () { return false; });
+    });
+  };
   App.applyHealthLink = function (hash) {
     // Prefer the live URL (search/hash/href) so a cleared replaceState or encoded Shortcut link still works
     var raw = [hash, typeof location !== 'undefined' ? (location.search || '') : '', typeof location !== 'undefined' ? (location.hash || '') : '', typeof location !== 'undefined' ? (location.href || '') : ''].join('&');
@@ -332,11 +355,15 @@
     if (!S.role) S.role = 'athlete';
     App.mergeHealth(r.days, [], 'Shortcut');
     var tok = r.tok || App.extractHealthTok(raw) || S.me.hTok;
+    var q = 'd=' + r.d + Object.keys(r.x).map(function (k) { return '&' + k + '=' + r.x[k]; }).join('');
     if (tok && tok.length >= 20) {
-      var q = 'd=' + r.d + Object.keys(r.x).map(function (k) { return '&' + k + '=' + r.x[k]; }).join('');
       if (!S.me.hTok) { S.me.hTok = tok; App.save(); }
-      fetch('https://hdcpxmctilthjhdhhixw.supabase.co/rest/v1/rpc/health_push?apikey=sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p_token: tok, p_q: q }) })
-        .then(function (res) { App.toast(res.ok ? '☁️ Naar je coach gestuurd ✓' : '⚠️ Server-sync mislukt (sleutel?)'); }).catch(function () { App.toast('⚠️ Offline — server-sync mislukt'); });
+      App.postHealthPush(tok, q).then(function (ok) {
+        App.toast(ok ? '☁️ Naar je coach gestuurd ✓' : '⚠️ Server-sync mislukt (sleutel?)');
+        if (App.healthFlush) App.healthFlush().catch(function () {});
+      });
+    } else if (App.cloud && App.cloud.user && App.cloud.user() && App.healthFlush) {
+      App.healthFlush().then(function (n) { App.toast(n ? '☁️ Naar je coach gestuurd ✓' : '⚠️ Server-sync mislukt'); }).catch(function () { App.toast('⚠️ Offline — server-sync mislukt'); });
     } else if (!(App.cloud && App.cloud.user && App.cloud.user())) App.toast('⚠️ Alleen lokaal opgeslagen: zet je sync-sleutel (&k=…) in de Opdracht');
     var x = r.x, bits = [];
     if (x.steps != null) bits.push(x.steps.toLocaleString(S.lang) + ' ' + t('steps')); if (x.weight) bits.push(App.r1(x.weight) + ' kg'); if (x.rhr) bits.push(x.rhr + ' bpm'); if (x.kcal != null) bits.push(x.kcal + ' kcal');

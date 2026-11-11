@@ -63,13 +63,13 @@
 
   function start() {
     return sb.from('coaches').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
-      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) { selfTargets(myClient); push(true); } return coachPull().then(function () { subscribe(); if (myClient && App.healthSyncPull) App.healthSyncPull(); }); }); }
+      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) selfTargets(myClient); return coachPull().then(function () { return myClient && App.healthSyncPull ? App.healthSyncPull() : null; }).then(function () { return myClient && App.healthFlush ? App.healthFlush() : null; }).then(function () { if (myClient) push(true); subscribe(); }); }); }
       return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (r2) {
         myClient = r2.data || null; role = myClient ? 'client' : 'none';
         if (myClient) {
           if (localStorage.getItem('fbg.consent') && !myClient.consent_at) sb.rpc('give_consent').then(function () {});
-          applyPlan(myClient); push(true);
-          subscribe(); if (App.healthSyncPull) App.healthSyncPull();
+          applyPlan(myClient);
+          return (App.healthSyncPull ? App.healthSyncPull() : Promise.resolve()).then(function () { return App.healthFlush ? App.healthFlush() : null; }).then(function () { push(true); subscribe(); rer(); });
         }
         rer();
       });
@@ -185,7 +185,14 @@
   var rawSave = App.save;
   App.save = function () { var r = rawSave.apply(this, arguments); if (role === 'client') push(); if (role === 'coach') { planPush(); if (myClient) push(); } return r; };
   window.addEventListener('online', function () { push(true); });
-  document.addEventListener('visibilitychange', function () { if (!sb || !user) return; if (role === 'client' || (role === 'coach' && myClient)) push(true); if (document.visibilityState === 'visible') { if (role === 'coach') coachPull(true).catch(function () {}); if ((role === 'client' || myClient) && App.healthSyncPull) App.healthSyncPull().catch(function () {}); if (myClient) mergeRemoteGone().then(reconcilePhotos); } });
+  document.addEventListener('visibilitychange', function () {
+    if (!sb || !user) return;
+    if (document.visibilityState === 'visible') {
+      var p = role === 'coach' ? coachPull(true).catch(function () {}) : Promise.resolve();
+      if ((role === 'client' || myClient) && App.healthSyncPull) p = p.then(function () { return App.healthSyncPull(); }).then(function () { return App.healthFlush ? App.healthFlush() : null; }).catch(function () {});
+      p.then(function () { if (role === 'client' || (role === 'coach' && myClient)) push(true); if (myClient) mergeRemoteGone().then(reconcilePhotos); });
+    } else if (role === 'client' || (role === 'coach' && myClient)) push(true);
+  });
   window.addEventListener('pagehide', function () { if (role === 'client' || myClient) push(true); });
   setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 

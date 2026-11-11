@@ -14,14 +14,28 @@
   function fmtAt(iso) { return iso ? F.fmtDate(iso, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
 
   // ---------- data in: client side ----------
+  function clientId() {
+    var c = C(); if (!c) return null;
+    return (c.state && c.state().client) || (c.selfClientId && c.selfClientId()) || null;
+  }
+  function metricsOf(d) {
+    var y = {}, k, keys = ['steps', 'kcal', 'rhr', 'weight', 'sleep', 'wmin'];
+    if (!d) return y;
+    for (k = 0; k < keys.length; k++) if (d[keys[k]] != null && isFinite(+d[keys[k]])) y[keys[k]] = +d[keys[k]];
+    return y;
+  }
   App.applyHealthSync = function (row) {
     if (!row || !row.data || !row.data.days) return false;
     var last = row.data.last || row.updated_at;
-    var days = row.data.days, h, before = JSON.stringify((S.me.health && S.me.health.days) || {});
+    var days = row.data.days, h, before = JSON.stringify((S.me.health && S.me.health.days) || {}), extra = false;
     App.mergeHealth(days, [], 'Shortcut (auto)');
     h = S.me.health;
-    Object.keys(days).forEach(function (d) { var x = days[d]; if (h.days[d] && x.sleep != null) h.days[d].sleep = x.sleep; if (h.days[d] && x.wmin != null) h.days[d].wmin = x.wmin; });
-    var changed = before !== JSON.stringify(h.days || {});
+    Object.keys(days).forEach(function (d) {
+      var x = days[d], cur = h.days[d]; if (!cur || !x) return;
+      if (x.sleep != null && cur.sleep !== x.sleep) { cur.sleep = x.sleep; extra = true; }
+      if (x.wmin != null && cur.wmin !== x.wmin) { cur.wmin = x.wmin; extra = true; }
+    });
+    var changed = extra || before !== JSON.stringify(h.days || {});
     if (S.me.hsyncLast === last && !changed) return false;
     S.me.hsyncLast = last; App.save();
     if (changed && /^#\/(hlink|health|today|progress)?$/.test(location.hash || '#/today') && !document.querySelector('.sheet')) App.rerender();
@@ -31,19 +45,79 @@
   App.healthSyncPull = function () {
     var c = C(); if (!c || !c.sb) return Promise.resolve();
     // athlete client OR coach's own "Ik" client record
-    var cid = (c.state && c.state().client) || (c.selfClientId && c.selfClientId());
+    var cid = clientId();
     if (!cid) return Promise.resolve();
-    return c.sb.from('client_data').select('data,updated_at').eq('client_id', cid).eq('kind', 'health_sync').maybeSingle()
-      .then(function (r) { if (r.data) App.applyHealthSync(r.data); return r.data; });
+    return c.sb.from('client_data').select('kind,data,updated_at').eq('client_id', cid).in('kind', ['health_sync', 'health'])
+      .then(function (r) {
+        var rows = r.data || [], hs = null, hu = null;
+        rows.forEach(function (row) { if (row.kind === 'health_sync') hs = row; else if (row.kind === 'health') hu = row; });
+        if (hs) App.applyHealthSync(hs);
+        if (hu && hu.data && hu.data.days && App.mergeHealth) {
+          var slim = {};
+          Object.keys(hu.data.days).forEach(function (d) {
+            var x = hu.data.days[d], y = {};
+            if (!x) return;
+            if (x.steps != null) y.steps = x.steps;
+            if (x.kcal != null) y.kcal = x.kcal;
+            if (x.rhr != null) y.rhr = x.rhr;
+            if (x.sleep != null) y.sleep = x.sleep;
+            if (x.wmin != null) y.wmin = x.wmin;
+            if (Object.keys(y).length) slim[d] = y;
+          });
+          App.mergeHealth(slim, [], 'Live sync');
+        }
+        return hs || hu;
+      });
   };
-  // Pull server steps on open / focus so Today shows the higher of local vs server
+  // Upload local watch metrics so every install (PWA or Safari) can read them from the server.
+  // Never sends manual extras (man) or session estimates (estSteps).
+  var lastFlush = '';
+  App.healthFlush = function () {
+    var days = (S.me.health && S.me.health.days) || {}, out = {}, cut, n = 0, sig, c, tok, seq;
+    try { cut = App.isoAdd(App.today(), -90); } catch (e) { return Promise.resolve(0); }
+    Object.keys(days).forEach(function (d) {
+      if (d < cut) return;
+      var y = metricsOf(days[d]);
+      if (Object.keys(y).length) { out[d] = y; n++; }
+    });
+    if (!n) return Promise.resolve(0);
+    sig = JSON.stringify(out); if (sig === lastFlush) return Promise.resolve(0);
+    c = C();
+    if (c && c.sb && c.user && c.user()) {
+      return c.sb.rpc('health_push_mine', { p_days: out }).then(function (r) {
+        if (r && r.error) throw r.error;
+        lastFlush = sig; return n;
+      });
+    }
+    tok = S.me && S.me.hTok;
+    if (tok && tok.length >= 20 && App.postHealthPush) {
+      seq = Promise.resolve();
+      Object.keys(out).sort().forEach(function (d) {
+        var q = 'd=' + d + Object.keys(out[d]).map(function (k) { return '&' + k + '=' + out[d][k]; }).join('');
+        seq = seq.then(function () { return App.postHealthPush(tok, q); });
+      });
+      return seq.then(function (ok) { if (ok !== false) lastFlush = sig; return n; });
+    }
+    return Promise.resolve(0);
+  };
+  App.healthSyncBoot = function (tries) {
+    tries = tries || 0;
+    var c = C(), cid = clientId();
+    if (!c || !c.sb || !cid) {
+      if (tries < 25) setTimeout(function () { App.healthSyncBoot(tries + 1); }, 400);
+      return Promise.resolve();
+    }
+    return App.healthSyncPull().then(function () { return App.healthFlush(); }).catch(function () {});
+  };
+  // Pull server steps on open / resume / periodically so Today shows the higher of local vs server
   if (!window.__fbgHealthFocus) {
     window.__fbgHealthFocus = 1;
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && App.healthSyncPull) App.healthSyncPull().catch(function () {});
-    });
-    window.addEventListener('focus', function () { if (App.healthSyncPull) App.healthSyncPull().catch(function () {}); });
-    setTimeout(function () { if (App.healthSyncPull) App.healthSyncPull().catch(function () {}); }, 1200);
+    function bounce() { App.healthSyncBoot(0); }
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') bounce(); });
+    window.addEventListener('focus', bounce);
+    window.addEventListener('pageshow', bounce);
+    setTimeout(bounce, 400);
+    setInterval(function () { if (document.visibilityState === 'visible') bounce(); }, 180000);
   }
   function token(reset) {
     var c = C(); if (!isClient()) return Promise.reject(new Error('login'));
