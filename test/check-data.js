@@ -3,7 +3,7 @@
 var fs = require('fs'), path = require('path'), vm = require('vm');
 var T = require('./lib/check'), root = path.resolve(__dirname, '..');
 var sb = { console: console }; sb.window = sb; sb.self = sb; vm.createContext(sb);
-['js/data.js', 'js/exextra.js', 'js/exmedia.js', 'js/foods.js', 'js/foods-db.js', 'js/foods-caribbean.js', 'js/foods-kippie.js'].forEach(function (f) {
+['js/data.js', 'js/exextra.js', 'js/exmedia.js', 'js/foods.js', 'js/foods-db.js', 'js/foods-caribbean.js', 'js/foods-kippie.js', 'js/foods-rasabaru.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), sb, { filename: f });
 });
 var D = sb.FBG_DATA, FD = sb.FBG_FOODS, EX = D.EXERCISES, FOODS = FD.FOODS;

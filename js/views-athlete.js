@@ -325,11 +325,11 @@
     function hay(f) { return f._h || (f._h = norm(f.en + ' ' + f.nl + ' ' + (f.al || '') + ' ' + (f.brand || '') + ' ' + (f.rgName || '') + ' ' + (f.rg || '') + ' ' + ((FD.REGIONS && FD.REGIONS[f.rg]) || ''))); }
     function matchReg(f) {
       if (!reg) return true;
-      if (reg === 'latam') return !!f.rg && f.rg !== 'kippie';
+      if (reg === 'latam') return !!f.rg && f.rg !== 'kippie' && !(FD.BRAND_RG && FD.BRAND_RG[f.rg]);
       var row = (FD.REGION_FILTERS || []).filter(function (r) { return r[0] === reg; })[0];
       var codes = row ? row[2] : reg;
       if (codes === 'CAR') return (FD.CARIBBEAN_RG || []).indexOf(f.rg) !== -1;
-      if (codes === '*') return !!f.rg && f.rg !== 'kippie';
+      if (codes === '*') return !!f.rg && f.rg !== 'kippie' && !(FD.BRAND_RG && FD.BRAND_RG[f.rg]);
       if (Object.prototype.toString.call(codes) === '[object Array]') return codes.indexOf(f.rg) !== -1;
       return f.rg === codes || f.rg === reg;
     }
