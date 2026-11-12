@@ -435,14 +435,7 @@
       ['Automatisch elke dag: tab Automatisering → + → Tijdstip → 21:00 · Dagelijks → Voer direct uit → kies “Forged by Grace sync”.']
     ];
   };
-  A['h-help'] = function () {
-    var steps = App.shortcutSteps();
-    App.sheet(App.sheetHead(t('Shortcut sync (iPhone)'), t('A web app cannot read Apple Health directly. This free Shortcut sends today’s numbers to the app.')) +
-      '<ol class="steps">' + steps.map(function (s) { return '<li>' + esc(s[0]) + (s[1] ? '<code class="codebox">' + esc(s[1]) + '</code>' : '') + '</li>'; }).join('') + '</ol>' +
-      '<p class="tiny muted">' + esc(t('Tip: a value that is empty (for example no weight today) is simply skipped. Dutch number format (84,6 / 8.412) is understood.')) + '</p>' +
-      '<button class="btn block" id="h-copyurl">' + I.link + esc(t('Copy example link')) + '</button>');
-    document.getElementById('h-copyurl').onclick = function () { F.copyText(App.baseUrl() + '#health?d=' + App.today() + '&steps=8412&weight=84.6&rhr=58&kcal=520').then(function () { App.toast(t('Link copied')); }); };
-  };
+  A['h-help'] = function () { location.hash = '#/hlink/ios'; };
 
   // NL strings
   Object.assign(window.FBG_I18N.nl, {

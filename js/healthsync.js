@@ -7,6 +7,10 @@
   var App = window.App, S = App.S, F = App.F, esc = App.esc, t = App.t, I = App.I, V = App.views, A = App.acts;
   var BASE = 'https://hdcpxmctilthjhdhhixw.supabase.co/rest/v1/rpc/', KEY = 'sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg';
   var URL_IOS = BASE + 'health_push?apikey=' + KEY, URL_AND = BASE + 'health_webhook?apikey=' + KEY;
+  // One-tap install: an Apple-signed iCloud share. Must be published once from an iPhone
+  // (Linux cannot sign .shortcut files). Leave empty until that share exists.
+  var SHORTCUT_IOS = (window.FBG_CONFIG && window.FBG_CONFIG.iosShortcut) || '';
+  var SHORTCUT_NAME = 'FBG Sync';
   function nl() { return S.lang === 'nl'; }
   function L(a, b) { return nl() ? a : b; }
   function C() { return App.cloud; }
@@ -196,35 +200,59 @@
     }
     var login = isClient();
     if (dev === 'ios') {
-      o += '<h1 class="h1">iPhone · Apple Health</h1><p class="muted small">' + esc(L('Eén keer instellen (±5 min). Daarna gaat het elke avond vanzelf, ook als de app dicht is.', 'Set up once (±5 min). After that it runs every evening by itself, even with the app closed.')) + '</p>';
+      o += '<h1 class="h1">iPhone · Apple Health</h1>';
+      o += '<p class="muted small">' + esc(L('Eén keer instellen. Daarna gaan je stappen in de achtergrond naar FBG — Safari gaat ’s avonds niet meer open.', 'Set up once. After that, your steps go to FBG in the background — Safari will not open at night.')) + '</p>';
       o += status();
       if (!login) return o + needLogin();
-      o += step(1, L('Kopieer je 2 codes', 'Copy your 2 codes'), esc(L('Je hebt ze zo nodig in stap 3. Kopieer ze één voor één wanneer je ze plakt.', 'You need them in step 3. Copy them one at a time when you paste.')) + '<br>' + copyBtn('url-ios', L('Kopieer adres (URL)', 'Copy address (URL)')) + copyBtn('tok', L('Kopieer sleutel', 'Copy key')) + keyCard());
-      o += step(2, L('Maak de Opdracht (Shortcut)', 'Build the Shortcut'), '<ol class="plain-list small">' + [
-          'Open <b>Shortcuts</b> → tap <b>+</b>. ' + L('Naam', 'Name') + ': <b>FBG Sync</b>.',
-          'Tap <b>Add Action</b> → search <b>Find Health Samples</b>. ' + L('Zet', 'Set') + ': <b>Type: Steps</b>. Tap <b>Add Filter</b> → <b>Start Date</b> <b>is today</b>. <b style="color:#d4af37">' + L('GEEN Source-filter, Limit UIT, Sort by: niets.', 'NO Source filter, Limit OFF, no Sort.') + '</b>',
-          L('Daaronder', 'Below it') + ': <b>Calculate Statistics</b> → <b>Sum</b> of <b>Health Samples</b>. ' + L('(Telt álle kleine Garmin/iPhone-stukjes op.)', '(Adds up all the small Garmin/iPhone samples.)'),
-          L('Nog eens', 'Again') + ' <b>Find Health Samples</b>: <b>Steps</b>, <b>Start Date</b> <b>is yesterday</b>, Limit OFF → <b>Calculate Statistics</b> → <b>Sum</b>. ' + L('(Gisteren, als back-up.)', '(Yesterday, as a backfill.)'),
-          L('Optioneel', 'Optional') + ': <b>Find Health Samples</b> → <b>Active Energy</b>, is today → <b>Calculate Statistics</b> → <b>Sum</b>.'
+      if (SHORTCUT_IOS) {
+        o += '<button class="btn primary lg block" data-act="hl-install" style="margin:14px 0 8px;border-color:#d4af37">⬇ ' + esc(L('Installeer stappensync', 'Install step sync')) + '</button>';
+        o += '<p class="tiny muted" style="margin:0 0 16px">' + esc(L('Je sleutel wordt automatisch gekopieerd. Je typt niets. Apple laat een dagelijkse timer niet vanuit een link zetten — dat is de korte klus hieronder, één keer.', 'Your key is copied automatically. You type nothing. Apple does not allow a daily timer to be created from a link — that short job is below, once.')) + '</p>';
+        o += step('1', L('Installeer de opdracht', 'Install the shortcut'),
+          '<ol class="plain-list small">' + [
+            L('Tik hierboven op', 'Tap') + ' <b>Install step sync</b>.',
+            L('Tik op', 'Tap') + ' <b>Add Shortcut</b>.',
+            L('Vraagt hij om je sleutel: tik in het veld, tik', 'If it asks for your key: tap the field, then tap') + ' <b>Paste</b> ' + L('(die staat al op het klembord).', '(it is already on the clipboard).'),
+            L('Vraagt iPhone om toegang tot stappen: tik op', 'If iPhone asks for access to steps: tap') + ' <b>Allow</b>.'
+          ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
+      } else {
+        o += step('1', L('Maak de stille opdracht FBG Sync (geen Safari)', 'Make the silent shortcut FBG Sync (no Safari)'),
+          '<p class="tiny muted" style="margin:0 0 6px">' + esc(L('Niet Open URLs gebruiken — dat opent ’s avonds de website. Gebruik Get Contents of URL.', 'Do not use Open URLs — that opens the website at night. Use Get Contents of URL.')) + '</p>' +
+          copyBtn('url-ios', L('Kopieer adres (URL)', 'Copy address (URL)')) + copyBtn('tok', L('Kopieer sleutel', 'Copy key')) + keyCard() +
+          '<ol class="plain-list small" style="margin-top:8px">' + [
+            L('Open', 'Open') + ' <b>Shortcuts</b> → <b>+</b>. ' + L('Naam', 'Name') + ': <b>FBG Sync</b>',
+            L('Tik op', 'Tap') + ' <b>Add Action</b> → <b>Find Health Samples</b>. <b>Type: Steps</b>. <b>Add Filter</b> → <b>Start Date</b> <b>is today</b>. <b>Limit</b> ' + L('uit, geen Source-filter', 'off, no Source filter'),
+            L('Voeg toe', 'Add') + ' <b>Calculate Statistics</b> → <b>Sum</b>',
+            L('Nog eens voor gisteren', 'Once more for yesterday') + ': <b>Find Health Samples</b> · <b>Steps</b> · <b>Start Date</b> <b>is yesterday</b> · <b>Limit</b> off → <b>Calculate Statistics</b> → <b>Sum</b>',
+            L('Voeg toe', 'Add') + ' <b>Get Contents of URL</b>. ' + L('Plak het adres. Tik op', 'Paste the address. Tap') + ' <b>Show More</b>: Method <b>POST</b>, Request Body <b>JSON</b>',
+            L('Tik op', 'Tap') + ' <b>Add new field</b> → <b>Text</b>: <code>p_token</code> = ' + L('je sleutel', 'your key'),
+            L('Tik op', 'Tap') + ' <b>Add new field</b> → <b>Number</b>: <code>steps</code> = ' + L('de 1e Sum (vandaag)', 'the 1st Sum (today)'),
+            L('Tik op', 'Tap') + ' <b>Add new field</b> → <b>Number</b>: <code>ysteps</code> = ' + L('de 2e Sum (gisteren)', 'the 2nd Sum (yesterday)'),
+            L('Tik op', 'Tap') + ' <b>▶</b>. ' + L('Tik op', 'Tap') + ' <b>Allow</b>. ' + L('Je ziet', 'You should see') + ' <code>"ok": true</code>'
+          ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
+      }
+      o += step('2', L('Zet de timer (Apple laat dit niet via een link)', 'Set the timer (Apple does not allow this from a link)'),
+        '<p class="tiny muted" style="margin:0 0 6px">' + esc(L('Doe 23:00 eerst. 13:00 en 19:00 zijn extra, hetzelfde rijtje.', 'Do 23:00 first. 13:00 and 19:00 are extras, same list.')) + '</p>' +
+        '<ol class="plain-list small">' + [
+          L('Open', 'Open') + ' <b>Shortcuts</b>',
+          L('Tik op', 'Tap') + ' <b>Automation</b>',
+          L('Tik op', 'Tap') + ' <b>+</b>',
+          L('Tik op', 'Tap') + ' <b>Time of Day</b>',
+          L('Zet', 'Set') + ' <b>23:00</b>, <b>Daily</b>',
+          L('Tik op', 'Tap') + ' <b>Next</b>',
+          L('Kies', 'Choose') + ' <b>Run Immediately</b>',
+          L('Zet', 'Turn') + ' <b>Notify When Run</b> ' + L('uit', 'off'),
+          L('Tik op', 'Tap') + ' <b>Next</b>',
+          L('Tik op', 'Tap') + ' <b>Run Shortcut</b> ' + L('(of', '(or') + ' <b>Add Action</b> → <b>Run Shortcut</b>)',
+          L('Kies', 'Choose') + ' <b>FBG Sync</b>',
+          L('Tik op', 'Tap') + ' <b>Done</b>'
         ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
-      o += step(3, L('Laat hem versturen', 'Make it send'), '<ol class="plain-list small">' + [
-          L('Voeg', 'Add') + ' <b>Get Contents of URL</b> ' + L('toe en plak het <b>adres</b> uit stap 1.', 'and paste the <b>address</b> from step 1.'),
-          L('Tik op', 'Tap') + ' <b>›</b> (Show More): Method <b>POST</b>, Request Body <b>JSON</b>.',
-          'Tap <b>Add new field → Text</b>: key <code>p_token</code>, value = ' + L('plak je <b>sleutel</b>', 'paste your <b>key</b>') + '.',
-          'Tap <b>Add new field → Number</b>: key <code>steps</code>, value = ' + L('de <b>1e Statistics</b> (vandaag)', 'the <b>1st Statistics</b> (today)') + '.',
-          'Tap <b>Add new field → Number</b>: key <code>ysteps</code>, value = ' + L('de <b>2e Statistics</b> (gisteren)', 'the <b>2nd Statistics</b> (yesterday)') + '.',
-          L('Optioneel', 'Optional') + ': <b>Number</b> <code>kcal</code> = Active Energy Sum.',
-          L('Voeg als laatste', 'Last, add') + ' <b>Show Result</b> → <b>Contents of URL</b>. ' + L('Bij ▶ moet je zien', 'When you tap ▶ you should see') + ' <code>"ok": true</code> ' + L('met je echte stappen.', 'with your real steps.')
-        ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><p class="tiny muted">' + esc(L('Zie je maar een paar stappen (bijv. 20)? Dan pakt de actie één monster: zet Limit uit en verwijder elke Source-filter. Zie je niets met "ok"? Dan ontbreekt Get Contents of URL of is de sleutel fout.', 'Only a few steps (e.g. 20)? The action is taking one sample: turn Limit off and remove any Source filter. No "ok"? Get Contents of URL is missing or the key is wrong.')) + '</p>');
-      o += step(4, L('Test en zet automatisch aan', 'Test and automate'), '<ol class="plain-list small">' + (nl() ? [
-          'Tik op <b>▶</b>. Sta Health toe (<b>Allow</b>). Je ziet <code>"ok": true</code>.',
-          'Kom terug hier en tik op <b>Vernieuwen</b>: status = Laatst gesynchroniseerd.',
-          'Tab <b>Automation</b> → <b>+</b> → <b>Time of Day</b> → <b>23:00</b>, <b>Daily</b> → <b>Run Immediately</b> → kies <b>FBG Sync</b> → <b>Done</b>.'
-        ] : [
-          'Tap <b>▶</b>. Allow Health access (<b>Allow</b>). You see <code>"ok": true</code>.',
-          'Come back here and tap <b>Refresh</b>: status = Last synced.',
-          'Tab <b>Automation</b> → <b>+</b> → <b>Time of Day</b> → <b>23:00</b>, <b>Daily</b> → <b>Run Immediately</b> → pick <b>FBG Sync</b> → <b>Done</b>.'
-        ]).map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
+      o += step('3', L('Zet de oude website-opdracht uit', 'Turn off the old website shortcut'),
+        '<ol class="plain-list small">' + [
+          L('Open', 'Open') + ' <b>Shortcuts</b> → <b>Automation</b>',
+          L('Open de automatisering die de FBG-website opent', 'Open the automation that opens the FBG website'),
+          L('Tik op', 'Tap') + ' <b>Delete Automation</b>'
+        ].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol>');
+      o += '<p class="tiny muted">' + esc(L('Daarna gebeurt het vanzelf: drie keer per dag (of alleen om 23:00) worden je stappen stil naar FBG gestuurd. Open de app even om ze te zien. Geen Safari meer.', 'After that it runs by itself: three times a day (or only at 23:00) your steps are sent silently to FBG. Open the app to see them. No more Safari.')) + '</p>';
     } else {
       o += '<h1 class="h1">Android · Health Connect</h1><p class="muted small">' + esc(L('Eén keer instellen (±5 min) met de gratis app Life Dashboard Companion. Daarna synct hij vanzelf.', 'Set up once (±5 min) with the free app Life Dashboard Companion. Then it syncs by itself.')) + '</p>';
       o += status();
@@ -246,6 +274,19 @@
     setTimeout(function () { token().then(function (k) { var el = document.getElementById('hl-tok'); if (el) el.textContent = k.slice(0, 12) + '…'; }).catch(function () {}); App.healthSyncPull(); });
     return o;
   };
+  A['hl-install'] = function () {
+    token().then(function (k) {
+      if (!k) throw new Error('key');
+      return F.copyText(k).then(function () {
+        if (SHORTCUT_IOS) {
+          App.toast(L('Sleutel gekopieerd. Tik op Add Shortcut.', 'Key copied. Tap Add Shortcut.'));
+          setTimeout(function () { location.href = SHORTCUT_IOS; }, 350);
+        } else {
+          App.toast(L('Sleutel gekopieerd. Volg de stappen hieronder.', 'Key copied. Follow the steps below.'));
+        }
+      });
+    }).catch(function () { App.toast(L('Log eerst in bij Live sync', 'Sign in to Live sync first')); });
+  };
   A['hl-copy'] = function (el) {
     var k = el.dataset.k;
     var p = k === 'tok' ? token() : Promise.resolve(k === 'url-ios' ? URL_IOS : URL_AND);
@@ -255,10 +296,10 @@
   A['hl-reset'] = function () { App.confirm(L('Nieuwe sleutel maken?', 'Make a new key?'), L('De oude sleutel werkt dan niet meer. Plak de nieuwe in je Opdracht / app.', 'The old key stops working. Paste the new one in your Shortcut / app.'), L('Nieuwe sleutel', 'New key')).then(function (ok) { if (ok) token(true).then(function () { App.toast(L('Nieuwe sleutel klaar', 'New key ready')); App.rerender(); }); }); };
 
   // entry points: More (athlete) + top of the Health page
-  var oMore = V.more; V.more = function () { var h = oMore.apply(this, arguments); if (S.role === 'coach') return h;
-    var card = '<a class="card tap row" href="#/hlink" id="hl-card" style="border:1px solid rgba(212,175,55,.6)"><div class="ex-icon">⌚</div><div class="grow"><b>' + esc(L('Koppel Health & horloge', 'Connect Health & watch')) + '</b><div class="tiny muted">' + esc(L('Apple Health, Health Connect, Garmin, Apple Watch… elke dag automatisch', 'Apple Health, Health Connect, Garmin, Apple Watch… automatic every day')) + '</div></div><span class="chev">›</span></a>';
+  var oMore = V.more; V.more = function () { var h = oMore.apply(this, arguments);
+    var card = '<a class="card tap row" href="#/hlink" id="hl-card" style="border:1px solid rgba(212,175,55,.6)"><div class="ex-icon">⌚</div><div class="grow"><b>' + esc(L('Installeer stappensync', 'Install step sync')) + '</b><div class="tiny muted">' + esc(L('Apple Health / Garmin: stil op de achtergrond, zonder Safari', 'Apple Health / Garmin: silent in the background, no Safari')) + '</div></div><span class="chev">›</span></a>';
     var i = h.indexOf('<a class="card tap row" href="#/health">'); return i === -1 ? card + h : h.slice(0, i) + card + h.slice(i); };
   var oHealth = V.health; V.health = function () { var h = oHealth.apply(this, arguments);
-    var card = '<a class="card tap row" href="#/hlink" style="border:1px solid rgba(212,175,55,.6)"><div class="ex-icon">⌚</div><div class="grow"><b>' + esc(L('Automatisch koppelen (aanbevolen)', 'Connect automatically (recommended)')) + '</b><div class="tiny muted">' + esc(L('Stap-voor-stap: iPhone, Android of sporthorloge', 'Step by step: iPhone, Android or sports watch')) + '</div></div><span class="chev">›</span></a>';
+    var card = '<a class="card tap row" href="#/hlink" style="border:1px solid rgba(212,175,55,.6)"><div class="ex-icon">⌚</div><div class="grow"><b>' + esc(L('Installeer stappensync (aanbevolen)', 'Install step sync (recommended)')) + '</b><div class="tiny muted">' + esc(L('Stil op de achtergrond, zonder dat Safari opengaat', 'Silent in the background, without opening Safari')) + '</div></div><span class="chev">›</span></a>';
     var i = h.indexOf('<div class="grid3">'); return i === -1 ? card + h : h.slice(0, i) + card + h.slice(i); };
 })();

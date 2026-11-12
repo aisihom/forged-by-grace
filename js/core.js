@@ -504,7 +504,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.30.14';
+  App.VERSION = '3.30.15';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
@@ -538,7 +538,7 @@
     var view = document.getElementById('view');
     if (!S.role) { App.renderTabs(''); view.innerHTML = App.views.welcome(); App.bind(view); return; }
     var def = S.role === 'coach' ? 'clients' : 'today';
-    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more', 'health'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal', 'health', 'pet', 'hlink'];
+    var allowed = S.role === 'coach' ? ['clients', 'client', 'plans', 'plan', 'meal', 'mind', 'more', 'health', 'hlink'] : ['today', 'food', 'train', 'progress', 'more', 'plan', 'meal', 'health', 'pet', 'hlink'];
     if (allowed.indexOf(name) === -1 || !App.views[name]) name = def;
     var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food', health: S.role === 'coach' ? 'more' : 'progress', pet: 'today', hlink: 'more' }[name] || name;
     App.renderTabs(tab);
