@@ -4,6 +4,6 @@
 window.FBG_CONFIG = {
   coachName: 'Aarón Ricardo',
   coachEmail: 'aricardo147@gmail.com',   // where client intakes + check-ins are emailed
-  coachWhatsApp: ''                     // e.g. '31612345678' (country code + number, digits only),
+  coachWhatsApp: '',                    // e.g. '31612345678' (country code + number, digits only)
   iosShortcut: ''                    // iCloud share URL for the silent FBG Sync shortcut, once published from an iPhone
 };

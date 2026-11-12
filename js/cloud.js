@@ -23,6 +23,7 @@
 
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
   var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; }, myFeedback: function () { return (myClient && myClient.coach_feedback) || null; } };
+  C._test = { applyPlan: function (r) { return applyPlan(r); }, selfTargets: function (r) { return selfTargets(r); } }; // used by test/smoke.js only
   C.restart = function () { role = null; myClient = null; return start(); };
   C.user = function () { return user; }; C.coachId = function () { return myClient && myClient.coach_id; }; C.role = function () { return role; };
 
@@ -95,7 +96,9 @@
     if (me.cloudPlanAt === stamp) return;
     if (row.plan && true) { me.plan = row.plan; if (!me.plan.id) me.plan.id = F.uid(); if (!me.plan.start || me.plan.start > App.today()) me.plan.start = App.today(); }
     if (row.meal && true) me.meal = row.meal;
-    if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride), spGifts: (row.profile.spGifts || (me.profile || {}).spGifts) });
+    if (row.profile && row.profile.targetsOverride && row.profile.targetsOverride.kcal && me.meal) me.meal.targets = Object.assign({}, me.meal.targets || {}, row.profile.targetsOverride); // coach macros always show
+    if (row.profile) me.profile = Object.assign({}, row.profile, me.profile || {}, { targetsOverride: (row.profile.targetsOverride || (me.profile || {}).targetsOverride), spGifts: (row.profile.spGifts || (me.profile || {}).spGifts), stepGoal: (row.profile.stepGoal || (me.profile || {}).stepGoal) });
+    if (row.profile && row.profile.stepGoal) me.stepGoal = row.profile.stepGoal; // coach-set goal always wins
     if (!me.coach) me.coach = { name: S.coach.name, email: S.coach.email, whatsapp: S.coach.whatsapp };
     me.cid = row.id; me.cloudPlanAt = stamp;
     var gN = App.applySpGifts ? App.applySpGifts() : 0;

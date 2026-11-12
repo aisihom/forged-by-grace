@@ -1,0 +1,13 @@
+{
+  "name": "forged-by-grace",
+  "version": "3.30.16",
+  "private": true,
+  "description": "Forged by Grace PWA",
+  "scripts": {
+    "test": "node test/run-all.js",
+    "release": "bash scripts/release.sh"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.48.0"
+  }
+}

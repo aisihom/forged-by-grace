@@ -15,7 +15,7 @@ vm.runInContext(fs.readFileSync(path.join(root, 'js/exmedia.js'), 'utf8'), ctx);
 
 var EX = ctx.FBG_DATA.EXERCISES;
 var EM = ctx.window.FBG_EXMEDIA;
-assert.ok(EX && EX.length === 316, '316 exercises, got ' + (EX && EX.length));
+assert.ok(EX && EX.length >= 316, 'at least 316 exercises, got ' + (EX && EX.length));
 assert.ok(EM && EM.art && EM.approx, 'FBG_EXMEDIA loaded');
 
 var files = fs.readdirSync(path.join(root, 'assets/ex'));

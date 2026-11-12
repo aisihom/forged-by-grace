@@ -42,9 +42,9 @@ check('config can hold an iCloud shortcut URL later', function () {
   assert.ok(hs.indexOf('FBG_CONFIG.iosShortcut') !== -1);
 });
 
-check('version is 3.30.15', function () {
+check('version.json holds a valid version (consistency is checked in check-release.js)', function () {
   var v = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8'));
-  assert.strictEqual(v.v, '3.30.15');
+  assert.ok(/^\d+\.\d+\.\d+$/.test(v.v), v.v);
 });
 
 console.log(passed + ' of ' + (passed + failed) + ' tests passed');

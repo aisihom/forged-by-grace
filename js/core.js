@@ -271,7 +271,7 @@
   App.foodDay = function (ath, iso) { return (ath.food[iso || App.today()] || []); };
   App.dayTotals = function (entries) {
     var t0 = { kcal: 0, p: 0, c: 0, f: 0 };
-    entries.forEach(function (e) { t0.kcal += e.kcal; t0.p += e.p; t0.c += e.c; t0.f += e.f; });
+    (entries || []).forEach(function (e) { if (!e) return; t0.kcal += +e.kcal || 0; t0.p += +e.p || 0; t0.c += +e.c || 0; t0.f += +e.f || 0; }); // never NaN, even for a damaged entry
     return { kcal: Math.round(t0.kcal), p: Math.round(t0.p), c: Math.round(t0.c), f: Math.round(t0.f) };
   };
   App.athTargets = function (ath) { return (ath.meal && ath.meal.targets) || App.calcTargets(ath.profile) || { kcal: 2000, p: 150, c: 200, f: 65 }; };
@@ -504,7 +504,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.30.15';
+  App.VERSION = '3.30.16';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
@@ -543,8 +543,13 @@
     var tab = { client: 'clients', plan: S.role === 'coach' ? 'clients' : 'train', meal: S.role === 'coach' ? 'clients' : 'food', health: S.role === 'coach' ? 'more' : 'progress', pet: 'today', hlink: 'more' }[name] || name;
     App.renderTabs(tab);
     var keep = App._keep; App._keep = false; var y = window.scrollY;
-    view.innerHTML = App.views[name](arg);
-    App.bind(view);
+    try { view.innerHTML = App.views[name](arg); App.bind(view); }
+    catch (err) {
+      if (window.FBG_REPORT) window.FBG_REPORT(err, 'render:' + name, true);
+      if (window.console) console.warn('render failed', name, err);
+      view.innerHTML = App.header(t(name.charAt(0).toUpperCase() + name.slice(1))) + '<div class="card"><p>' + esc(S.lang === 'nl' ? 'Dit scherm kon even niet laden. Je gegevens zijn veilig.' : 'This screen could not load. Your data is safe.') + '</p><button class="btn primary block" onclick="location.hash=\'#/' + def + '\';location.reload()">' + esc(S.lang === 'nl' ? 'Opnieuw proberen' : 'Try again') + '</button></div>';
+      App.bind(view);
+    }
     window.scrollTo(0, keep ? y : 0);
     document.title = t(name.charAt(0).toUpperCase() + name.slice(1)) + ' · Forged by Grace';
   };
@@ -559,7 +564,8 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-act]'); if (!el) return;
     var fn = App.acts[el.getAttribute('data-act')]; if (!fn) return;
-    e.preventDefault(); fn(el, e);
+    e.preventDefault();
+    try { fn(el, e); } catch (err) { if (window.FBG_REPORT) window.FBG_REPORT(err, 'act:' + el.getAttribute('data-act')); if (window.console) console.warn(err); }
   });
   window.addEventListener('hashchange', function () { App.route(); });
   window.addEventListener('DOMContentLoaded', function () {
