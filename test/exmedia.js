@@ -3,7 +3,6 @@ var fs = require('fs');
 var path = require('path');
 var vm = require('vm');
 var assert = require('assert');
-var { execFileSync } = require('child_process');
 var root = path.resolve(__dirname, '..');
 
 var ctx = { window: {}, console: console };
@@ -31,10 +30,15 @@ artIds.forEach(function (id) {
 });
 
 function dim(file) {
-  var out = execFileSync('python3', ['-c',
-    'from PIL import Image; im=Image.open("' + file.replace(/"/g, '\\"') + '"); print(im.size[0], im.size[1])'
-  ], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
-  return out;
+  // Pure-Node JPEG size reader (no Python/PIL needed, so it runs the same on the box and in CI).
+  var b = fs.readFileSync(file), i = 2;
+  while (i < b.length) {
+    if (b[i] !== 0xFF) { i++; continue; }
+    var m = b[i + 1], len = b.readUInt16BE(i + 2);
+    if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) return [b.readUInt16BE(i + 7), b.readUInt16BE(i + 5)];
+    i += 2 + len;
+  }
+  throw new Error('no JPEG size in ' + file);
 }
 
 // Spot-check dimensions: a photo and an illustration

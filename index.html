@@ -17,12 +17,12 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script>(function(){try{var th=localStorage.getItem('fbg.theme');if(th==='light'){document.documentElement.setAttribute('data-theme','light');document.querySelector('meta[name="theme-color"]').setAttribute('content','#ffffff');}}catch(e){}})();</script>
   <script>(function(){try{var href=location.href||'',raw=href+'&'+(location.search||'')+'&'+(location.hash||'');if(!/(?:[?&#]|%26)(?:steps|weight|rhr|kcal|fat|k)(?:=|%3D)/i.test(raw)&&!/fbgh_/.test(raw))return;var s=raw;try{s=decodeURIComponent(s.replace(/\+/g,'%20'));}catch(e){}s=s.replace(/%26/gi,'&').replace(/%3D/gi,'=').replace(/%23/gi,'#').replace(/%3F/gi,'?');s=s.replace(/[\r\n\u00a0]+/g,'').replace(/\s*&\s*/g,'&').replace(/\s*=\s*/g,'=');s=s.replace(/(&)?k(=)(fbgh_[A-Za-z0-9_-]+)/i,function(a,b,c,tok){return '&k='+tok;});var m=s.match(/[?&#]k=([A-Za-z0-9_-]{20,})/)||s.match(/(fbgh_[A-Za-z0-9_-]{20,})/);var tok=m?String(m[1]).replace(/[^A-Za-z0-9_-]/g,''):'';if(!tok||tok.length<20)return;function pick(k){var x=s.match(new RegExp('[?&#]'+k+'=([^&#]*)'));return x?String(x[1]):'';}var d=(s.match(/[?&#]d=(\d{4}-\d\d-\d\d)/)||[])[1]||'';var steps=pick('steps').replace(/[^\d]/g,''),kcal=pick('kcal').replace(/[^\d]/g,''),rhr=pick('rhr').replace(/[^\d]/g,''),weight=pick('weight').replace(/[^\d.,-]/g,''),fat=pick('fat').replace(/[^\d.,-]/g,'');var q=(d?'d='+d:'');if(steps)q+='&steps='+steps;if(kcal)q+='&kcal='+kcal;if(rhr)q+='&rhr='+rhr;if(weight)q+='&weight='+weight;if(fat)q+='&fat='+fat;if(!/steps=|kcal=|weight=|rhr=|fat=/.test(q))return;var url='https://hdcpxmctilthjhdhhixw.supabase.co/rest/v1/rpc/health_push?apikey=sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg';var body=JSON.stringify({p_token:tok,p_q:q});try{if(navigator.sendBeacon)navigator.sendBeacon(url,new Blob([body],{type:'application/json'}));}catch(e){}try{fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true,mode:'cors',cache:'no-store'}).catch(function(){});}catch(e){}}catch(e){}})();</script>
-  <link rel="stylesheet" href="css/styles.css?v=3.30.16">
-  <link rel="stylesheet" href="css/app.css?v=3.30.16">
-  <link rel="stylesheet" href="css/light.css?v=3.30.16">
-  <link rel="stylesheet" href="css/pet.css?v=3.30.16">
-  <link rel="stylesheet" href="css/exdemo.css?v=3.30.16">
-  <link rel="stylesheet" href="css/checkin2.css?v=3.30.16">
+  <link rel="stylesheet" href="css/styles.css?v=3.30.17">
+  <link rel="stylesheet" href="css/app.css?v=3.30.17">
+  <link rel="stylesheet" href="css/light.css?v=3.30.17">
+  <link rel="stylesheet" href="css/pet.css?v=3.30.17">
+  <link rel="stylesheet" href="css/exdemo.css?v=3.30.17">
+  <link rel="stylesheet" href="css/checkin2.css?v=3.30.17">
 </head>
 <body>
   <a class="skip" href="#view">Skip to content</a>
@@ -30,50 +30,50 @@
     <div id="view" tabindex="-1"><noscript><p class="card">Forged by Grace needs JavaScript turned on.</p></noscript></div>
   </main>
   <nav class="tabbar" aria-label="Main" hidden><div class="tabbar-inner"></div></nav>
-  <script src="js/guard.js?v=3.30.16"></script>
+  <script src="js/guard.js?v=3.30.17"></script>
   <script src="config.js"></script>
-  <script src="js/data.js?v=3.30.16"></script>
-  <script src="js/exextra.js?v=3.30.16"></script>
-  <script src="js/foods.js?v=3.30.16"></script>
-  <script src="js/foods-db.js?v=3.30.16"></script>
-  <script src="js/foods-caribbean.js?v=3.30.16"></script>
-  <script src="js/foods-kippie.js?v=3.30.16"></script>
-  <script src="js/intake-i18n.js?v=3.30.16"></script>
-  <script src="js/common.js?v=3.30.16"></script>
-  <script src="js/i18n.js?v=3.30.16"></script>
-  <script src="js/core.js?v=3.30.16"></script>
-  <script src="js/views-athlete.js?v=3.30.16"></script>
-  <script src="js/views-coach.js?v=3.30.16"></script>
-  <script src="js/scan.js?v=3.30.16"></script>
-  <script src="js/health.js?v=3.30.16"></script>
-  <script src="js/sports.js?v=3.30.16"></script>
-  <script src="js/steps.js?v=3.30.16"></script>
-  <script src="js/exinfo.js?v=3.30.16"></script>
-  <script src="js/exmedia.js?v=3.30.16"></script>
-  <script src="js/exdemo.js?v=3.30.16"></script>
-  <script src="js/rest.js?v=3.30.16"></script>
-  <script src="js/checkin2.js?v=3.30.16"></script>
-  <script src="js/pet/1-data.js?v=3.30.16"></script>
-  <script src="js/pet/2-shop.js?v=3.30.16"></script>
-  <script src="js/pet/3-game.js?v=3.30.16"></script>
-  <script src="js/pet/4-rewards.js?v=3.30.16"></script>
-  <script src="js/water.js?v=3.30.16"></script>
-  <script src="js/clientx.js?v=3.30.16"></script>
-  <script src="js/cloud.js?v=3.30.16"></script>
-  <script src="js/join.js?v=3.30.16"></script>
-  <script src="js/tour.js?v=3.30.16"></script>
-  <script src="js/healthsync.js?v=3.30.16"></script>
-  <script src="js/foodtext.js?v=3.30.16"></script>
-  <script src="js/receipt.js?v=3.30.16"></script>
-  <script src="js/workoutx.js?v=3.30.16"></script>
-  <script src="js/pause.js?v=3.30.16"></script>
-  <script src="js/exnote.js?v=3.30.16"></script>
-  <script src="js/weekview.js?v=3.30.16"></script>
-  <script src="js/nutridb.js?v=3.30.16"></script>
-  <script src="js/foodrate.js?v=3.30.16"></script>
-  <script src="js/recipes.js?v=3.30.16"></script>
-  <script src="js/consent.js?v=3.30.16"></script>
-  <script src="js/photoguide.js?v=3.30.16"></script>
-  <script src="js/avatar.js?v=3.30.16"></script>
+  <script src="js/data.js?v=3.30.17"></script>
+  <script src="js/exextra.js?v=3.30.17"></script>
+  <script src="js/foods.js?v=3.30.17"></script>
+  <script src="js/foods-db.js?v=3.30.17"></script>
+  <script src="js/foods-caribbean.js?v=3.30.17"></script>
+  <script src="js/foods-kippie.js?v=3.30.17"></script>
+  <script src="js/intake-i18n.js?v=3.30.17"></script>
+  <script src="js/common.js?v=3.30.17"></script>
+  <script src="js/i18n.js?v=3.30.17"></script>
+  <script src="js/core.js?v=3.30.17"></script>
+  <script src="js/views-athlete.js?v=3.30.17"></script>
+  <script src="js/views-coach.js?v=3.30.17"></script>
+  <script src="js/scan.js?v=3.30.17"></script>
+  <script src="js/health.js?v=3.30.17"></script>
+  <script src="js/sports.js?v=3.30.17"></script>
+  <script src="js/steps.js?v=3.30.17"></script>
+  <script src="js/exinfo.js?v=3.30.17"></script>
+  <script src="js/exmedia.js?v=3.30.17"></script>
+  <script src="js/exdemo.js?v=3.30.17"></script>
+  <script src="js/rest.js?v=3.30.17"></script>
+  <script src="js/checkin2.js?v=3.30.17"></script>
+  <script src="js/pet/1-data.js?v=3.30.17"></script>
+  <script src="js/pet/2-shop.js?v=3.30.17"></script>
+  <script src="js/pet/3-game.js?v=3.30.17"></script>
+  <script src="js/pet/4-rewards.js?v=3.30.17"></script>
+  <script src="js/water.js?v=3.30.17"></script>
+  <script src="js/clientx.js?v=3.30.17"></script>
+  <script src="js/cloud.js?v=3.30.17"></script>
+  <script src="js/join.js?v=3.30.17"></script>
+  <script src="js/tour.js?v=3.30.17"></script>
+  <script src="js/healthsync.js?v=3.30.17"></script>
+  <script src="js/foodtext.js?v=3.30.17"></script>
+  <script src="js/receipt.js?v=3.30.17"></script>
+  <script src="js/workoutx.js?v=3.30.17"></script>
+  <script src="js/pause.js?v=3.30.17"></script>
+  <script src="js/exnote.js?v=3.30.17"></script>
+  <script src="js/weekview.js?v=3.30.17"></script>
+  <script src="js/nutridb.js?v=3.30.17"></script>
+  <script src="js/foodrate.js?v=3.30.17"></script>
+  <script src="js/recipes.js?v=3.30.17"></script>
+  <script src="js/consent.js?v=3.30.17"></script>
+  <script src="js/photoguide.js?v=3.30.17"></script>
+  <script src="js/avatar.js?v=3.30.17"></script>
 </body>
 </html>
