@@ -38,7 +38,7 @@ sandbox.window.App = {
   photoDel: function () { return Promise.resolve(); },
   cloud: {
     state: function () { return { role: 'client', client: OWN }; },
-    sb: { storage: { from: function () { return { remove: function (paths) { removed.push(paths.slice()); return Promise.resolve({ error: null }); } }; } } }
+    sb: { storage: { from: function () { return { remove: function (paths) { removed.push(paths.slice()); return Promise.resolve({ error: null }); }, move: function (a, b) { removed.push([a, b]); return Promise.resolve({ error: null }); } }; } } }
   }
 };
 sandbox.App = sandbox.window.App;
@@ -166,8 +166,11 @@ add('client delete of own mock photo marks gone, drops metadata, removes own pat
   removed.length = 0;
   S.me = { photoLog: [{ date: '2026-11-05', poses: { front: 'ph-2026-11-05-front-abc', left: 'ph-2026-11-05-left-def' } }], photoGone: {} };
   return App.deleteCheckinPhoto({ id: 'ph-2026-11-05-front-abc', folderId: OWN, asCoach: false }).then(function () {
-    assert.strictEqual(JSON.stringify(removed), JSON.stringify([[OWN + '/ph-2026-11-05-front-abc.jpg']]));
-    assert.strictEqual(S.me.photoGone['ph-2026-11-05-front-abc'], 1);
+    assert.strictEqual(removed.length, 1);
+    assert.strictEqual(removed[0][0], OWN + '/ph-2026-11-05-front-abc.jpg');
+    assert.ok(/^aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\/trash\/\d{13}__ph-2026-11-05-front-abc\.jpg$/.test(removed[0][1]), 'moved to own trash: ' + removed[0][1]);
+    assert.strictEqual(S.me.photoGone['ph-2026-11-05-front-abc'].why, 'user-delete');
+    assert.deepStrictEqual(Object.keys(S.me.photoTrashQ || {}), []);
     assert.strictEqual(S.me.photoLog[0].poses.front, undefined);
     assert.strictEqual(S.me.photoLog[0].poses.left, 'ph-2026-11-05-left-def');
     assert.strictEqual(App.shouldUploadPhoto('ph-2026-11-05-front-abc', {}, S.me.photoGone), false);
@@ -176,9 +179,11 @@ add('client delete of own mock photo marks gone, drops metadata, removes own pat
 
 add('coach delete of mock photo uses only that client folder', function () {
   removed.length = 0;
-  var before = JSON.stringify(S.me);
+  S.me.photoGoneV = 2; var before = JSON.stringify(S.me);
   return App.deleteCheckinPhoto({ asCoach: true, folderId: OTHER, id: 'ph-2026-11-02-back-zzz' }).then(function () {
-    assert.strictEqual(JSON.stringify(removed), JSON.stringify([[OTHER + '/ph-2026-11-02-back-zzz.jpg']]));
+    assert.strictEqual(removed.length, 1);
+    assert.strictEqual(removed[0][0], OTHER + '/ph-2026-11-02-back-zzz.jpg');
+    assert.ok(removed[0][1].indexOf(OTHER + '/trash/') === 0, 'coach delete moves to that client trash');
     assert.strictEqual(JSON.stringify(S.me), before);
   });
 });

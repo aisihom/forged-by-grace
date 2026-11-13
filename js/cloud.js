@@ -70,7 +70,7 @@
         if (myClient) {
           if (localStorage.getItem('fbg.consent') && !myClient.consent_at) sb.rpc('give_consent').then(function () {});
           applyPlan(myClient);
-          return (App.healthSyncPull ? App.healthSyncPull() : Promise.resolve()).then(function () { return App.healthFlush ? App.healthFlush() : null; }).then(function () { push(true); subscribe(); rer(); });
+          return (App.healthSyncPull ? App.healthSyncPull() : Promise.resolve()).then(function () { return App.healthFlush ? App.healthFlush() : null; }).then(function () { push(true); subscribe(); rer(); if (App.cleanPhotoTrash) setTimeout(function () { if (myClient) App.cleanPhotoTrash(myClient.id); }, 8000); });
         }
         rer();
       });
@@ -113,9 +113,9 @@
     var intakes = F.store.get('intakes', null) || F.store.get('intakeLast', null);
     var ci = null; try { ci = App.buildCheckin(me, '', 0); } catch (e) {}
     var known = ['profile', 'sessions', 'food', 'body', 'habits', 'checkins', 'water', 'steps', 'health', 'recipes', 'consent', 'photoGone'], extra = {};
-    Object.keys(me).forEach(function (k) { if (known.indexOf(k) === -1 && ['pw', 'plan', 'meal', 'coach', 'cid', 'cloudPlanAt', 'cloudPh'].indexOf(k) === -1) extra[k] = me[k]; });
+    Object.keys(me).forEach(function (k) { if (known.indexOf(k) === -1 && ['pw', 'plan', 'meal', 'coach', 'cid', 'cloudPlanAt', 'cloudPh', 'photoGoneV', 'photoGoneLegacy', 'photoTrashQ'].indexOf(k) === -1) extra[k] = me[k]; });
     return { profile: me.profile, sessions: me.sessions, food: me.food, body: me.body, habits: me.habits, checkins: { list: me.checkins, summary: ci, photoLog: me.photoLog || [] },
-      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, photoGone: me.photoGone || {}, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
+      water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, photoGone: { v: 2, ids: me.photoGone || {} }, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
   }
   var last = {}, timer = null, retryT = null;
   function push(now) {
@@ -149,40 +149,50 @@
   };
   function photos() {
     if (!App.photoGet || !myClient) return;
+    if (App.migratePhotoGone) App.migratePhotoGone(S.me);
     var up = S.me.cloudPh = S.me.cloudPh || {}, gone = S.me.photoGone || {};
     if (App.applyPhotoGone) App.applyPhotoGone(S.me);
-    Object.keys(gone).forEach(function (id) {
-      var clean = App.photoIdFromPath ? App.photoIdFromPath(id) : id;
-      if (App.isCheckinPhotoName && App.isCheckinPhotoName(clean) && App.removeStoredCheckinPhoto) App.removeStoredCheckinPhoto(myClient.id, clean).catch(function () {});
-    });
+    // v3.30.19: gone ids are NEVER deleted from here; only queued explicit deletes are sent (once, until done)
+    if (App.flushTrash) App.flushTrash(myClient.id).then(function (n) { if (n) rawSave(); }).catch(function () {});
     (S.me.photoLog || []).forEach(function (e) { Object.keys(e.poses || {}).forEach(function (p) { var id = e.poses[p];
       if (App.shouldUploadPhoto ? !App.shouldUploadPhoto(id, up, gone) : (up[id] || gone[id])) return;
       App.photoGet(id).then(function (rec) { if (!rec || !rec.blob) return; return sb.storage.from('checkin-photos').upload(myClient.id + '/' + id + '.jpg', rec.blob, { upsert: true, contentType: rec.blob.type || 'image/jpeg' }); })
         .then(function (r) { if (r && !r.error) { up[id] = Date.now(); rawSave(); } }).catch(function () {}); }); });
   }
+  // remote photoGone: only v2 lists (written by v3.30.19+) count; old flat v1 lists are ignored
+  function mergeGoneData(d) {
+    if (!d || d.v !== 2 || !d.ids || typeof d.ids !== 'object') return false;
+    if (App.migratePhotoGone) App.migratePhotoGone(S.me);
+    var mine = S.me.photoGone = S.me.photoGone || {}, added = 0;
+    Object.keys(d.ids).forEach(function (id) { if (!mine[id] && App.isCheckinPhotoName && App.isCheckinPhotoName(id)) { mine[id] = d.ids[id] && typeof d.ids[id] === 'object' ? d.ids[id] : { at: Date.now(), why: 'remote' }; added++; if (App.logPhoto) App.logPhoto('gone', 'remote ' + id); } });
+    var ch = App.applyPhotoGone ? App.applyPhotoGone(S.me) : false;
+    return !!(added || ch);
+  }
+  C._mergeGoneData = mergeGoneData;
   function mergeRemoteGone() {
     if (!sb || !myClient) return Promise.resolve();
     return sb.from('client_data').select('data').eq('client_id', myClient.id).eq('kind', 'photoGone').maybeSingle().then(function (r) {
-      var remote = (r.data && r.data.data) || {};
-      S.me.photoGone = Object.assign({}, remote, S.me.photoGone || {});
-      if (App.applyPhotoGone && App.applyPhotoGone(S.me)) rawSave();
+      if (r && !r.error && r.data && mergeGoneData(r.data.data)) rawSave();
     }).catch(function () {});
   }
+  // reconcile = heal, never destroy: a stamped photo missing on the server is re-uploaded from this phone,
+  // unless it sits in the trash folder (= someone explicitly deleted it, e.g. the coach). Failed/empty listings are skipped.
   function reconcilePhotos() {
     if (!sb || !myClient || !(S.me.photoLog || []).length) return Promise.resolve();
-    return sb.storage.from('checkin-photos').list(myClient.id, { limit: 400 }).then(function (r) {
-      var names = {}, up = S.me.cloudPh || {}, gone = S.me.photoGone = S.me.photoGone || {}, changed = false, now = Date.now();
-      (r.data || []).forEach(function (f) { if (f && f.name) { names[f.name] = 1; names[f.name.replace(/\.jpg$/i, '')] = 1; } });
-      (S.me.photoLog || []).forEach(function (e) {
-        Object.keys(e.poses || {}).forEach(function (p) {
-          var id = e.poses[p], stamped = up[id];
-          if (!id || !stamped) return;
-          if (typeof stamped === 'number' && stamped > 1 && (now - stamped) < 60000) return;
-          if (names[id] || names[id + '.jpg']) return;
-          gone[id] = 1; delete e.poses[p]; if (App.photoDel) App.photoDel(id); changed = true;
-        });
+    var cid = myClient.id;
+    return sb.storage.from('checkin-photos').list(cid, { limit: 1000 }).then(function (r) {
+      if (!r || r.error || !Array.isArray(r.data)) { if (App.logPhoto) App.logPhoto('reconcile-skip', 'list failed'); return; }
+      var chk = App.photosMissing(S.me, r.data), missing = chk.missing;
+      if (!missing.length) return;
+      if (chk.empty && App.logPhoto) App.logPhoto('reconcile-skip', 'empty listing, ' + missing.length + ' stamped: no re-upload, trash check only');
+      return sb.storage.from('checkin-photos').list(cid + '/trash', { limit: 1000 }).then(function (t) {
+        if (!t || t.error || !Array.isArray(t.data)) return;
+        var out = App.reconcileDecide(missing, t.data, chk.empty), up = S.me.cloudPh || {}, changed = false;
+        out.reupload.forEach(function (id) { delete up[id]; changed = true; if (App.logPhoto) App.logPhoto('reupload', id); });
+        out.gone.forEach(function (id) { if (App.markPhotoGone(id, 'trash-found')) changed = true; });
+        if (out.gone.length && App.applyPhotoGone) App.applyPhotoGone(S.me);
+        if (changed) { rawSave(); if (out.reupload.length) photos(); }
       });
-      if (changed) { S.me.photoLog = (S.me.photoLog || []).filter(function (e) { return Object.keys(e.poses || {}).length || e.weight; }); rawSave(); }
     }).catch(function () {});
   }
   var rawSave = App.save;
@@ -237,7 +247,7 @@
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
       if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); if (myClient && d.client_id === myClient.id) { if (d.kind === 'health_sync') selfHealth(); rawSave(); return; } rawSave(); pill(); }
-      else if (myClient && d.client_id === myClient.id && d.kind === 'photoGone') { S.me.photoGone = Object.assign({}, d.data || {}, S.me.photoGone || {}); if (App.applyPhotoGone) App.applyPhotoGone(S.me); rawSave(); if (App.rerender) App.rerender(); }
+      else if (myClient && d.client_id === myClient.id && d.kind === 'photoGone') { if (mergeGoneData(d.data)) { rawSave(); if (App.rerender) App.rerender(); } }
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;

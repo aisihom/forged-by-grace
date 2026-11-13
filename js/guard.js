@@ -44,6 +44,20 @@
       fetch(URL_, { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(body), keepalive: true }).catch(function () {});
     } catch (e) {}
   }
+  // audit events (not errors): e.g. every photo marked deleted, with its reason. Own cap, never a toast.
+  var evSent = 0, evSeen = {};
+  window.FBG_LOG = function (kind, msg) {
+    try {
+      kind = String(kind || 'event').slice(0, 40); msg = scrub(msg, 500); if (!msg) return;
+      var sig = kind + '|' + msg; if (evSeen[sig]) return; evSeen[sig] = 1;
+      window.FBG_EVENTS = window.FBG_EVENTS || []; window.FBG_EVENTS.push({ kind: kind, msg: msg });
+      if (evSent >= 40 || !window.fetch || !/^https:$/.test(location.protocol)) return;
+      evSent++;
+      var body = { version: String((window.App && App.VERSION) || '').slice(0, 20), kind: kind, msg: msg, route: scrub((location.hash || '').split('?')[0], 60), role: role(),
+        ua: String(navigator.userAgent || '').slice(0, 200), standalone: !!(window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) };
+      fetch(URL_, { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(body), keepalive: true }).catch(function () {});
+    } catch (e) {}
+  };
   window.FBG_REPORT = function (err, where, quiet) { report(where || 'caught', err && err.message || err, '', 0, 0, err && err.stack, quiet); };
   window.addEventListener('error', function (e) {
     if (e && e.target && e.target !== window && (e.target.src || e.target.href)) return; // broken image/script tags are handled where they load

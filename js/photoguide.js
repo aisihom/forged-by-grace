@@ -74,9 +74,9 @@
         Promise.all(ks.map(function (k) { var id = 'ph-' + iso + '-' + k + '-' + Date.now().toString(36), old = entry.poses[k]; entry.poses[k] = id; return App.photoPut({ id: id, date: iso, pose: k, blob: picked[k] }).then(function () {
           if (!old || old === id) return;
           if (App.photoDel) App.photoDel(old);
-          if (App.markPhotoGone) App.markPhotoGone(old);
+          if (App.markPhotoGone) App.markPhotoGone(old, 'retake');
           var cid = App.ownStorageId && App.ownStorageId();
-          if (cid && App.removeStoredCheckinPhoto) return App.removeStoredCheckinPhoto(cid, old);
+          if (cid && App.trashCheckinPhoto) { if (App.queueTrash) App.queueTrash(old); return App.trashCheckinPhoto(cid, old).then(function () { if (S.me.photoTrashQ) delete S.me.photoTrashQ[old]; }, function () {}); }
         }); })).then(function () {
           if (w) { ath.body = ath.body || []; var bb = ath.body.filter(function (x) { return x.date === iso; })[0]; if (!bb) { bb = { date: iso }; ath.body.push(bb); ath.body.sort(function (a, c) { return a.date < c.date ? -1 : 1; }); } bb.weight = w; if (ath.profile) ath.profile.weight = w; }
           ath.lastMeasure = iso; App.save(); s.close(); App.rerender(); App.toast(t('Check-in saved ✓'));
@@ -219,6 +219,7 @@
   }
   function coachPhotos(c) {
     var el = document.getElementById('pg-coach'), sb = App.cloud && App.cloud.sb; if (!el || !sb) return;
+    if (App.cleanPhotoTrash) App.cleanPhotoTrash(c.cloudId);
     sb.storage.from('checkin-photos').list(c.cloudId, { limit: 400 }).then(function (r) {
       var g = groups((r.data || []).map(function (f) { return f.name; })), dates = Object.keys(g).sort().reverse();
       if (!dates.length) { el.innerHTML = '<p class="small muted">' + esc(t('No photos yet')) + '</p>'; return; }

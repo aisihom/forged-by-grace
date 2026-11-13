@@ -24,15 +24,37 @@
     return folderId + '/' + id + '.jpg';
   };
   App.ownStorageId = function () { var st = App.cloud && App.cloud.state && App.cloud.state(); return (st && st.client) || null; };
+  // ---------- photo safety (v3.30.19) ----------
+  // A photo is only ever removed by an explicit tap + confirm (client or coach) or by retaking that pose.
+  // Removal = MOVE to <clientId>/trash/<ms>__<id>.jpg (kept 30 days, then cleaned), never an instant hard delete.
+  // photoGone (v2) only hides a photo + stops re-upload; it never triggers deletes by itself. Every addition is logged.
+  var TRASH_DAYS = 30, BUCKET = 'checkin-photos';
+  App.PHOTO_GONE_V = 2;
+  App.logPhoto = function (what, detail) {
+    try { if (window.FBG_LOG) window.FBG_LOG('photo:' + what, String(detail || '') + ' cid=' + (App.ownStorageId() || '-')); } catch (e) {}
+  };
+  // old phones carry a v1 photoGone list that kept re-deleting photos on every sync: park it, act on nothing in it
+  App.migratePhotoGone = function (ath) {
+    ath = ath || S.me; if (!ath || ath.photoGoneV === App.PHOTO_GONE_V) return false;
+    var old = ath.photoGone || {}, n = 0, park = ath.photoGoneLegacy || {};
+    Object.keys(old).forEach(function (k) { if (App.isCheckinPhotoName(k)) { park[k] = 1; n++; } });
+    ath.photoGoneLegacy = park; ath.photoGone = {}; ath.photoGoneV = App.PHOTO_GONE_V;
+    if (n) App.logPhoto('legacy-parked', n + ' old photoGone entries ignored');
+    return true;
+  };
   App.shouldUploadPhoto = function (id, cloudPh, photoGone) {
     if (!id) return false;
     if (cloudPh && (cloudPh[id] || cloudPh[id + '.jpg'])) return false;
     if (photoGone && (photoGone[id] || photoGone[id + '.jpg'])) return false;
     return true;
   };
-  App.markPhotoGone = function (id) {
-    id = App.photoIdFromPath(id); if (!id) return;
-    var gone = (S.me.photoGone = S.me.photoGone || {}); gone[id] = 1;
+  App.markPhotoGone = function (id, why) {
+    id = App.photoIdFromPath(id); if (!id || !App.isCheckinPhotoName(id)) return false;
+    if (S.me.photoGoneV !== App.PHOTO_GONE_V) App.migratePhotoGone(S.me);
+    var gone = (S.me.photoGone = S.me.photoGone || {}); if (gone[id]) return false;
+    gone[id] = { at: Date.now(), why: String(why || 'unknown').slice(0, 30) };
+    App.logPhoto('gone', (why || 'unknown') + ' ' + id);
+    return true;
   };
   App.applyPhotoGone = function (ath) {
     ath = ath || S.me; var gone = ath.photoGone || {}, changed = false;
@@ -49,12 +71,72 @@
     if (changed) ath.photoLog = (ath.photoLog || []).filter(function (e) { return Object.keys(e.poses || {}).length || e.weight; });
     return changed;
   };
-  App.removeStoredCheckinPhoto = function (folderId, id) {
+  App.trashName = function (id, now) { return (now || Date.now()) + '__' + App.photoIdFromPath(id) + '.jpg'; };
+  App.trashAge = function (name) { var m = /^(\d{12,14})__/.exec(String(name || '')); return m ? +m[1] : 0; };
+  function notFound(err) { var m = String((err && (err.message || err.error || err.statusCode)) || ''); return /not.?found|404|does not exist/i.test(m); }
+  // move one photo to the trash folder of the same client; resolves true when done (or already gone)
+  App.trashCheckinPhoto = function (folderId, id) {
     var path = App.safeCheckinPath(folderId, id), store = App.cloud && App.cloud.sb;
     if (!path) return Promise.reject(new Error('Ongeldige foto'));
     if (App.forgetCheckinPhoto) App.forgetCheckinPhoto(path);
-    if (!store) return Promise.resolve();
-    return store.storage.from('checkin-photos').remove([path]).then(function (r) { if (r.error) throw r.error; });
+    if (!store) return Promise.reject(new Error('offline'));
+    var dest = folderId + '/trash/' + App.trashName(id);
+    return store.storage.from(BUCKET).move(path, dest).then(function (r) {
+      if (r && r.error) { if (notFound(r.error)) return true; throw r.error; }
+      App.logPhoto('trashed', App.photoIdFromPath(id));
+      return true;
+    });
+  };
+  App.removeStoredCheckinPhoto = App.trashCheckinPhoto; // old name, same safe behaviour
+  // queue of explicit deletes that still have to reach the server (offline etc.); each one is sent until done, then never again
+  App.queueTrash = function (id) { var q = (S.me.photoTrashQ = S.me.photoTrashQ || {}); if (!q[id]) q[id] = { at: Date.now(), n: 0 }; };
+  App.flushTrash = function (folderId) {
+    var q = S.me.photoTrashQ || {}, ids = Object.keys(q);
+    if (!folderId || !ids.length) return Promise.resolve(0);
+    return Promise.all(ids.map(function (id) {
+      if (!App.isCheckinPhotoName(id)) { delete q[id]; return 0; }
+      q[id].n = (q[id].n || 0) + 1;
+      return App.trashCheckinPhoto(folderId, id).then(function () { delete q[id]; return 1; }, function (e) {
+        if (q[id] && q[id].n >= 25) { App.logPhoto('trash-giveup', id + ' ' + ((e && e.message) || e)); delete q[id]; }
+        return 0;
+      });
+    })).then(function (r) { return r.reduce(function (a, b) { return a + b; }, 0); });
+  };
+  // remove trashed photos older than 30 days (explicit deletes only ever land here)
+  App.cleanPhotoTrash = function (folderId, now) {
+    var store = App.cloud && App.cloud.sb; now = now || Date.now();
+    if (!store || !folderId || /[\/]/.test(folderId)) return Promise.resolve(0);
+    var key = 'fbg.trashClean.' + folderId, day = new Date(now).toISOString().slice(0, 10);
+    try { if (localStorage.getItem(key) === day) return Promise.resolve(0); } catch (e) {}
+    return store.storage.from(BUCKET).list(folderId + '/trash', { limit: 1000 }).then(function (r) {
+      if (!r || r.error || !Array.isArray(r.data)) return 0;
+      var old = r.data.map(function (f) { return f && f.name; }).filter(function (n) { var a = App.trashAge(n); return a && now - a > TRASH_DAYS * 864e5; });
+      try { localStorage.setItem(key, day); } catch (e) {}
+      if (!old.length) return 0;
+      return store.storage.from(BUCKET).remove(old.map(function (n) { return folderId + '/trash/' + n; })).then(function () { App.logPhoto('trash-cleaned', old.length + ' files > ' + TRASH_DAYS + 'd'); return old.length; });
+    }).catch(function () { return 0; });
+  };
+  // which uploaded photos are missing from a folder listing? empty=true when the listing holds no check-in photo at all
+  App.photosMissing = function (ath, files, now) {
+    now = now || Date.now();
+    var names = {}, any = false, up = (ath && ath.cloudPh) || {}, out = [];
+    (files || []).forEach(function (f) { var n = f && f.name; if (!n) return; names[n] = 1; names[n.replace(/\.jpg$/i, '')] = 1; if (App.isCheckinPhotoName(n)) any = true; });
+    ((ath && ath.photoLog) || []).forEach(function (e) {
+      Object.keys(e.poses || {}).forEach(function (p) {
+        var id = e.poses[p], st = up[id];
+        if (!id || !st) return;
+        if (typeof st === 'number' && st > 1 && now - st < 60000) return;
+        if (!names[id] && !names[id + '.jpg']) out.push(id);
+      });
+    });
+    return { missing: out, empty: !any };
+  };
+  // missing photos: in trash = explicitly deleted elsewhere (hide here); otherwise re-upload from this phone
+  App.reconcileDecide = function (missing, trashFiles, emptyListing) {
+    var inTrash = {}, res = { gone: [], reupload: [] };
+    (trashFiles || []).forEach(function (f) { var m = /^\d+__(.+?)(\.jpg)?$/i.exec((f && f.name) || ''); if (m) inTrash[m[1]] = 1; });
+    (missing || []).forEach(function (id) { if (inTrash[id]) res.gone.push(id); else if (!emptyListing) res.reupload.push(id); });
+    return res;
   };
   App.deleteCheckinPhoto = function (opts) {
     opts = opts || {};
@@ -63,12 +145,13 @@
     if (!id || !App.isCheckinPhotoName(id)) return Promise.reject(new Error('Ongeldige foto'));
     if (opts.asCoach) {
       if (!folderId || !App.safeCheckinPath(folderId, id)) return Promise.reject(new Error('Geen toegang'));
-      return App.removeStoredCheckinPhoto(folderId, id);
+      App.logPhoto('coach-delete', id + ' folder=' + folderId);
+      return App.trashCheckinPhoto(folderId, id);
     }
     var own = App.ownStorageId();
     if (folderId && own && folderId !== own) return Promise.reject(new Error('Geen toegang'));
     folderId = folderId || own;
-    App.markPhotoGone(id);
+    App.markPhotoGone(id, opts.why || 'user-delete');
     (S.me.photoLog || []).forEach(function (e) {
       Object.keys(e.poses || {}).forEach(function (k) { if (e.poses[k] === id) delete e.poses[k]; });
     });
@@ -76,8 +159,13 @@
     if (urls[id]) { try { URL.revokeObjectURL(urls[id]); } catch (err) {} delete urls[id]; }
     var local = Promise.resolve();
     try { if (App.photoDel) local = Promise.resolve(App.photoDel(id)).catch(function () {}); } catch (e) { local = Promise.resolve(); }
-    return local.then(function () { return folderId ? App.removeStoredCheckinPhoto(folderId, id) : null; }).then(function () { App.save(); });
+    if (!folderId) return local.then(function () { App.save(); });
+    App.queueTrash(id);
+    return local.then(function () {
+      return App.trashCheckinPhoto(folderId, id).then(function () { if (S.me.photoTrashQ) delete S.me.photoTrashQ[id]; }, function () { /* stays queued, retried on next sync */ });
+    }).then(function () { App.save(); });
   };
+  try { if (S.me && App.migratePhotoGone(S.me) && App.save) setTimeout(function () { try { App.save(); } catch (e) {} }, 0); } catch (e) {}
   App.compress = function (file, max, q) {
     max = Math.min(max || 1600, 1600);
     function draw(src, w, h) {
