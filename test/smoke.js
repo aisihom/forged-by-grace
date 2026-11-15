@@ -66,7 +66,7 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
   await step('seed a client with plan, meals, food, sessions, steps', async function () {
     await page.evaluate(function () {
       var S = App.S, today = App.today();
-      S.role = 'athlete'; S.lang = 'nl'; S.me.isCoach = true;
+      S.role = 'athlete'; S.lang = 'nl'; S.me.isCoach = true; S.me.coachOk = true; // coach's own device (access gate)
       S.me.profile = { name: 'Test Klant', sex: 'm', age: 35, weight: 90, height: 182, goal: 'lean', activity: 1.55, mode: 'gym', level: 'intermediate', stepGoal: 7500 };
       S.me.plan = App.generatePlan('lean3', { mode: 'gym', level: 'intermediate' }); S.me.plan.start = App.isoAdd(today, -3);
       S.me.meal = App.generateMeal(S.me.profile, 4);
@@ -171,6 +171,56 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
   });
   var COACH = [['clients', '.tabbar'], ['client/c1'], ['client/me'], ['plans'], ['mind'], ['more'], ['health'], ['hlink'], ['plan/c1'], ['meal/c1']];
   for (var j = 0; j < COACH.length; j++) await step('coach screen #/' + COACH[j][0], screen.bind(null, '#/' + COACH[j][0], COACH[j][1]));
+
+  // ---- v3.31: delete client + approval gate ----
+  await step('coach: a deleted client is gone from the list and stays gone', async function () {
+    var r = await page.evaluate(function () {
+      App.S.clients.push({ id: 'cdel', cloudId: 'del-cloud-1', name: 'Weg Klant', created: new Date().toISOString(), checkins: [], profile: { name: 'Weg Klant' } });
+      location.hash = '#/clients'; App.route();
+      var before = document.getElementById('view').innerText.indexOf('Weg Klant') !== -1;
+      App.applyDeletedClients(['del-cloud-1']); App.route();
+      var after = document.getElementById('view').innerText.indexOf('Weg Klant') !== -1;
+      return { before: before, after: after, kept: !!App.client('c1') };
+    });
+    if (!r.before || r.after || !r.kept) return { fail: JSON.stringify(r) };
+  });
+  await step('coach: pending sign-ups show "Toegang geven" / "Weigeren" on top', async function () {
+    var r = await page.evaluate(function () {
+      App.cloud._test.setPending([{ id: 'p1', name: 'Nieuw Iemand', email: 'nieuw@example.com', status: 'pending' }]);
+      location.hash = '#/clients'; App.route(); var v = document.getElementById('view');
+      var ok = !!v.querySelector('[data-act="acc-approve"]') && !!v.querySelector('[data-act="acc-reject"]') && v.innerText.indexOf('Nieuw Iemand') !== -1;
+      App.cloud._test.setPending([]); App.route();
+      return ok && !document.querySelector('#acc-pending');
+    });
+    if (!r) return { fail: 'pending card wrong' };
+  });
+  await step('coach: delete needs the typed name ("Definitief verwijderen")', async function () {
+    await page.evaluate(function () { App.S.clients.push({ id: 'cloc', name: 'Lokaal Klant', created: new Date().toISOString(), checkins: [], profile: { name: 'Lokaal Klant' } }); location.hash = '#/client/cloc'; App.route(); });
+    await page.waitForTimeout(150);
+    await page.click('[data-act="client-del"]'); await page.waitForTimeout(200);
+    var d0 = await page.evaluate(function () { var b = document.getElementById('del-go'); return b && b.disabled; });
+    await page.fill('#del-n', 'verkeerd'); var d1 = await page.evaluate(function () { return document.getElementById('del-go').disabled; });
+    await page.fill('#del-n', 'lokaal klant'); var d2 = await page.evaluate(function () { return document.getElementById('del-go').disabled; });
+    await page.click('#del-go'); await page.waitForTimeout(300);
+    var gone = await page.evaluate(function () { return !App.client('cloc'); });
+    if (!(d0 === true && d1 === true && d2 === false && gone)) return { fail: JSON.stringify([d0, d1, d2, gone]) };
+  });
+  await step('gate: pending is locked, unknown is locked, approved client works', async function () {
+    var r = await page.evaluate(function () {
+      var S = App.S, me = S.me, keep = [me.coachOk, me.cid, S.role], v = document.getElementById('view'), out = {};
+      me.coachOk = false; me.cid = null; S.role = 'athlete'; localStorage.removeItem('fbg.sb.auth');
+      localStorage.setItem('fbg.pending', '1'); location.hash = '#/today'; App.route();
+      out.pending = /Wacht op goedkeuring van je coach/.test(v.innerText);
+      out.pendingNoFood = !/kcal/.test(v.innerText);
+      localStorage.removeItem('fbg.pending'); App.route();
+      out.login = /alleen voor klanten/.test(v.innerText) && !!v.querySelector('[data-act="cloud-in"]');
+      me.cid = 'approved-cid'; App.route();
+      out.approved = !/alleen voor klanten|Wacht op goedkeuring/.test(v.innerText) && v.innerText.length > 50;
+      me.coachOk = keep[0]; me.cid = keep[1]; S.role = keep[2]; App.save(); location.hash = '#/clients'; App.route();
+      return out;
+    });
+    if (!r.pending || !r.pendingNoFood || !r.login || !r.approved) return { fail: JSON.stringify(r) };
+  });
 
   // ---- the error guard itself ----
   await step('error guard: a crash shows a calm toast and is recorded, app keeps working', async function () {

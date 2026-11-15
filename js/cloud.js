@@ -23,7 +23,7 @@
 
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
   var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; }, myFeedback: function () { return (myClient && myClient.coach_feedback) || null; } };
-  C._test = { applyPlan: function (r) { return applyPlan(r); }, selfTargets: function (r) { return selfTargets(r); } }; // used by test/smoke.js only
+  C._test = { applyPlan: function (r) { return applyPlan(r); }, selfTargets: function (r) { return selfTargets(r); }, setPending: function (a) { pendingRows = a; } }; // used by test/smoke.js only
   C.restart = function () { role = null; myClient = null; return start(); };
   C.user = function () { return user; }; C.coachId = function () { return myClient && myClient.coach_id; }; C.role = function () { return role; };
 
@@ -64,10 +64,15 @@
 
   function start() {
     return sb.from('coaches').select('user_id').eq('user_id', user.id).maybeSingle().then(function (r) {
-      if (r.data) { role = 'coach'; return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) selfTargets(myClient); return coachPull().then(function () { return myClient && App.healthSyncPull ? App.healthSyncPull() : null; }).then(function () { return myClient && App.healthFlush ? App.healthFlush() : null; }).then(function () { if (myClient) push(true); subscribe(); }); }); }
+      if (r.data) { role = 'coach'; S.me.coachOk = true; if (!S.role) S.role = 'coach'; try { localStorage.removeItem('fbg.pending'); } catch (e) {} return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (me) { myClient = me.data || null; if (myClient) selfTargets(myClient); return coachPull().then(function () { return myClient && App.healthSyncPull ? App.healthSyncPull() : null; }).then(function () { return myClient && App.healthFlush ? App.healthFlush() : null; }).then(function () { if (myClient) push(true); subscribe(); }); }); }
       return sb.from('clients').select('*').eq('user_id', user.id).maybeSingle().then(function (r2) {
+        if (r2.error) { status = 'offline'; return; } // never decide anything on a failed read
         myClient = r2.data || null; role = myClient ? 'client' : 'none';
+        try { localStorage.setItem('fbg.uid', user.id); } catch (e) {}
+        if (!myClient) return pendingCheck();
         if (myClient) {
+          try { localStorage.removeItem('fbg.pending'); } catch (e) {}
+          if (S.me.cid !== myClient.id) { S.me.cid = myClient.id; rawSave(); if (!document.querySelector('.sheet')) setTimeout(function () { App.route(); }, 0); }
           if (localStorage.getItem('fbg.consent') && !myClient.consent_at) sb.rpc('give_consent').then(function () {});
           applyPlan(myClient);
           return (App.healthSyncPull ? App.healthSyncPull() : Promise.resolve()).then(function () { return App.healthFlush ? App.healthFlush() : null; }).then(function () { push(true); subscribe(); rer(); if (App.cleanPhotoTrash) setTimeout(function () { if (myClient) App.cleanPhotoTrash(myClient.id); }, 8000); });
@@ -76,6 +81,58 @@
       });
     }).catch(function () { status = 'offline'; });
   }
+
+  // approval gate: a signed-in user without a visible client row asks the server what it is (explicit answer only)
+  function pendingCheck() {
+    return sb.rpc('my_status').then(function (r) {
+      if (r.error || !r.data || typeof r.data.status !== 'string') { rer(); return; }
+      if (r.data.status === 'pending') {
+        localStorage.setItem('fbg.pending', '1'); role = 'pending';
+        var ik = F.store.get('intakes', null) || F.store.get('intakeLast', null);
+        if (ik) sb.rpc('pending_push', { p_kind: 'intake', p_data: strip(ik) }).then(function () {});
+        if (!document.querySelector('.sheet')) App.route();
+        return;
+      }
+      if (r.data.status === 'none') localStorage.removeItem('fbg.pending');
+      if (!document.querySelector('.sheet')) App.route();
+    }, function () { status = 'offline'; });
+  }
+  C.recheck = function () { if (!sb || !user) return load(); role = null; myClient = null; return start(); };
+  // coach: approve a pending sign-up
+  C.approve = function (cid) {
+    if (!sb || role !== 'coach') return Promise.reject(new Error(S.lang === 'nl' ? 'Log eerst in als coach.' : 'Sign in as coach first.'));
+    return sb.from('clients').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', cid).select('id,status').then(function (r) {
+      if (r.error) throw r.error; if (!r.data || !r.data[0] || r.data[0].status !== 'active') throw new Error('not saved');
+      return coachPull();
+    });
+  };
+  // coach: delete a client EVERYWHERE. 1) all photos (main + trash) via the Storage API, verified empty,
+  // 2) server RPC deletes rows + login and leaves a tombstone so the phone wipes itself, 3) local copy.
+  function listAll(prefix) {
+    return sb.storage.from('checkin-photos').list(prefix, { limit: 1000 }).then(function (r) {
+      if (!r || r.error || !Array.isArray(r.data)) throw new Error((r && r.error && r.error.message) || 'list failed');
+      return r.data.filter(function (o) { return o && o.id; }).map(function (o) { return prefix + '/' + o.name; });
+    });
+  }
+  function photoNames(cid) { return Promise.all([listAll(cid), listAll(cid + '/trash')]).then(function (a) { return a[0].concat(a[1]); }); }
+  function removeChunks(names) {
+    var q = Promise.resolve();
+    for (var i = 0; i < names.length; i += 100) (function (part) { q = q.then(function () { return sb.storage.from('checkin-photos').remove(part).then(function (r) { if (r && r.error) throw r.error; }); }); })(names.slice(i, i + 100));
+    return q;
+  }
+  C.deleteClient = function (cid) {
+    if (!sb || role !== 'coach' || !user) return Promise.reject(new Error(S.lang === 'nl' ? 'Log eerst in als coach (More → ☁️ Live koppeling).' : 'Sign in as coach first.'));
+    if (myClient && cid === myClient.id) return Promise.reject(new Error('own record'));
+    var tries = 0;
+    function wipePhotos() { return photoNames(cid).then(function (n) { if (!n.length) return; if (++tries > 3) throw new Error('photos left'); return removeChunks(n).then(wipePhotos); }); }
+    return wipePhotos().then(function () { return sb.rpc('coach_delete_client', { p_cid: cid }); }).then(function (r) {
+      if (r.error) throw r.error; if (!r.data || r.data.ok !== true) throw new Error('not deleted');
+      delete rows[cid]; delete data[cid]; pendingRows = pendingRows.filter(function (x) { return x.id !== cid; });
+      if (App.applyDeletedClients) App.applyDeletedClients([cid]);
+      rawSave(); return r.data;
+    });
+  };
+  C.pending = function () { return pendingRows.slice(); };
 
   // ---------- client side ----------
   // coach's own record: apply coach-set targets, step goal and plan to his own athlete data (once per change)
@@ -210,22 +267,28 @@
   setInterval(function () { if (role === 'coach' && document.visibilityState === 'visible') coachPull(true).catch(function () {}); }, 120000);
 
   // ---------- coach side ----------
-  var rows = {}, data = {};
+  var rows = {}, data = {}, pendingRows = [];
   var sig = '';
   function selfHealth() { var d = myClient && data[myClient.id]; if (d && d.health_sync && App.applyHealthSync) App.applyHealthSync(d.health_sync); }
   C.selfClientId = function () { return role === 'coach' && myClient ? myClient.id : null; };
   function coachPull(silent) {
-    return Promise.all([sb.from('clients').select('*'), sb.from('client_data').select('*')]).then(function (r) {
-      var ns = (r[0].data || []).map(function (c) { return c.id + c.updated_at; }).join() + '|' + (r[1].data || []).map(function (d) { return d.client_id + d.kind + d.updated_at; }).sort().join();
+    return Promise.all([sb.from('clients').select('*'), sb.from('client_data').select('*'), sb.rpc('coach_deleted_ids')]).then(function (r) {
+      // deleted on the server (by this or another coach device): drop locally. Only on an explicit list.
+      var gone = !r[2].error && Array.isArray(r[2].data) ? r[2].data.map(function (x) { return typeof x === 'string' ? x : x && x.coach_deleted_ids; }).filter(Boolean) : [];
+      if (gone.length && App.applyDeletedClients && App.applyDeletedClients(gone)) rawSave();
+      if (r[0].error || r[1].error || !Array.isArray(r[0].data)) return; // failed read: change nothing
+      var ns = (r[0].data || []).map(function (c) { return c.id + c.updated_at + c.status; }).join() + '|' + (r[1].data || []).map(function (d) { return d.client_id + d.kind + d.updated_at; }).sort().join();
       if (silent && ns === sig) return; // nothing new: do nothing at all
       sig = ns;
-      (r[0].data || []).forEach(function (c) { rows[c.id] = c; });
+      // rebuild from the server answer, so a deleted client can never come back from memory
+      rows = {}; data = {}; pendingRows = [];
+      (r[0].data || []).forEach(function (c) { if (c.status === 'pending') pendingRows.push(c); else rows[c.id] = c; });
       (r[1].data || []).forEach(function (d) { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; });
       Object.keys(rows).forEach(merge); selfHealth(); rawSave(); status = 'ok'; if (silent) pill(); else rer();
     });
   }
   function merge(id) {
-    var row = rows[id]; if (!row) return; var d = data[id] || {};
+    var row = rows[id]; if (!row || row.status === 'pending' || (App.isDeletedClient && App.isDeletedClient(id))) return; var d = data[id] || {};
     var c = S.clients.filter(function (x) { return x.cloudId === id || (row.slug && x.setupSlug === row.slug) || x.id === id; })[0];
     if (!c) { c = { id: id, name: row.name, created: row.created_at, checkins: [], profile: row.profile || {} }; S.clients.push(c); }
     c.cloudId = id; c.coachFb = row.coach_feedback || {}; c.email = row.email; c.cloudNotes = row.notes || ''; c.cloudStatus = row.status; c.name = row.name || c.name;
@@ -246,12 +309,12 @@
     if (chan) return;
     chan = sb.channel('fbg-live').on('postgres_changes', { event: '*', schema: 'public', table: 'client_data' }, function (p) {
       var d = p.new && p.new.client_id ? p.new : null; if (!d) return;
-      if (role === 'coach') { (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); if (myClient && d.client_id === myClient.id) { if (d.kind === 'health_sync') selfHealth(); rawSave(); return; } rawSave(); pill(); }
+      if (role === 'coach') { if (App.isDeletedClient && App.isDeletedClient(d.client_id)) return; (data[d.client_id] = data[d.client_id] || {})[d.kind] = d; if (!rows[d.client_id]) return coachPull(true); merge(d.client_id); if (myClient && d.client_id === myClient.id) { if (d.kind === 'health_sync') selfHealth(); rawSave(); return; } rawSave(); pill(); }
       else if (myClient && d.client_id === myClient.id && d.kind === 'photoGone') { if (mergeGoneData(d.data)) { rawSave(); if (App.rerender) App.rerender(); } }
       else if (myClient && d.client_id === myClient.id && d.kind === 'health_sync' && App.applyHealthSync) App.applyHealthSync(d);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, function (p) {
       var r = p.new; if (!r || !r.id) return;
-      if (role === 'coach') { rows[r.id] = r; if (myClient && r.id === myClient.id) { myClient = r; selfTargets(r); } merge(r.id); rawSave(); pill(); }
+      if (role === 'coach') { if (r.status === 'pending') return coachPull(true); if (App.isDeletedClient && App.isDeletedClient(r.id)) return; rows[r.id] = r; if (myClient && r.id === myClient.id) { myClient = r; selfTargets(r); } merge(r.id); rawSave(); pill(); }
       else if (myClient && r.id === myClient.id) { myClient = r; applyPlan(r); App.rerender(); }
     }).subscribe();
   }

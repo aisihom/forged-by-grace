@@ -56,7 +56,7 @@
           S.me.profile = Object.assign({}, S.me.profile || {}, { name: nm }); S.role = 'athlete'; App.save();
           return C.restart();
         });
-      }).then(function () { App.toast('✅ ' + L('Gekoppeld aan je coach!', 'Linked to your coach!')); location.hash = '#/today'; App.route(); })
+      }).then(function () { App.toast(localStorage.getItem('fbg.pending') ? '✅ ' + L('Account aangemaakt. Wacht op goedkeuring van je coach.', 'Account created. Waiting for your coach to approve.') : '✅ ' + L('Gekoppeld aan je coach!', 'Linked to your coach!')); location.hash = '#/today'; App.route(); })
         .catch(function (err) { msg((err && err.message) || L('Offline — probeer het later opnieuw.', 'Offline — try again later.')); });
     };
   }

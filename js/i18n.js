@@ -105,6 +105,8 @@ window.FBG_I18N = {
 "Erase": "Wissen",
 "Erase all data on this device": "Alle gegevens op dit toestel wissen",
 "Erase everything?": "Alles wissen?",
+"Erase everything on this device?": "Alles op dit toestel wissen?",
+"Only this device is wiped (clients, plans and logs stored here). Your account and the data on the server stay; signing in again brings them back. Export a backup first.": "Alleen dit toestel wordt gewist (klanten, plannen en logboek die hier staan). Je account en de gegevens op de server blijven bestaan; opnieuw inloggen haalt ze terug. Maak eerst een back-up.",
 "Exercise library": "Oefeningenbibliotheek",
 "Export backup": "Back-up exporteren",
 "Fat": "Vet",

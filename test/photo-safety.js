@@ -145,7 +145,11 @@ add('only explicit UI paths can delete: every deleteCheckinPhoto call sits behin
     while ((m = re.exec(s))) { var before = s.slice(Math.max(0, m.index - 400), m.index); assert.ok(/App\.confirm\(/.test(before) && /if \(!ok\) return;/.test(before), f + ' delete without confirm'); }
   });
   var all = ['js/cloud.js', 'js/checkin2.js', 'js/photoguide.js'].map(function (f) { return fs.readFileSync(path.join(root, f), 'utf8'); }).join('\n');
-  assert.strictEqual((all.match(/storage\.from\([^)]*\)\.remove\(/g) || []).length, 1, 'the only remove() is the 30-day trash cleanup');
+  // v3.31: plus ONE in cloud.js removeChunks(), used only by the coach's explicit full client delete (typed-name confirm)
+  assert.strictEqual((all.match(/storage\.from\([^)]*\)\.remove\(/g) || []).length, 2, 'only the 30-day trash cleanup + the full client delete remove()');
+  var rc = body(cloud, 'removeChunks'); assert.ok(/\.remove\(/.test(rc), 'removeChunks holds the delete remove()');
+  assert.strictEqual((cloud.match(/removeChunks\(/g) || []).length, 2, 'removeChunks: defined once, called once (deleteClient)');
+  assert.ok(/C\.deleteClient = function[\s\S]{0,600}removeChunks\(n\)/.test(cloud), 'called from deleteClient');
 });
 
 q.then(function () { if (failed) { console.error('\n' + failed + ' failed'); process.exit(1); } console.log('\nall tests passed'); });

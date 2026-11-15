@@ -126,7 +126,7 @@
       } else done();
     };
   };
-  A['client-del'] = function (el) { App.confirm(t('Delete client?'), t('This removes the client and their check-ins from this device.'), t('Delete'), true).then(function (ok) { if (!ok) return; S.clients = App.S.clients = S.clients.filter(function (c) { return c.id !== el.dataset.id; }); App.S.clients = S.clients; App.save(); App.go('clients'); }); };
+  A['client-del'] = function (el) { var c = App.client(el.dataset.id); if (!c) return; App.deleteSheet({ id: c.id, name: c.name, cloudId: c.cloudId || null }, function () { App.go('clients'); }); };
   A['meal-gen'] = function (el) { var o = App.owner(el.dataset.o); o.meal = App.generateMeal(o.profile || {}, 4); App.save(); App.go('meal/' + el.dataset.o); };
   A['share-client'] = function (el) {
     var c = App.client(el.dataset.id);
@@ -334,5 +334,5 @@
   };
   A['set-role'] = function () { S.role = S.role === 'coach' ? 'athlete' : 'coach'; S.me.isCoach = S.me.isCoach || S.role === 'coach'; App.save(); App.go(S.role === 'coach' ? 'clients' : 'today'); };
   A.backup = function () { F.download('forged-by-grace-backup-' + App.today() + '.json', JSON.stringify({ t: 'backup', v: 2, at: new Date().toISOString(), state: S }), 'application/json'); };
-  A.reset = function () { App.confirm(t('Erase everything?'), t('All clients, plans and logs on this device are deleted. Export a backup first.'), t('Erase'), true).then(function (ok) { if (ok) App.reset(); }); };
+  A.reset = function () { App.confirm(t('Erase everything on this device?'), t('Only this device is wiped (clients, plans and logs stored here). Your account and the data on the server stay; signing in again brings them back. Export a backup first.'), t('Erase'), true).then(function (ok) { if (ok) App.reset(); }); };
 })();
