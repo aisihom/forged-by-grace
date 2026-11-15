@@ -300,6 +300,7 @@
     var live = {}; Object.keys(d).forEach(function (k) { live[k] = d[k].data; });
     c.live = { at: Object.keys(d).reduce(function (a, k) { return d[k].updated_at > a ? d[k].updated_at : a; }, ''), d: live };
     if (live.profile) c.profile = Object.assign({}, c.profile || {}, live.profile);
+    if (live.intake && F.syncIntake) F.syncIntake(c, live.intake); // intake answers from the phone -> coach page + Mind tab
     if (row.profile && (row.profile.targetsOverride || row.profile.spGifts)) c.profile = Object.assign({}, c.profile || {}, { targetsOverride: row.profile.targetsOverride || (c.profile || {}).targetsOverride, spGifts: row.profile.spGifts || (c.profile || {}).spGifts });
     var sum = live.checkins && live.checkins.summary;
     if (App.overlayHealthSync) App.overlayHealthSync(c, live, sum);

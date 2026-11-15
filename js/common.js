@@ -416,11 +416,27 @@
     return 'Hi ' + first + ', thanks for filling in the intake — I have read your answers properly.' + (topic ? " I'd like us to start with: " + topic + '.' : '') + ' When would a first 30-minute conversation suit you this week?\n\nSpeak soon,\n' + coachFirst;
   }
 
+  // live sync: newest intake the client's phone sent up (array or single object); null when none/invalid
+  function latestIntake(raw) {
+    var list = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+    return list.filter(function (x) { return x && typeof x === 'object' && x.answers && typeof x.answers === 'object'; })
+      .sort(function (a, b) { return String(b.submittedAt || '') < String(a.submittedAt || '') ? -1 : String(b.submittedAt || '') > String(a.submittedAt || '') ? 1 : 0; })[0] || null;
+  }
+  // put the server intake on the coach's client card (Mental coaching + Mind tab) unless the coach has a newer one
+  function syncIntake(c, raw) {
+    var ik = latestIntake(raw); if (!c || !ik) return false;
+    var cur = c.intake;
+    if (cur && cur.id !== ik.id && String(cur.submittedAt || '') > String(ik.submittedAt || '')) return false;
+    if (cur && JSON.stringify(cur) === JSON.stringify(ik)) return false;
+    c.intake = ik; c.intakeId = ik.id; try { c.brief = brief(ik); } catch (e) { c.brief = null; }
+    return true;
+  }
+
   root.FBG = {
     store: store, esc: esc, uid: uid, isoDate: isoDate, parseISO: parseISO, fmtDate: fmtDate, fmtDay: fmtDay,
     download: download, copyText: copyText, slug: slug, b64urlEncode: b64urlEncode, b64urlDecode: b64urlDecode,
     getCoach: getCoach, coachLinkParam: coachLinkParam,
     buildPayload: buildPayload, summaryText: summaryText, answerRows: answerRows, parseIntake: parseIntake, optLabel: optLabel,
-    brief: brief, replyDraft: replyDraft, THEMES: THEMES
+    brief: brief, replyDraft: replyDraft, THEMES: THEMES, latestIntake: latestIntake, syncIntake: syncIntake
   };
 })(typeof window !== 'undefined' ? window : this);
