@@ -147,13 +147,21 @@
       '<h1 class="h1" tabindex="-1" id="step-title">' + esc(t('thanksTitle', { name: name })) + '</h1>' +
       '<p class="muted">' + esc(hasEmail || hasWa ? t('thanksText') : t('thanksNoCoach')) + '</p></div>' +
       '<div class="stack" style="margin-top:18px">' + btns + '</div>' +
-      '<p class="small dim center" style="margin-top:10px">✓ ' + esc(t('savedLocal')) + '</p>' +
+      serverNote(p, jt) +
       '<div class="card" style="margin-top:18px"><h2 class="h3">' + esc(t('nextTitle')) + '</h2><p class="muted small" style="margin:0">' + esc(t('nextText')) + '</p></div>' +
       '<details class="card" style="margin-top:12px"><summary class="h3" style="cursor:pointer;margin:0">' + esc(t('reviewTitle')) + '</summary><pre class="summary" style="margin-top:12px">' + esc(F.summaryText(p, { withData: false })) + '</pre></details>' +
       '<div class="row" style="margin-top:16px"><button class="btn ghost grow" data-act="edit">' + esc(t('editAnswers')) + '</button><button class="btn ghost grow" data-act="new">' + esc(t('newForm')) + '</button></div>' +
       '<p class="crisis">' + esc(t('crisis')) + '</p><p class="footer-note">' + esc(t('footer')) + '</p>';
   }
 
+  function serverNote(p, jt) {
+    var st = sent()[p.id];
+    if (st === 'saved') return '<p class="small center" id="srv-note" style="margin-top:10px;color:var(--gold,#d4af37)">✓ ' + esc(t('savedServer')) + '</p>';
+    if (st === 'saving') return '<p class="small dim center" id="srv-note" style="margin-top:10px">' + esc(t('savingServer')) + '</p>';
+    var app = false; try { app = !!localStorage.getItem('fbg.sb.auth'); } catch (e) {}
+    if (jt || app) return '<p class="small dim center" style="margin-top:10px">✓ ' + esc(t('savedLocal')) + '</p>'; // join flow / signed-in app: the app syncs it
+    return '<div class="card" id="srv-note" style="margin-top:12px;border:1px solid rgba(212,175,55,.7)"><p class="small" style="margin:0;color:var(--gold,#d4af37)">⚠️ ' + esc(t('localOnly')) + '</p></div>';
+  }
   function emailBody(p) {
     var full = F.coachReportText(p) + '\n\n(Importgegevens voor de app — niet wijzigen)\n' + F.coachReportData(p);
     // Some mail apps limit link length; fall back to the compact data-only version.
@@ -223,7 +231,22 @@
     state.step = 7;
     saveDraft();
     render();
+    drop(payload);
   }
+  // v3.32: save straight to the coach's dossier (works in Safari too, no login needed): coach token + the client's e-mail.
+  var SB = 'https://hdcpxmctilthjhdhhixw.supabase.co', SBK = 'sb_publishable_oFIIm1osyVtpV-t9PCjFxA_tkkQ9xUg';
+  function sent() { return F.store.get('intakeSent', null) || {}; }
+  function setSent(id, v) { var o = sent(); o[id] = v; F.store.set('intakeSent', o); }
+  function token() { var k = params.get('k') || params.get('join'); try { k = k || localStorage.getItem('fbg.join'); } catch (e) {} return /^[A-Za-z0-9_-]{6,80}$/.test(k || '') ? k : ''; }
+  function drop(p) {
+    var k = token();
+    if (!k || !window.fetch || !p || !p.answers || !p.answers.email) { setSent(p.id, 'none'); return Promise.resolve('none'); }
+    setSent(p.id, 'saving'); render();
+    return fetch(SB + '/rest/v1/rpc/intake_drop', { method: 'POST', headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_token: k, p_data: p }) })
+      .then(function (r) { return r.ok ? r.json() : 'fail'; }).catch(function () { return 'fail'; })
+      .then(function (res) { var v = res === 'saved' ? 'saved' : res === 'nomatch' ? 'nomatch' : 'fail'; setSent(p.id, v); if (state.step === 7) render(); return v; });
+  }
+  window.FBG_INTAKE_DROP = drop; // test hook
 
   function toast(msg) {
     var el = document.createElement('div');
@@ -303,4 +326,6 @@
   });
 
   render();
+  // an earlier send failed (offline) or never finished: try once more when the page opens again
+  if (state.submitted && /^(fail|saving)$/.test(sent()[state.submitted.id] || '')) drop(state.submitted);
 })();

@@ -74,6 +74,7 @@
       return C.sb.from('coaches').select('invite_token').eq('user_id', u.id).maybeSingle(); }).then(function (r) { if (!r.data || !r.data.invite_token) throw new Error('signin'); return (myTok = r.data.invite_token); });
   }
   App.inviteLink = function (k) { return BASE + '?join=' + k; };
+  App.getInviteToken = getTok;
   A['coach-invite'] = function () {
     var s = App.sheet(App.sheetHead('🔗 ' + L('Uitnodigingslink', 'Invite link'), L('Stuur deze link naar elke nieuwe klant. Na de intake en het account staat hij automatisch in jouw dossier.', 'Send this link to any new client. After intake and sign-up they appear in your dashboard automatically.')) + '<div id="ivo"><p class="small muted">…</p></div>');
     getTok().then(function (k) {

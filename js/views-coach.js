@@ -283,10 +283,16 @@
     return h;
   };
   A['intake-share'] = function () {
-    var link = App._intakeLink, text = t('Hi! Before we start, could you answer a few questions? It takes about 5 minutes:') + '\n' + link;
+    // v3.32: add the coach token (&k=) so answers filled in via Safari land in the client's dossier automatically
+    var base = App._intakeLink;
+    if (App.getInviteToken) App.getInviteToken().then(function (k) { shareIntake(base + '&k=' + encodeURIComponent(k)); }, function () { shareIntake(base); });
+    else shareIntake(base);
+  };
+  function shareIntake(link) {
+    var text = t('Hi! Before we start, could you answer a few questions? It takes about 5 minutes:') + '\n' + link;
     var s = App.sheet(App.sheetHead(t('Send intake')) + '<textarea class="input mono" readonly>' + esc(link) + '</textarea><div class="grid2" style="margin-top:10px"><button class="btn" id="il-copy">' + I.link + esc(t('Copy link')) + '</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text) + '">' + I.wa + 'WhatsApp</a></div>');
     s.el.querySelector('#il-copy').onclick = function () { F.copyText(link).then(function () { App.toast(t('Link copied')); }); };
-  };
+  }
   A['intake-import'] = function () {
     var s = App.sheet(App.sheetHead(t('Import intake answers'), t('Paste the whole email or WhatsApp message, or choose the file.')) + '<textarea class="input" id="ii" rows="6"></textarea><input type="file" class="input" id="iif" accept=".txt,.json,.html,.htm" style="margin-top:10px"><button class="btn primary lg block" id="iigo" style="margin-top:12px">' + esc(t('Import')) + '</button>');
     s.el.querySelector('#iigo').onclick = function () {

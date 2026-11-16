@@ -85,6 +85,13 @@
         '<p class="tiny muted center" style="margin-top:10px">' + esc(t('Your logs stay on this phone. You send progress to your coach with one tap.')) + '</p></div>';
       App._pendingImport = obj;
     } else if (obj.t === 'checkin') {
+      // v3.32: opened outside the coach's app (iPhone: WhatsApp links always open in Safari) -> explain, never turn this browser into a "coach"
+      if (App.accessState && App.accessState() !== 'ok') {
+        var nl = S.lang !== 'en';
+        view.innerHTML = '<div class="welcome"><div class="logo-xl">' + App.LOGO + '</div><div class="card" style="margin-top:18px;border:1px solid rgba(212,175,55,.6)"><h2 class="h2" style="color:var(--gold,#d4af37)">' + esc(nl ? 'Check-in van ' + (obj.name || 'je klant') : 'Check-in from ' + (obj.name || 'your client')) + '</h2>' +
+          '<p class="muted">' + esc(nl ? 'Deze check-in komt vanzelf binnen in je FBG-app (Clients → naam) zodra je klant online is. Op een iPhone opent een link altijd in Safari, niet in de app op je beginscherm. Open dus gewoon de FBG-app op je beginscherm.' : 'This check-in arrives in your FBG app by itself (Clients → name) once your client is online. On an iPhone a link always opens in Safari, not in the home-screen app. Just open the FBG app on your home screen.') + '</p></div></div>';
+        return;
+      }
       var c = App.importCheckin(obj);
       history.replaceState(null, '', '#/client/' + c.id);
       App.toast(t('Check-in from {n} saved', { n: c.name }));
@@ -95,7 +102,7 @@
   };
   App.importCheckin = function (obj) {
     if (S.role !== 'coach') { S.role = 'coach'; }
-    var c = App.client(obj.cid);
+    var c = App.client(obj.cid) || (obj.cid ? S.clients.filter(function (x) { return x.cloudId === obj.cid; })[0] : null); // v3.32: live clients keep their own card (no duplicate)
     if (!c) { c = { id: obj.cid || F.uid(), name: obj.name || 'Client', created: new Date().toISOString(), checkins: [], profile: obj.profile || {} }; S.clients.push(c); }
     c.checkins = (c.checkins || []).filter(function (x) { return x.at !== obj.at; });
     c.checkins.push(obj); c.checkins.sort(function (a, b) { return a.at < b.at ? -1 : 1; });

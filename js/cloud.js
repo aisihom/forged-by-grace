@@ -24,7 +24,7 @@
   var sb = null, user = null, role = null, myClient = null, loading = null, status = '', chan = null;
   var C = App.cloud = { state: function () { return { user: user && user.email, role: role, client: myClient && myClient.id, status: status }; }, myFeedback: function () { return (myClient && myClient.coach_feedback) || null; } };
   C._test = { applyPlan: function (r) { return applyPlan(r); }, selfTargets: function (r) { return selfTargets(r); }, setPending: function (a) { pendingRows = a; } }; // used by test/smoke.js only
-  C.restart = function () { role = null; myClient = null; return start(); };
+  C.restart = function () { role = null; myClient = null; restored = null; last = {}; return start(); };
   C.user = function () { return user; }; C.coachId = function () { return myClient && myClient.coach_id; }; C.role = function () { return role; };
 
   function load() {
@@ -42,7 +42,7 @@
   }
   C.load = load;
 
-  function stop() { role = null; myClient = null; if (chan) { sb.removeChannel(chan); chan = null; } rer(); }
+  function stop() { role = null; myClient = null; restored = null; restoring = null; last = {}; srvFull = {}; if (chan) { sb.removeChannel(chan); chan = null; } rer(); }
   // coach: never re-render under the reader's eyes — show a gold pill; tap = refresh keeping scroll + open sections
   function pill() {
     if (!/^#\/(more|clients|client)/.test(location.hash)) return;
@@ -97,7 +97,7 @@
       if (!document.querySelector('.sheet')) App.route();
     }, function () { status = 'offline'; });
   }
-  C.recheck = function () { if (!sb || !user) return load(); role = null; myClient = null; return start(); };
+  C.recheck = function () { if (!sb || !user) return load(); role = null; myClient = null; restored = null; last = {}; return start(); };
   // coach: approve a pending sign-up
   C.approve = function (cid) {
     if (!sb || role !== 'coach') return Promise.reject(new Error(S.lang === 'nl' ? 'Log eerst in als coach.' : 'Sign in as coach first.'));
@@ -175,20 +175,52 @@
       water: me.water || me.waterLog || null, steps: me.steps || null, health: me.health || null, recipes: me.recipes || null, consent: me.consent || null, photoGone: { v: 2, ids: me.photoGone || {} }, intake: intakes, game: { ls: ls, game: me.game || me.pet || null }, extra: extra };
   }
   var last = {}, timer = null, retryT = null;
+  // v3.32 merge-safe sync: before the FIRST push of a session we read our own rows and merge them in (server-only
+  // items are added, nothing is removed). Until that read succeeded, nothing is pushed. A kind that is empty here
+  // while the server has data is never sent. Stamps = updated_at of our own last push per kind (this device only).
+  var restored = null, restoring = null, srvFull = {};
+  function stamps(cid) { try { var o = JSON.parse(localStorage.getItem('fbg.syncAt') || 'null'); return o && o.cid === cid && o.k ? o.k : {}; } catch (e) { return {}; } }
+  function stamp(cid, kinds, at) { try { var k = stamps(cid); kinds.forEach(function (x) { k[x] = at; }); localStorage.setItem('fbg.syncAt', JSON.stringify({ cid: cid, k: k })); } catch (e) {} }
+  function restoreOwn() {
+    if (!sb || !myClient) return Promise.resolve(false);
+    var cid = myClient.id; if (restored === cid) return Promise.resolve(true);
+    if (restoring) return restoring;
+    restoring = sb.from('client_data').select('kind,data,updated_at').eq('client_id', cid).then(function (r) {
+      restoring = null;
+      if (!r || r.error || !Array.isArray(r.data) || !myClient || myClient.id !== cid) return false; // failed read: push nothing
+      var M = App.syncMerge; srvFull = {};
+      r.data.forEach(function (x) { if (x && x.kind && M && !M.blank(x.kind, x.data)) srvFull[x.kind] = 1; });
+      var ch = M ? M.mergeOwn(S.me, r.data, stamps(cid), {
+        getIntakes: function () { return F.store.get('intakes', null) || F.store.get('intakeLast', null); },
+        setIntakes: function (a) { F.store.set('intakes', a); },
+        lsGet: function (k) { return localStorage.getItem(k); }, lsSet: function (k, v) { localStorage.setItem(k, v); }
+      }) : [];
+      restored = cid;
+      if (ch.length) { rawSave(); if (App.logPhoto) App.logPhoto('restore', ch.join(',')); if (!document.querySelector('.sheet')) setTimeout(function () { App.rerender(); }, 0); }
+      return true;
+    }, function () { restoring = null; return false; });
+    return restoring;
+  }
+  C._test.restoreOwn = restoreOwn; C._test.setClient = function (c, r, fake) { if (fake !== undefined) sb = fake; myClient = c; role = c ? (r || 'client') : null; restored = null; restoring = null; last = {}; srvFull = {}; };
   function push(now) {
     if ((role !== 'client' && role !== 'coach') || !myClient) return;
+    if (restored !== myClient.id) { restoreOwn().then(function (ok) { if (ok) push(true); }); return; }
     clearTimeout(timer);
     timer = setTimeout(function () {
-      var snap = strip(snapshot()), rows = [];
-      Object.keys(snap).forEach(function (k) { var j = JSON.stringify(snap[k]); if (snap[k] != null && last[k] !== j) rows.push({ client_id: myClient.id, kind: k, data: snap[k], updated_at: new Date().toISOString(), _j: j }); });
+      var snap = strip(snapshot()), rows = [], M = App.syncMerge, at = new Date().toISOString();
+      Object.keys(snap).forEach(function (k) {
+        if (snap[k] == null) return;
+        if (M && srvFull[k] && M.blank(k, snap[k])) return; // never send empty over the server's data
+        var j = JSON.stringify(snap[k]); if (last[k] !== j) rows.push({ client_id: myClient.id, kind: k, data: snap[k], updated_at: at, _j: j });
+      });
       if (!rows.length) return;
       sb.from('client_data').upsert(rows.map(function (r) { return { client_id: r.client_id, kind: r.kind, data: r.data, updated_at: r.updated_at }; })).then(function (r) {
         if (r.error) {
           // one bad row must never block the rest: retry each kind on its own
           status = 'error'; clearTimeout(retryT); retryT = setTimeout(function () { push(true); }, 60000);
-          return Promise.all(rows.map(function (x) { return sb.from('client_data').upsert({ client_id: x.client_id, kind: x.kind, data: x.data, updated_at: x.updated_at }).then(function (q) { if (!q.error) last[x.kind] = x._j; }); }));
+          return Promise.all(rows.map(function (x) { return sb.from('client_data').upsert({ client_id: x.client_id, kind: x.kind, data: x.data, updated_at: x.updated_at }).then(function (q) { if (!q.error) { last[x.kind] = x._j; stamp(x.client_id, [x.kind], x.updated_at); if (!M || !M.blank(x.kind, x.data)) srvFull[x.kind] = 1; } }); }));
         }
-        rows.forEach(function (x) { last[x.kind] = x._j; }); status = 'ok';
+        rows.forEach(function (x) { last[x.kind] = x._j; if (!M || !M.blank(x.kind, x.data)) srvFull[x.kind] = 1; }); stamp(myClient.id, rows.map(function (x) { return x.kind; }), at); status = 'ok';
       }, function () { status = 'offline'; });
       photos();
     }, now ? 50 : 800);

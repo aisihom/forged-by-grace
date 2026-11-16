@@ -222,6 +222,71 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
     if (!r.pending || !r.pendingNoFood || !r.login || !r.approved) return { fail: JSON.stringify(r) };
   });
 
+  await step('sync: a fresh phone restores server data first and never pushes empty over it', async function () {
+    var r = await page.evaluate(async function () {
+      var S = App.S, keep = S.me, keepRole = S.role, ups = [], mode = 'ok';
+      var srv = [{ kind: 'food', updated_at: '2026-11-15T10:00:00+00:00', data: { '2026-11-14': [{ id: 'a', name: 'Pan', kcal: 100, p: 1, c: 20, f: 1 }] } },
+        { kind: 'sessions', updated_at: '2026-11-15T10:00:00+00:00', data: [{ id: 's1', date: '2026-11-10', title: 'Push', type: 'plan', dur: 600, endedAt: 1, items: [], prs: [] }] }];
+      function q() { var o = { select: function () { return o; }, eq: function () { return o; }, in: function () { return o; }, order: function () { return o; }, limit: function () { return o; },
+        maybeSingle: function () { return Promise.resolve({ data: null, error: null }); },
+        then: function (a, b) { return Promise.resolve(mode === 'fail' ? { data: null, error: { message: 'offline' } } : { data: srv, error: null }).then(a, b); },
+        upsert: function (x) { ups.push(x); return Promise.resolve({ error: null }); } }; return o; }
+      var fake = { from: q, rpc: function () { return Promise.resolve({ data: null, error: null }); },
+        storage: { from: function () { return { list: function () { return Promise.resolve({ data: [], error: null }); }, upload: function () { return Promise.resolve({ error: null }); }, move: function () { return Promise.resolve({ error: null }); }, remove: function () { return Promise.resolve({ error: null }); } }; } } };
+      var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); }, out = {};
+      // 1) server read fails -> nothing at all is pushed
+      S.me = { cid: 'cid-smoke', profile: null, plan: null, meal: null, sessions: [], food: {}, body: [], habits: {}, checkins: [], coach: null };
+      localStorage.removeItem('fbg.syncAt'); mode = 'fail'; App.cloud._test.setClient({ id: 'cid-smoke' }, 'client', fake);
+      App.cloud.push(true); await wait(300); out.failPushed = ups.length;
+      // 2) server read works -> history restored, then pushed back complete
+      mode = 'ok'; App.cloud._test.setClient({ id: 'cid-smoke' }, 'client', fake);
+      App.cloud.push(true); await wait(400);
+      out.food = !!(S.me.food['2026-11-14'] && S.me.food['2026-11-14'][0].id === 'a'); out.sessions = S.me.sessions.length;
+      var rows = [].concat.apply([], ups.map(function (x) { return Array.isArray(x) ? x : [x]; }));
+      var food = rows.filter(function (x) { return x.kind === 'food'; })[0];
+      out.pushedFood = !!(food && food.data['2026-11-14']);
+      out.emptyPushed = rows.filter(function (x) { return (x.kind === 'food' || x.kind === 'sessions') && !Object.keys(x.data || {}).length; }).length;
+      App.cloud._test.setClient(null, null, null); S.me = keep; S.role = keepRole; App.save(); localStorage.removeItem('fbg.syncAt');
+      location.hash = '#/clients'; App.route();
+      return out;
+    });
+    if (r.failPushed !== 0 || !r.food || r.sessions !== 1 || !r.pushedFood || r.emptyPushed) return { fail: JSON.stringify(r) };
+  });
+
+  await step('check-in link: a live client keeps one card (no duplicate) and a locked browser is not turned into a coach', async function () {
+    var r = await page.evaluate(function () {
+      var S = App.S, n0 = S.clients.length, out = {};
+      S.clients.push({ id: 'loc-mo', cloudId: 'cloud-mo', name: 'Mo Test', created: new Date().toISOString(), checkins: [], profile: {} });
+      var c = App.importCheckin({ t: 'checkin', cid: 'cloud-mo', name: 'Mo Test', at: '2026-11-16T08:00:00.000Z' });
+      out.same = c.id === 'loc-mo'; out.count = S.clients.length - n0;
+      S.clients = App.S.clients = S.clients.filter(function (x) { return x.id !== 'loc-mo'; });
+      var keep = [S.me.coachOk, S.me.cid, S.role]; S.me.coachOk = false; S.me.cid = null; S.role = 'athlete'; localStorage.removeItem('fbg.pending');
+      App.showImport({ t: 'checkin', cid: 'cloud-x', name: 'Iemand', at: '2026-11-16T09:00:00.000Z' });
+      out.msg = /komt vanzelf binnen/.test(document.getElementById('view').innerText); out.role = S.role; out.noNew = !App.client('cloud-x');
+      S.me.coachOk = keep[0]; S.me.cid = keep[1]; S.role = keep[2]; App.save(); location.hash = '#/clients'; App.route();
+      return out;
+    });
+    if (!r.same || r.count !== 1 || !r.msg || r.role !== 'athlete' || !r.noNew) return { fail: JSON.stringify(r) };
+  });
+  await step('intake via a Safari link is saved straight to the coach (intake_drop), and warns when it cannot be', async function () {
+    var p2 = await ctx.newPage(), calls = [];
+    await p2.route(/rpc\/intake_drop/, function (rt) { calls.push(JSON.parse(rt.request().postData() || '{}')); rt.fulfill({ status: 200, contentType: 'application/json', body: '"saved"' }); });
+    p2.on('pageerror', function (e) { errors.push('intake pageerror: ' + e.message); });
+    await p2.goto(srv.url.replace(/\/?$/, '/') + 'intake.html?k=tok123abc&lang=nl', { waitUntil: 'load' });
+    var res = await p2.evaluate(async function () {
+      var out = {};
+      out.saved = await window.FBG_INTAKE_DROP({ id: 'ik-smoke-1', type: 'intake', answers: { name: 'Test', email: 'test@example.com' } });
+      return out;
+    });
+    var call = calls[0] || {};
+    // no token at all (plain ?c= link, no join) -> nothing sent, clear warning on the thanks screen
+    await p2.evaluate(function () { localStorage.clear(); localStorage.setItem('fbg.intakeLast', JSON.stringify({ id: 'ik-2', type: 'intake', v: 1, lang: 'nl', submittedAt: new Date().toISOString(), answers: { name: 'Test Twee', email: 'x@example.com', consent: true } })); });
+    await p2.goto(srv.url.replace(/\/?$/, '/') + 'intake.html?lang=nl', { waitUntil: 'load' }); await p2.waitForTimeout(200);
+    var warn = await p2.evaluate(function () { var n = document.getElementById('srv-note'); return n ? n.innerText : ''; });
+    await p2.close();
+    if (res.saved !== 'saved' || call.p_token !== 'tok123abc' || !call.p_data || call.p_data.id !== 'ik-smoke-1' || !/alleen op deze telefoon/.test(warn)) return { fail: JSON.stringify({ res: res, call: !!call.p_data, warn: warn }) };
+  });
+
   // ---- the error guard itself ----
   await step('error guard: a crash shows a calm toast and is recorded, app keeps working', async function () {
     await page.evaluate(function () { setTimeout(function () { throw new Error('smoke-test boom'); }, 0); });
