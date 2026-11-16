@@ -10,12 +10,18 @@
     if (!dbp) dbp = new Promise(function (res, rej) { var r = indexedDB.open('fbg-photos', 1); r.onupgradeneeded = function () { r.result.createObjectStore('p', { keyPath: 'id' }); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; });
     return dbp;
   }
-  function tx(mode, fn) { return db().then(function (d) { return new Promise(function (res, rej) { var x = d.transaction('p', mode), st = x.objectStore('p'), out = fn(st); x.oncomplete = function () { res(out && out.result !== undefined ? out.result : out); }; x.onerror = function () { rej(x.error); }; }); }); }
+  function tx(mode, fn) { return db().then(function (d) { return new Promise(function (res, rej) { var x = d.transaction('p', mode), st = x.objectStore('p'), out = fn(st); x.oncomplete = function () { res(typeof IDBRequest !== 'undefined' && out instanceof IDBRequest ? out.result : out); }; x.onerror = function () { rej(x.error); }; }); }); }
   App.photoPut = function (rec) { return tx('readwrite', function (st) { st.put(rec); }); };
   App.photoGet = function (id) { return tx('readonly', function (st) { return st.get(id); }); };
   App.photoDel = function (id) { return tx('readwrite', function (st) { st.delete(id); }); };
   var urls = {};
-  App.photoURL = function (id) { if (urls[id]) return Promise.resolve(urls[id]); return App.photoGet(id).then(function (r) { if (!r) return ''; urls[id] = URL.createObjectURL(r.blob); return urls[id]; }); };
+  App.photoURL = function (id) { if (urls[id]) return Promise.resolve(urls[id]); return App.photoGet(id).then(function (r) { if (!r || !(r.blob instanceof Blob)) return cloudURL(id); urls[id] = URL.createObjectURL(r.blob); return urls[id]; }); };
+  // v3.32: photo not on this phone (new phone / reinstalled app) -> show the copy from the server (own folder, 1 h link)
+  function cloudURL(id) {
+    var C = App.cloud, sb = C && C.sb, own = App.ownStorageId && App.ownStorageId(), path = own && App.safeCheckinPath(own, id);
+    if (!sb || !path || !sb.storage) return Promise.resolve('');
+    return Promise.resolve(sb.storage.from('checkin-photos').createSignedUrl(path, 3600)).then(function (r) { var u = r && !r.error && r.data && r.data.signedUrl; if (u) urls[id] = u; return u || ''; }, function () { return ''; });
+  }
   App.photoIdFromPath = function (path) { return String(path || '').split('/').pop().replace(/\.jpg$/i, ''); };
   App.isCheckinPhotoName = function (name) { return /^ph-\d{4}-\d{2}-\d{2}-(front|left|right|back|side)-[A-Za-z0-9]+(\.jpg)?$/i.test(String(name || '').split('/').pop() || ''); };
   App.safeCheckinPath = function (folderId, idOrPath) {
@@ -248,7 +254,7 @@
   };
   function shareIds(ids, title) {
     return Promise.all(ids.map(App.photoGet)).then(function (rs) {
-      var files = rs.filter(Boolean).map(function (r) { return new File([r.blob], 'forged-by-grace-' + r.date + '-' + r.pose + '.jpg', { type: 'image/jpeg' }); });
+      var files = rs.filter(function (r) { return r && r.blob; }).map(function (r) { return new File([r.blob], 'forged-by-grace-' + r.date + '-' + r.pose + '.jpg', { type: 'image/jpeg' }); });
       if (navigator.canShare && navigator.canShare({ files: files })) return navigator.share({ files: files, title: title, text: title }).catch(function () {});
       files.forEach(function (f) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); });
       App.toast('Delen niet ondersteund \u2014 foto\u2019s gedownload');

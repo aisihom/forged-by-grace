@@ -253,6 +253,17 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
     if (r.failPushed !== 0 || !r.food || r.sessions !== 1 || !r.pushedFood || r.emptyPushed) return { fail: JSON.stringify(r) };
   });
 
+  await step('photos: a photo that is not on this phone (new phone) is shown from the server', async function () {
+    var r = await page.evaluate(async function () {
+      var asked = [], fake = { storage: { from: function (b) { return { createSignedUrl: function (path, sec) { asked.push(b + ':' + path + ':' + sec); return Promise.resolve({ data: { signedUrl: 'https://example.invalid/signed/' + path }, error: null }); } }; } } };
+      var keepSb = App.cloud.sb; App.cloud._test.setClient({ id: 'cid-ph' }, 'client', fake); App.cloud.sb = fake;
+      var missing = await App.photoGet('ph-2026-11-09-front-nothere'); if (missing !== undefined) return { u: 'photoGet of a missing photo returned ' + typeof missing };
+      try { var u = await App.photoURL('ph-2026-11-09-front-abc123'), bad = await App.photoURL('../evil'); }
+      finally { App.cloud._test.setClient(null, null, null); App.cloud.sb = keepSb; }
+      return { u: u, bad: bad, asked: asked };
+    });
+    if (r.u !== 'https://example.invalid/signed/cid-ph/ph-2026-11-09-front-abc123.jpg' || r.bad !== '' || r.asked.length !== 1) return { fail: JSON.stringify(r) };
+  });
   await step('check-in link: a live client keeps one card (no duplicate) and a locked browser is not turned into a coach', async function () {
     var r = await page.evaluate(function () {
       var S = App.S, n0 = S.clients.length, out = {};
