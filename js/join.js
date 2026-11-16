@@ -45,6 +45,8 @@
         var sb = C.sb;
         return sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: BASE } }).then(function (r) {
           if (r.error && /registered|exists/i.test(r.error.message)) return sb.auth.signInWithPassword({ email: em, password: pw });
+          // v3.32: an existing account can also come back as "no error, no session" (e-mail confirmation on): try signing in first
+          if (!r.error && r.data && !r.data.session) return sb.auth.signInWithPassword({ email: em, password: pw }).then(function (s2) { return s2.error ? r : s2; });
           return r;
         }).then(function (r) {
           if (r.error) throw r.error; if (!r.data.session) throw new Error(L('Kijk in je inbox om je e-mail te bevestigen.', 'Check your inbox to confirm your email.'));

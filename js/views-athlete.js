@@ -86,7 +86,7 @@
       App._pendingImport = obj;
     } else if (obj.t === 'checkin') {
       // v3.32: opened outside the coach's app (iPhone: WhatsApp links always open in Safari) -> explain, never turn this browser into a "coach"
-      if (App.accessState && App.accessState() !== 'ok') {
+      if (!S.me.coachOk && !S.me.isCoach) {
         var nl = S.lang !== 'en';
         view.innerHTML = '<div class="welcome"><div class="logo-xl">' + App.LOGO + '</div><div class="card" style="margin-top:18px;border:1px solid rgba(212,175,55,.6)"><h2 class="h2" style="color:var(--gold,#d4af37)">' + esc(nl ? 'Check-in van ' + (obj.name || 'je klant') : 'Check-in from ' + (obj.name || 'your client')) + '</h2>' +
           '<p class="muted">' + esc(nl ? 'Deze check-in komt vanzelf binnen in je FBG-app (Clients → naam) zodra je klant online is. Op een iPhone opent een link altijd in Safari, niet in de app op je beginscherm. Open dus gewoon de FBG-app op je beginscherm.' : 'This check-in arrives in your FBG app by itself (Clients → name) once your client is online. On an iPhone a link always opens in Safari, not in the home-screen app. Just open the FBG app on your home screen.') + '</p></div></div>';

@@ -260,10 +260,10 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
       var c = App.importCheckin({ t: 'checkin', cid: 'cloud-mo', name: 'Mo Test', at: '2026-11-16T08:00:00.000Z' });
       out.same = c.id === 'loc-mo'; out.count = S.clients.length - n0;
       S.clients = App.S.clients = S.clients.filter(function (x) { return x.id !== 'loc-mo'; });
-      var keep = [S.me.coachOk, S.me.cid, S.role]; S.me.coachOk = false; S.me.cid = null; S.role = 'athlete'; localStorage.removeItem('fbg.pending');
+      var keep = [S.me.coachOk, S.me.cid, S.role, S.me.isCoach]; S.me.coachOk = false; S.me.isCoach = false; S.me.cid = 'approved-client'; S.role = 'athlete'; localStorage.removeItem('fbg.pending');
       App.showImport({ t: 'checkin', cid: 'cloud-x', name: 'Iemand', at: '2026-11-16T09:00:00.000Z' });
       out.msg = /komt vanzelf binnen/.test(document.getElementById('view').innerText); out.role = S.role; out.noNew = !App.client('cloud-x');
-      S.me.coachOk = keep[0]; S.me.cid = keep[1]; S.role = keep[2]; App.save(); location.hash = '#/clients'; App.route();
+      S.me.coachOk = keep[0]; S.me.cid = keep[1]; S.role = keep[2]; S.me.isCoach = keep[3]; App.save(); location.hash = '#/clients'; App.route();
       return out;
     });
     if (!r.same || r.count !== 1 || !r.msg || r.role !== 'athlete' || !r.noNew) return { fail: JSON.stringify(r) };
@@ -285,6 +285,33 @@ function bad(name, msg) { failed++; console.error('FAIL  ' + name + '\n      ' +
     var warn = await p2.evaluate(function () { var n = document.getElementById('srv-note'); return n ? n.innerText : ''; });
     await p2.close();
     if (res.saved !== 'saved' || call.p_token !== 'tok123abc' || !call.p_data || call.p_data.id !== 'ik-smoke-1' || !/alleen op deze telefoon/.test(warn)) return { fail: JSON.stringify({ res: res, call: !!call.p_data, warn: warn }) };
+  });
+
+  await step('join: an existing account (sign-up gives no session) signs in and links instead of "check your inbox"', async function () {
+    var c2 = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, locale: 'nl-NL' });
+    await c2.route(function (u) { return !/^http:\/\/127\.0\.0\.1:/.test(u.href); }, function (r) { r.abort(); });
+    await c2.addInitScript(function () {
+      var cb = null, calls = window.__calls = [];
+      function q() { var o = { select: function () { return o; }, eq: function () { return o; }, in: function () { return o; }, maybeSingle: function () { return Promise.resolve({ data: null, error: null }); }, then: function (a, b) { return Promise.resolve({ data: [], error: null }).then(a, b); }, upsert: function () { return Promise.resolve({ error: null }); } }; return o; }
+      var fake = { auth: { onAuthStateChange: function (f) { cb = f; }, getSession: function () { return Promise.resolve({ data: { session: null } }); },
+          signUp: function () { calls.push('signUp'); return Promise.resolve({ data: { user: { id: 'x' }, session: null }, error: null }); },
+          signInWithPassword: function () { calls.push('signIn'); var sess = { user: { id: 'u-join', email: 'a@b.cd' } }; setTimeout(function () { cb && cb('SIGNED_IN', sess); }, 0); return Promise.resolve({ data: { session: sess, user: sess.user }, error: null }); },
+          signOut: function () { return Promise.resolve({}); } },
+        rpc: function (n) { calls.push(n); return Promise.resolve(n === 'join_coach' ? { data: 'cid-join', error: null } : n === 'my_status' ? { data: { status: 'pending' }, error: null } : { data: null, error: null }); },
+        from: q, channel: function () { var c = { on: function () { return c; }, subscribe: function () { return c; } }; return c; }, removeChannel: function () {}, storage: { from: function () { return {}; } } };
+      window.supabase = { createClient: function () { return fake; } };
+    });
+    var p3 = await c2.newPage(), errs = [];
+    p3.on('pageerror', function (e) { errs.push(e.message); });
+    await p3.goto(srv.url.replace(/\/?$/, '/') + '?join=abc12345', { waitUntil: 'load' });
+    await p3.evaluate(function () { localStorage.setItem('fbg.intakes', JSON.stringify([{ id: 'ik', type: 'intake', answers: { name: 'Nieuw', email: 'a@b.cd' } }])); App.route(); });
+    await p3.waitForTimeout(200);
+    await p3.fill('#jn', 'Nieuw'); await p3.fill('#je', 'a@b.cd'); await p3.fill('#jp', 'geheim123'); await p3.check('#jc');
+    await p3.click('#jf button[type=submit]'); await p3.waitForTimeout(800);
+    var r = await p3.evaluate(function () { var m = document.getElementById('jm'); return { calls: window.__calls, joined: localStorage.getItem('fbg.joined'), msg: m ? m.textContent : '' }; });
+    await c2.close();
+    if (errs.length) return { fail: errs.join('; ') };
+    if (r.calls.indexOf('signIn') === -1 || r.calls.indexOf('join_coach') === -1 || r.joined !== 'cid-join') return { fail: JSON.stringify(r) };
   });
 
   // ---- the error guard itself ----
