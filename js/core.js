@@ -504,7 +504,7 @@
       '<div class="row" style="gap:6px">' + (right || '') + (canSwitch ? '<button class="btn sm ghost" id="role-switch" title="' + esc(other) + '">' + App.I.swaprole + '<span>' + esc(other) + '</span></button>' : '') + '</div></header>' +
       (title ? '<h1 class="h1">' + esc(title) + '</h1>' : '');
   };
-  App.VERSION = '3.32.2';
+  App.VERSION = '3.32.3';
   App.forceUpdate = function () {
     var jobs = [];
     if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
@@ -574,7 +574,7 @@
     if ('serviceWorker' in navigator && App.secure()) {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (r) { r.update().catch(function () {}); }).catch(function () {});
       var had = !!navigator.serviceWorker.controller, reloaded = false;
-      navigator.serviceWorker.addEventListener('controllerchange', function () { if (had && !reloaded && !document.querySelector('.pw-ov,.sheet')) { reloaded = true; location.reload(); } });
+      navigator.serviceWorker.addEventListener('controllerchange', function () { if (had && !reloaded && !document.querySelector('.pw-ov,.sheet,#logger,.rest-bar')) { reloaded = true; location.reload(); } });
     }
     App.checkVersion();
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') App.checkVersion(); });

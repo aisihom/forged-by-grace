@@ -32,3 +32,13 @@ GitHub Actions (`.github/workflows/test.yml`) runs the same `npm test` on every 
 - `js/guard.js` (loaded first): uncaught errors and promise rejections show one calm toast and are logged (scrubbed, max 5 per session, no tokens/emails) to `app_errors` (insert-only RLS).
 - `App.route` render guard: a screen that throws shows "Dit scherm kon even niet laden" + retry, instead of a blank page.
 - Button handlers (`data-act`) are wrapped: one broken button can't freeze the app.
+
+## Sync safety (v3.32, quality week 16 Nov 2026)
+- `js/syncmerge.js`: before the first push of a session the phone reads its own `client_data` rows and merges them in
+  (server-only items are added, nothing local is removed). No push happens until that read succeeded; an empty kind is
+  never sent over server data. Test: `test/sync-merge.js` + smoke step "sync: a fresh phone…".
+- Server net `supabase/keep_nonempty.sql`: an UPDATE can never replace non-empty data with an empty copy (old app versions too).
+- `supabase/intake_drop.sql`: intake filled in via a Safari link (`intake.html?c=…&k=<coach token>`) is saved into the
+  dossier of the client with the same e-mail. No match = nothing saved + a clear warning on the thanks screen.
+- Backup taken before the audit: `private.client_data_bak_20261116` (not reachable from the app).
+- Rest timer (`js/rest.js`): the end chime is baked into a short WAV that starts when you tick a set, so it still sounds if iOS freezes the page behind a locked screen. A screen wake lock (when the OS allows it) keeps the countdown visible. An app update will not auto-reload during a workout or rest. Test: `test/rest-timer.js`.

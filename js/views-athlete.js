@@ -513,7 +513,7 @@
   };
 
   // ---------------- Workout logger ----------------
-  var W = null, restT = null;
+  var W = null;
   App.getW = function () { return W; }; App.setW = function (w) { W = w; };
   A['start-workout'] = function (el) {
     App.closeSheets();
@@ -579,18 +579,6 @@
     App.sheet('<div class="center"><div class="success-ring">' + I.check + '</div><h2 class="h2">' + esc(t('Workout done')) + '</h2><p class="muted">' + Math.round(sess.dur / 60) + ' min · ' + App.doneSetsCount(sess) + ' ' + esc(t('sets')) + ' · ' + Math.round(vol) + ' kg ' + esc(t('volume')) + '</p>' +
       (prs.length ? '<p class="pill accent">' + I.trophy + esc(t('New PR')) + ': ' + esc(prs.join(', ')) + '</p>' : '') + '<p class="small muted" style="margin-top:12px">“' + esc(App.verse()[1]) + '”</p><button class="btn primary block" data-close>' + esc(t('Amen, done')) + '</button></div>');
   };
-  App.restTimer = function (sec) {
-    App.stopRest();
-    var bar = document.createElement('div'); bar.className = 'rest-bar'; var end = Date.now() + sec * 1000;
-    bar.innerHTML = '<div class="rest-prog" style="width:100%"></div><div class="rest-inner"><div class="grow"><div class="tiny muted">' + esc(t('Rest')) + '</div><div class="timer" id="rt"></div></div><button class="btn sm" data-act="rest-add">+15s</button><button class="btn sm primary" data-act="rest-skip">' + esc(t('Skip')) + '</button></div>';
-    document.body.appendChild(bar);
-    function tick() { var left = Math.max(0, Math.round((end - Date.now()) / 1000)); var el = document.getElementById('rt'); if (!el) return App.stopRest(); el.textContent = Math.floor(left / 60) + ':' + ('0' + left % 60).slice(-2); bar.querySelector('.rest-prog').style.width = (left / sec * 100) + '%'; if (left <= 0) { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); App.stopRest(); } }
-    A['rest-add'] = function () { end += 15000; sec += 15; tick(); };
-    tick(); restT = setInterval(tick, 1000);
-  };
-  App.stopRest = function () { clearInterval(restT); var b = document.querySelector('.rest-bar'); if (b) b.remove(); };
-  A['rest-skip'] = function () { App.stopRest(); };
-
   // ---------------- Progress ----------------
   V.progress = function () {
     var ath = me(), body = ath.body.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
