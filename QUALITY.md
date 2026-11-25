@@ -41,4 +41,4 @@ GitHub Actions (`.github/workflows/test.yml`) runs the same `npm test` on every 
 - `supabase/intake_drop.sql`: intake filled in via a Safari link (`intake.html?c=…&k=<coach token>`) is saved into the
   dossier of the client with the same e-mail. No match = nothing saved + a clear warning on the thanks screen.
 - Backup taken before the audit: `private.client_data_bak_20261116` (not reachable from the app).
-- Rest timer (`js/rest.js`): the end chime is baked into a short WAV that starts when you tick a set, so it still sounds if iOS freezes the page behind a locked screen. A screen wake lock (when the OS allows it) keeps the countdown visible. An app update will not auto-reload during a workout or rest. Test: `test/rest-timer.js`.
+- Rest timer (`js/rest.js`): a short Web Audio sine beep at the end (and a quieter warning at 3s), mixed with music already playing (`navigator.audioSession = ambient`, no HTML audio / Media Session, so iPhone music is not interrupted). A screen wake lock keeps the countdown visible while the app is open. An app update will not auto-reload during a workout or rest. Test: `test/rest-timer.js`.

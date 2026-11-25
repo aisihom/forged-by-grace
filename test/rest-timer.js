@@ -1,5 +1,5 @@
 'use strict';
-// Rest timer: the end chime lives in a WAV so a locked iPhone can still hear it; rest.js must be the only timer.
+// Rest timer: short Web Audio beep only, never steals the iPhone music session.
 var fs = require('fs'), path = require('path'), assert = require('assert'), vm = require('vm');
 var T = require('./lib/check');
 var root = path.join(__dirname, '..');
@@ -29,8 +29,23 @@ T.check('service worker focuses the app when a rest notification is tapped', fun
   assert.ok(/clients\.openWindow/.test(src));
 });
 
+T.check('rest.js does not use HTML audio, Media Session, or a background WAV', function () {
+  assert.ok(!/\bnew Audio\b/.test(restSrc));
+  assert.ok(!/mediaSession/.test(restSrc));
+  assert.ok(!/MediaMetadata/.test(restSrc));
+  assert.ok(!/makeRestWav/.test(restSrc));
+  assert.ok(!/createObjectURL/.test(restSrc));
+  assert.ok(!/audio\/wav/.test(restSrc));
+  assert.ok(!/keepAudio/.test(restSrc));
+  assert.ok(/audioSession\.type = 'ambient'/.test(restSrc));
+  assert.ok(/wakeLock\.request\('screen'\)/.test(restSrc));
+  assert.ok(/createOscillator/.test(restSrc));
+  assert.ok(/linearRampToValueAtTime/.test(restSrc));
+  assert.ok(/o\.type = 'sine'/.test(restSrc));
+});
+
 function fakeWindow() {
-  var els = {}, bars = [], hidden = false, audio = null;
+  var els = {}, bars = [], hidden = false, audioBuilt = 0, tones = [], wakes = 0, sessionType = 'auto';
 
   function node(tag) {
     var self = {
@@ -86,7 +101,6 @@ function fakeWindow() {
     if (sel === '.rest-bar.rest-done') return all.filter(function (e) { return /\brest-bar\b/.test(e.className) && /\brest-done\b/.test(e.className); })[0] || null;
     if (sel === '.rest-prog') return all.filter(function (e) { return /\brest-prog\b/.test(e.className); })[0] || null;
     if (sel === '.rest-inner') return all.filter(function (e) { return /\brest-inner\b/.test(e.className); })[0] || null;
-    if (sel === '#rt' || sel === 'rt') return els.rt || null;
     return null;
   }
   function gid(id) { return els[id] || null; }
@@ -107,18 +121,42 @@ function fakeWindow() {
   Object.defineProperty(document, 'hidden', { get: function () { return hidden; }, set: function (v) { hidden = v; }, configurable: true });
   body.appendChild = function (c) {
     if (/\brest-bar\b/.test(c.className) && bars.indexOf(c) === -1) bars.push(c);
-    return node.prototype, (function () { body.children.push(c); if (c.id) els[c.id] = c; if (c._html) fill(c); return c; }());
+    body.children.push(c); if (c.id) els[c.id] = c; if (c._html) fill(c); return c;
   };
 
-  function Audio() {
-    audio = this;
-    this.src = ''; this.loop = false; this.volume = 1; this.ended = false; this.currentTime = 0; this.preload = '';
-    this.setAttribute = function () {};
-    this.removeAttribute = function () {};
-    this.play = function () { return Promise.resolve(); };
-    this.pause = function () {};
-    this.load = function () {};
+  function Audio() { audioBuilt++; throw new Error('HTML Audio must not be used'); }
+
+  var now = 0;
+  function AudioContext() {
+    this.state = 'running';
+    this.sampleRate = 44100;
+    this.destination = {};
+    this.resume = function () { this.state = 'running'; return Promise.resolve(); };
+    this.createOscillator = function () {
+      var tone = { type: '', freq: 0, started: false, stopped: false, _g: null };
+      var osc = {
+        type: 'sine',
+        frequency: { value: 0, setValueAtTime: function (v) { tone.freq = v; osc.frequency.value = v; } },
+        connect: function (g) { tone._g = g; },
+        start: function (t) { tone.started = true; tone.at = t; tone.type = osc.type; tones.push(tone); },
+        stop: function (t) { tone.stopped = true; tone.stopAt = t; }
+      };
+      return osc;
+    };
+    this.createGain = function () {
+      var ramps = [];
+      return {
+        ramps: ramps,
+        connect: function () {},
+        gain: {
+          setValueAtTime: function (v, t) { ramps.push({ op: 'set', v: v, t: t }); },
+          linearRampToValueAtTime: function (v, t) { ramps.push({ op: 'lin', v: v, t: t }); },
+          exponentialRampToValueAtTime: function () { throw new Error('exponential ramps can click or whistle; use linear fades'); }
+        }
+      };
+    };
   }
+  Object.defineProperty(AudioContext.prototype, 'currentTime', { get: function () { return now; } });
 
   var ctx = {
     window: null,
@@ -128,27 +166,13 @@ function fakeWindow() {
     navigator: {
       vibrate: function () {},
       serviceWorker: { ready: Promise.resolve({ showNotification: function () { return Promise.resolve(); } }) },
-      wakeLock: null,
+      wakeLock: { request: function (type) { assert.strictEqual(type, 'screen'); wakes++; return Promise.resolve({ release: function () { return Promise.resolve(); } }); } },
       standalone: true,
-      mediaSession: null
+      audioSession: { get type() { return sessionType; }, set type(v) { sessionType = v; } }
     },
     matchMedia: function () { return { matches: true }; },
     Audio: Audio,
-    AudioContext: function () {
-      this.state = 'running'; this.currentTime = 0; this.destination = {};
-      this.resume = function () { return Promise.resolve(); };
-      this.createBuffer = function () { return {}; };
-      this.createBufferSource = function () { return { connect: function () {}, start: function () {}, buffer: null }; };
-      this.createOscillator = function () { return { connect: function () {}, start: function () {}, stop: function () {}, frequency: { value: 0 }, type: 'sine' }; };
-      this.createGain = function () { return { connect: function () {}, gain: { setValueAtTime: function () {}, exponentialRampToValueAtTime: function () {} } }; };
-    },
-    URL: { createObjectURL: function () { return 'blob:rest'; }, revokeObjectURL: function () {} },
-    Blob: Blob,
-    ArrayBuffer: ArrayBuffer,
-    Int16Array: Int16Array,
-    Uint8Array: Uint8Array,
-    DataView: DataView,
-    MediaMetadata: function (o) { this.title = o.title; this.artist = o.artist; },
+    AudioContext: AudioContext,
     setTimeout: setTimeout,
     setInterval: setInterval,
     clearTimeout: clearTimeout,
@@ -161,8 +185,10 @@ function fakeWindow() {
   };
   ctx.window = ctx;
   ctx.webkitAudioContext = ctx.AudioContext;
-  Object.defineProperty(ctx, '_audio', { get: function () { return audio; } });
-  Object.defineProperty(ctx, '_bars', { get: function () { return bars; } });
+  Object.defineProperty(ctx, '_audioBuilt', { get: function () { return audioBuilt; } });
+  Object.defineProperty(ctx, '_tones', { get: function () { return tones; } });
+  Object.defineProperty(ctx, '_wakes', { get: function () { return wakes; } });
+  Object.defineProperty(ctx, '_sessionType', { get: function () { return sessionType; } });
   return ctx;
 }
 
@@ -171,33 +197,40 @@ function loadRest(ctx) {
   return ctx.App;
 }
 
-var jobs = [];
-
-jobs.push(Promise.resolve().then(function () {
+T.check('starting a rest timer does not take over audio or play a sound', function () {
   var ctx = fakeWindow();
   var App = loadRest(ctx);
-  var blob = App.makeRestWav(5, true);
-  assert.ok(blob && blob.size > 44);
-  return blob.arrayBuffer().then(function (buf) {
-    var u8 = new Uint8Array(buf), v = new DataView(buf);
-    assert.strictEqual(String.fromCharCode(u8[0], u8[1], u8[2], u8[3]), 'RIFF');
-    assert.strictEqual(String.fromCharCode(u8[8], u8[9], u8[10], u8[11]), 'WAVE');
-    var rate = v.getUint32(24, true), n = (buf.byteLength - 44) / 2;
-    assert.strictEqual(rate, 22050);
-    var sec = n / rate;
-    assert.ok(sec > 6 && sec < 6.5, 'duration ' + sec);
-    var samples = new Int16Array(buf, 44);
-    function peak(fromSec, toSec) {
-      var a = Math.floor(fromSec * rate), b = Math.min(samples.length, Math.floor(toSec * rate)), m = 0, i;
-      for (i = a; i < b; i++) { var x = Math.abs(samples[i]); if (x > m) m = x; }
-      return m;
-    }
-    assert.ok(peak(0, 4.5) < 500, 'body stays faint, got ' + peak(0, 4.5));
-    assert.ok(peak(5, 6.1) > 10000, 'chime is loud at t=5s, got ' + peak(5, 6.1));
-    console.log('ok    makeRestWav is a valid WAV whose chime starts at the rest length');
-  });
-}));
+  App.restTimer(90);
+  assert.ok(ctx.document.getElementById('rt'), 'rest bar is on screen');
+  assert.strictEqual(ctx._audioBuilt, 0, 'no HTML Audio element');
+  assert.strictEqual(ctx._tones.length, 0, 'no beep at timer start');
+  assert.ok(ctx._wakes >= 1, 'screen wake lock requested');
+  assert.strictEqual(ctx._sessionType, 'ambient', 'mixes with other music');
+  App.stopRest();
+});
 
+T.check('the end beep is a clean, faded sine via Web Audio', function () {
+  var ctx = fakeWindow();
+  var App = loadRest(ctx);
+  App.restSound('end');
+  assert.strictEqual(ctx._audioBuilt, 0);
+  assert.strictEqual(ctx._tones.length, 3);
+  assert.deepStrictEqual(ctx._tones.map(function (x) { return x.freq; }), [880, 880, 1320]);
+  ctx._tones.forEach(function (tone) {
+    assert.strictEqual(tone.type, 'sine');
+    assert.ok(tone.started && tone.stopped);
+    var ramps = tone._g.ramps;
+    assert.ok(ramps.length >= 3, 'fade envelope present');
+    assert.strictEqual(ramps[0].op, 'set');
+    assert.strictEqual(ramps[0].v, 0);
+    assert.ok(ramps.some(function (r) { return r.op === 'lin' && r.v > 0 && r.v <= 0.3; }), 'peaks at a modest volume');
+    assert.strictEqual(ramps[ramps.length - 1].op, 'lin');
+    assert.strictEqual(ramps[ramps.length - 1].v, 0);
+  });
+  assert.strictEqual(ctx._sessionType, 'ambient');
+});
+
+var jobs = [];
 jobs.push(Promise.resolve().then(function () {
   var ctx = fakeWindow();
   var shown = [];
@@ -209,13 +242,14 @@ jobs.push(Promise.resolve().then(function () {
   var App = loadRest(ctx);
   App.restTimer(1);
   assert.ok(ctx.document.getElementById('rt'), 'rest bar is on screen');
-  assert.ok(ctx._audio && ctx._audio.src, 'keepalive audio starts on the user gesture');
+  assert.strictEqual(ctx._audioBuilt, 0);
+  assert.strictEqual(ctx._tones.length, 0, 'still silent at the start of a 1s rest');
   return new Promise(function (resolve, reject) {
     setTimeout(function () {
       try {
         assert.ok(ctx.document.querySelector('.rest-bar.rest-done'), 'done banner is shown');
+        assert.ok(ctx._tones.length >= 3, 'end chime played through Web Audio');
         return Promise.resolve(ctx.navigator.serviceWorker.ready).then(function () {
-          // showNotification is chained on ready; give the then() a tick
           return new Promise(function (ok) { setTimeout(ok, 20); });
         }).then(function () {
           assert.strictEqual(shown.length, 1, 'notification count ' + shown.length);
@@ -232,7 +266,7 @@ jobs.push(Promise.resolve().then(function () {
 T.done('rest-timer (sync)');
 
 Promise.all(jobs).then(function () {
-  console.log('rest-timer (async): 2 passed, 0 failed');
+  console.log('rest-timer (async): 1 passed, 0 failed');
 }).catch(function (e) {
   console.error('FAIL  rest-timer (async)\n      ' + (e && e.stack || e));
   process.exitCode = 1;
