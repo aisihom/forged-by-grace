@@ -44,8 +44,42 @@ T.check('rest.js does not use HTML audio, Media Session, or a background WAV', f
   assert.ok(/o\.type = 'sine'/.test(restSrc));
 });
 
+T.check('rest.js schedules and cancels a server-side web push, and never embeds a private VAPID key', function () {
+  assert.ok(/rest_alert_schedule/.test(restSrc));
+  assert.ok(/rest_alert_cancel/.test(restSrc));
+  assert.ok(/pushManager\.subscribe/.test(restSrc));
+  assert.ok(/userVisibleOnly: true/.test(restSrc));
+  assert.ok(/VAPID_PUBLIC/.test(restSrc));
+  assert.ok(!/privateJwk|private_key|BEGIN EC PRIVATE|\\"d\":/.test(restSrc));
+  assert.ok(/Notification\.requestPermission/.test(restSrc));
+  // Permission is only requested when the bell is turned on, not when a rest starts.
+  var start = restSrc.indexOf('App.restTimer =');
+  var bell = restSrc.indexOf("A['rest-sound']");
+  assert.ok(start !== -1 && bell !== -1);
+  assert.ok(!/requestPermission/.test(restSrc.slice(start, bell)));
+  assert.ok(/requestPermission/.test(restSrc.slice(bell)));
+});
+
+T.check('service worker shows Rust voorbij! from a push event', function () {
+  var src = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  assert.ok(/addEventListener\('push'/.test(src));
+  assert.ok(/Rust voorbij/.test(src));
+  assert.ok(/addEventListener\('notificationclick'/.test(src));
+});
+
+T.check('rest_alerts.sql is locked down and has no private key', function () {
+  var src = fs.readFileSync(path.join(root, 'supabase/rest_alerts.sql'), 'utf8');
+  assert.ok(/enable row level security/.test(src));
+  assert.ok(/revoke all on private\.rest_alerts from public, anon, authenticated/.test(src));
+  assert.ok(/grant execute on function public\.rest_alert_claim\(\) to service_role/.test(src));
+  assert.ok(/auth\.role\(\) is distinct from 'service_role'/.test(src));
+  assert.ok(/cron\.schedule\('fbg-rest-alerts'/.test(src));
+  assert.ok(/private\.rest_alert_tick/.test(src));
+  assert.ok(!/BEGIN EC PRIVATE|privateJwk|"kty":"EC"/.test(src));
+});
+
 function fakeWindow() {
-  var els = {}, bars = [], hidden = false, audioBuilt = 0, tones = [], wakes = 0, sessionType = 'auto';
+  var els = {}, bars = [], hidden = false, audioBuilt = 0, tones = [], wakes = 0, sessionType = 'auto', fetches = [];
 
   function node(tag) {
     var self = {
@@ -165,11 +199,27 @@ function fakeWindow() {
     Notification: { permission: 'default', requestPermission: function () { return Promise.resolve('granted'); } },
     navigator: {
       vibrate: function () {},
-      serviceWorker: { ready: Promise.resolve({ showNotification: function () { return Promise.resolve(); } }) },
       wakeLock: { request: function (type) { assert.strictEqual(type, 'screen'); wakes++; return Promise.resolve({ release: function () { return Promise.resolve(); } }); } },
       standalone: true,
-      audioSession: { get type() { return sessionType; }, set type(v) { sessionType = v; } }
+      audioSession: { get type() { return sessionType; }, set type(v) { sessionType = v; } },
+      serviceWorker: {
+        ready: Promise.resolve({
+          showNotification: function () { return Promise.resolve(); },
+          pushManager: {
+            getSubscription: function () { return Promise.resolve(null); },
+            subscribe: function (opts) {
+              assert.strictEqual(opts.userVisibleOnly, true);
+              assert.ok(opts.applicationServerKey);
+              return Promise.resolve({
+                endpoint: 'https://web.push.apple.com/fbg-test',
+                toJSON: function () { return { endpoint: 'https://web.push.apple.com/fbg-test', keys: { p256dh: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', auth: 'BBBBBBBBBBBBBBBBBBBBBB' } }; }
+              });
+            }
+          }
+        })
+      },
     },
+    PushManager: function () {},
     matchMedia: function () { return { matches: true }; },
     Audio: Audio,
     AudioContext: AudioContext,
@@ -181,14 +231,31 @@ function fakeWindow() {
     Math: Math,
     Promise: Promise,
     console: console,
-    App: { esc: function (s) { return String(s); }, t: function (s) { return s; }, acts: {}, toast: function () {} }
+    App: { esc: function (s) { return String(s); }, t: function (s) { return s; }, acts: {}, toast: function () {} },
+    fetch: function (url, opts) {
+      var body = {};
+      try { body = JSON.parse(opts && opts.body || '{}'); } catch (e) {}
+      fetches.push({ url: String(url), body: body, keepalive: !!(opts && opts.keepalive) });
+      var name = String(url);
+      var ret = name.indexOf('rest_alert_schedule') !== -1 ? 'alert-1' : (name.indexOf('rest_alert_reschedule') !== -1 ? 'alert-1' : true);
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve(ret); }, text: function () { return Promise.resolve(JSON.stringify(ret)); } });
+    }
   };
   ctx.window = ctx;
   ctx.webkitAudioContext = ctx.AudioContext;
+  var builtins = {
+    JSON: JSON, atob: atob, btoa: btoa, Uint8Array: Uint8Array, Int16Array: Int16Array,
+    ArrayBuffer: ArrayBuffer, URL: URL, TextEncoder: TextEncoder, Number: Number, String: String,
+    Boolean: Boolean, Array: Array, Object: Object, parseInt: parseInt, parseFloat: parseFloat,
+    isNaN: isNaN, encodeURIComponent: encodeURIComponent, decodeURIComponent: decodeURIComponent,
+    Infinity: Infinity, NaN: NaN
+  };
+  Object.keys(builtins).forEach(function (k) { ctx[k] = builtins[k]; });
   Object.defineProperty(ctx, '_audioBuilt', { get: function () { return audioBuilt; } });
   Object.defineProperty(ctx, '_tones', { get: function () { return tones; } });
   Object.defineProperty(ctx, '_wakes', { get: function () { return wakes; } });
   Object.defineProperty(ctx, '_sessionType', { get: function () { return sessionType; } });
+  Object.defineProperty(ctx, '_fetches', { get: function () { return fetches; } });
   return ctx;
 }
 
@@ -253,7 +320,7 @@ jobs.push(Promise.resolve().then(function () {
           return new Promise(function (ok) { setTimeout(ok, 20); });
         }).then(function () {
           assert.strictEqual(shown.length, 1, 'notification count ' + shown.length);
-          assert.strictEqual(shown[0].title, 'Rust voorbij');
+          assert.strictEqual(shown[0].title, 'Rust voorbij!');
           App.stopRest();
           console.log('ok    when the rest ends in the background, a notification is shown');
           resolve();
@@ -263,10 +330,41 @@ jobs.push(Promise.resolve().then(function () {
   });
 }));
 
+
+jobs.push(Promise.resolve().then(function () {
+  var ctx = fakeWindow();
+  ctx.Notification.permission = 'granted';
+  var App = loadRest(ctx);
+  App.restTimer(90);
+  assert.strictEqual(ctx._audioBuilt, 0);
+  assert.strictEqual(ctx._tones.length, 0);
+  return new Promise(function (resolve, reject) {
+    setTimeout(function () {
+      try {
+        var sched = ctx._fetches.filter(function (f) { return /rest_alert_schedule/.test(f.url); });
+        assert.strictEqual(sched.length, 1, 'one schedule call, got ' + ctx._fetches.map(function (f) { return f.url; }).join(','));
+        assert.ok(sched[0].body.p_fire_at);
+        assert.strictEqual(sched[0].body.p_endpoint, 'https://web.push.apple.com/fbg-test');
+        assert.ok(sched[0].body.p_p256dh && sched[0].body.p_auth);
+        App.stopRest();
+        setTimeout(function () {
+          try {
+            var cancels = ctx._fetches.filter(function (f) { return /rest_alert_cancel/.test(f.url); });
+            assert.ok(cancels.length >= 1, 'skip/stop cancels the scheduled push');
+            assert.strictEqual(cancels[0].body.p_id, 'alert-1');
+            console.log('ok    rest start schedules a web push and skip cancels it');
+            resolve();
+          } catch (e) { reject(e); }
+        }, 30);
+      } catch (e) { reject(e); }
+    }, 40);
+  });
+}));
+
 T.done('rest-timer (sync)');
 
 Promise.all(jobs).then(function () {
-  console.log('rest-timer (async): 1 passed, 0 failed');
+  console.log('rest-timer (async): ' + jobs.length + ' passed, 0 failed');
 }).catch(function (e) {
   console.error('FAIL  rest-timer (async)\n      ' + (e && e.stack || e));
   process.exitCode = 1;
